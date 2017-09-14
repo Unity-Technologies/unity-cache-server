@@ -533,7 +533,7 @@ function handleData (socket, data)
 	// There is pending data, add it to the data buffer
 	if (socket.pendingData != null)
 	{
-		var buf = new Buffer (data.length + socket.pendingData.length);
+		var buf = Buffer.allocUnsafe (data.length + socket.pendingData.length);
 		socket.pendingData.copy (buf, 0, 0);
 		data.copy (buf, socket.pendingData.length, 0);
 		data = buf;
@@ -549,7 +549,7 @@ function handleData (socket, data)
 		if (!socket.protocolVersion)
 		{
 			socket.protocolVersion = readUInt32 (data);
-			var buf = new buffers.Buffer (UINT32_SIZE);
+			var buf = Buffer.allocUnsafe (UINT32_SIZE);
 			if (socket.protocolVersion == PROTOCOL_VERSION)
 			{
 				log (INFO, "Client protocol version " + socket.protocolVersion);
@@ -634,7 +634,7 @@ function handleData (socket, data)
 				var guid = readHex (GUID_SIZE, data.slice (idx));
 				var hash = readHex (HASH_SIZE, data.slice (idx + GUID_SIZE));
 
-				var resbuf = new buffers.Buffer (CMD_SIZE + UINT64_SIZE + ID_SIZE);
+				var resbuf = Buffer.allocUnsafe (CMD_SIZE + UINT64_SIZE + ID_SIZE);
 				data.copy (resbuf, CMD_SIZE + UINT64_SIZE, idx, idx + ID_SIZE); // copy guid + hash
 
 				if (reqType == TYPE_ASSET)
@@ -856,7 +856,7 @@ function handleData (socket, data)
 				else
 					log (DBG, "Cache Server integrity found "+verificationNumErrors+" error(s)");
 
-				var buf = new buffers.Buffer (CMD_SIZE + UINT64_SIZE);
+				var buf = Buffer.allocUnsafe (CMD_SIZE + UINT64_SIZE);
 				buf[0] = CMD_INTEGRITY;
 				buf[1] = CMD_CHECK;
 
@@ -908,7 +908,7 @@ var server = net.createServer (function (socket)
 		socket.isActive = false;
 		var checkFunc = function ()
 		{
-			var data = new Buffer (0);
+			var data = Buffer.allocUnsafe (0);
 			if (handleData (socket, data))
 			{
 				setTimeout (checkFunc, 1);
@@ -994,7 +994,7 @@ function sendNextGetFile (socket)
 	socket.activeGetFile = file;
 	var errfunc = function (err)
 	{
-		var buf = new buffers.Buffer (CMD_SIZE + ID_SIZE);
+		var buf = Buffer.allocUnsafe (CMD_SIZE + ID_SIZE);
 		buf[0] = CMD_GETNOK;
 		buf[1] = type;
 		resbuf.copy (buf, CMD_SIZE, CMD_SIZE + UINT64_SIZE, CMD_SIZE + UINT64_SIZE + ID_SIZE);
