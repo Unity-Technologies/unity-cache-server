@@ -661,6 +661,7 @@ function handleData (socket, data)
 				
 				if (!socket.activeGetFile)
 				{
+					socket.sendFilesStartTime = (new Date).getTime();
 					sendNextGetFile (socket);
 				}
 			
@@ -904,6 +905,8 @@ var server = net.createServer (function (socket)
 	
 	socket.on ('close', function (had_errors)
 	{
+		var endTime = (new Date).getTime();
+		log(INFO, "Total send file time: " + (endTime - socket.sendFilesStartTime));
 		log (ERR, "Socket closed");
 		socket.isActive = false;
 		var checkFunc = function () 
