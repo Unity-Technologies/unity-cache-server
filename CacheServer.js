@@ -476,16 +476,19 @@ function GetFreeCacheSize ()
 	return freeCacheSizeRatio * maxCacheSize;
 }
 
-function GetCachePath (guid, hash, extension, create)
+function GetCachePath (guid, hash, extension)
 {
 	var dir = cacheDir + "/" + guid.substring (0, 2);
-	if (create)
-	{
-		fs.access(dir, (err) => {
-			if (err)
-				log (DBG, "Create directory " + dir);
-				fs.mkdir(dir, 0777, () => {});
-			}
+	return dir + "/" + guid + "-" + hash + "." + extension;
+}
+
+function UpsertCachePath (guid, hash, extension)
+{
+	var dir = cacheDir + "/" + guid.substring (0, 2);
+	fs.access(dir, (err) => {
+		if (err)
+			log (DBG, "Create directory " + dir);
+			fs.mkdir(dir, 0777, () => {});
 		}
 	}
 	return dir + "/" + guid + "-" + hash + "." + extension;
@@ -643,17 +646,17 @@ function handleData (socket, data)
 				if (reqType == TYPE_ASSET)
 				{
 					log (TEST, "Get Asset Binary " + guid + "/" + hash);
-					socket.getFileQueue.unshift ( { buffer : resbuf, type : TYPE_ASSET, cacheStream : GetCachePath (guid, hash, 'bin', false) } );
+					socket.getFileQueue.unshift ( { buffer : resbuf, type : TYPE_ASSET, cacheStream : GetCachePath (guid, hash, 'bin') } );
 				}
 				else if (reqType == TYPE_INFO)
 				{
 					log (TEST, "Get Asset Info " + guid + "/" + hash);
-					socket.getFileQueue.unshift ( { buffer : resbuf, type : TYPE_INFO, cacheStream : GetCachePath (guid, hash, 'info', false) } );
+					socket.getFileQueue.unshift ( { buffer : resbuf, type : TYPE_INFO, cacheStream : GetCachePath (guid, hash, 'info') } );
 				}
 				else if (reqType == TYPE_RESOURCE)
 				{
 					log (TEST, "Get Asset Resource " + guid + "/" + hash);
-					socket.getFileQueue.unshift ( { buffer : resbuf, type : TYPE_RESOURCE, cacheStream : GetCachePath (guid, hash, 'resource', false) } );
+					socket.getFileQueue.unshift ( { buffer : resbuf, type : TYPE_RESOURCE, cacheStream : GetCachePath (guid, hash, 'resource') } );
 				}
 				else
 				{
@@ -793,17 +796,17 @@ function handleData (socket, data)
 				if (reqType == TYPE_ASSET)
 				{
 					log (TEST, "Put Asset Binary " + socket.currentGuid + "-" + socket.currentHash + " (size " + size + ")");
-					socket.activePutTarget = GetCachePath (socket.currentGuid, socket.currentHash, 'bin', true);
+					socket.activePutTarget = UpsertCachePath (socket.currentGuid, socket.currentHash, 'bin');
 				}
 				else if (reqType == TYPE_INFO)
 				{
 					log (TEST, "Put Asset Info " + socket.currentGuid + "-" + socket.currentHash + " (size " + size + ")");
-					socket.activePutTarget = GetCachePath (socket.currentGuid, socket.currentHash, 'info', true);
+					socket.activePutTarget = UpsertCachePath (socket.currentGuid, socket.currentHash, 'info');
 				}
 				else if (reqType == TYPE_RESOURCE)
 				{
 					log (TEST, "Put Asset Resource " + socket.currentGuid + "-" + socket.currentHash + " (size " + size + ")");
-					socket.activePutTarget = GetCachePath (socket.currentGuid, socket.currentHash, 'resource', true);
+					socket.activePutTarget = UpsertCachePath (socket.currentGuid, socket.currentHash, 'resource');
 				}
 				else
 				{
