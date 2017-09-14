@@ -1023,23 +1023,18 @@ function sendNextGetFile (socket)
 	file.on ('close', function ()
 	{
 		socket.activeGetFile = null;
-		if (socket.isActive)
-		{
+		if (socket.isActive) {
 			sendNextGetFile (socket);
 		}
 
-		try
-		{
-			// Touch the file, so that it becomes the newest accessed file for LRU cleanup -
-			// utimes expects a Unix timestamp in seconds, Date.now() returns millis
-			dateNow = Date.now() / 1000;
-			log (DBG, "Updating mtime of " + next.cacheStream + " to: " + dateNow);
-			fs.utimes(next.cacheStream, dateNow, dateNow, () => {});
-		}
-		catch (err)
-		{
-			log (ERR, "Failed to update mtime of " + next.cacheStream + ": " + err);
-		}
+		dateNow = Date.now() / 1000;
+		log (DBG, "Updating mtime of " + next.cacheStream + " to: " + dateNow);
+		// Touch the file, so that it becomes the newest accessed file for LRU cleanup -
+		// utimes expects a Unix timestamp in seconds, Date.now() returns millis
+		fs.utimes(next.cacheStream, dateNow, dateNow, (err) => {
+			if(err)
+				log (ERR, "Failed to update mtime of " + next.cacheStream + ": " + err);
+		});
 	});
 
 	file.on ('open', function (fd)
