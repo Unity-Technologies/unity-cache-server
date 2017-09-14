@@ -1,13 +1,13 @@
-var net = require ('net');
-var fs = require ('fs');
-var path = require ('path');
-var buffers = require ('buffer');
-var assert = require ('assert');
+const net = require ('net');
+const fs = require ('fs');
+const path = require ('path');
+const buffers = require ('buffer');
+const assert = require ('assert');
 
-var cacheDir = "cache5.0";
-var version = "5.3";
-var port = 8126;
-var PROTOCOL_VERSION = 254;
+const cacheDir = "cache5.0";
+const version = "5.3";
+const port = 8126;
+const PROTOCOL_VERSION = 254;
 var verificationFailed = false;
 var verificationNumErrors = 0;
 
@@ -84,32 +84,32 @@ function log (lvl, msg)
 	console.log (msg);
 }
 
-var CMD_QUIT = 'q'.charCodeAt (0);
+const CMD_QUIT = 'q'.charCodeAt (0);
 
-var CMD_GET = 'g'.charCodeAt (0);
-var CMD_PUT = 'p'.charCodeAt (0);
-var CMD_GETOK = '+'.charCodeAt (0);
-var CMD_GETNOK = '-'.charCodeAt (0);
+const CMD_GET = 'g'.charCodeAt (0);
+const CMD_PUT = 'p'.charCodeAt (0);
+const CMD_GETOK = '+'.charCodeAt (0);
+const CMD_GETNOK = '-'.charCodeAt (0);
 
-var TYPE_ASSET = 'a'.charCodeAt (0);
-var TYPE_INFO = 'i'.charCodeAt (0);
-var TYPE_RESOURCE = 'r'.charCodeAt (0);
+const TYPE_ASSET = 'a'.charCodeAt (0);
+const TYPE_INFO = 'i'.charCodeAt (0);
+const TYPE_RESOURCE = 'r'.charCodeAt (0);
 
-var CMD_TRX = 't'.charCodeAt (0);
-var TRX_START = 's'.charCodeAt (0);
-var TRX_END = 'e'.charCodeAt (0);
+const CMD_TRX = 't'.charCodeAt (0);
+const TRX_START = 's'.charCodeAt (0);
+const TRX_END = 'e'.charCodeAt (0);
 
-var CMD_INTEGRITY = 'i'.charCodeAt (0);
-var CMD_CHECK = 'c'.charCodeAt (0);
-var OPT_VERIFY = 'v'.charCodeAt (0);
-var OPT_FIX = 'f'.charCodeAt (0);
+const CMD_INTEGRITY = 'i'.charCodeAt (0);
+const CMD_CHECK = 'c'.charCodeAt (0);
+const OPT_VERIFY = 'v'.charCodeAt (0);
+const OPT_FIX = 'f'.charCodeAt (0);
 
-var UINT32_SIZE = 8;					// hex encoded
-var UINT64_SIZE = 16;					// hex
-var HASH_SIZE = 16;						// bin
-var GUID_SIZE = 16;						// bin
-var ID_SIZE = GUID_SIZE + HASH_SIZE;	// bin
-var CMD_SIZE = 2;						// bin
+const UINT32_SIZE = 8;					// hex encoded
+const UINT64_SIZE = 16;					// hex
+const HASH_SIZE = 16;						// bin
+const GUID_SIZE = 16;						// bin
+const ID_SIZE = GUID_SIZE + HASH_SIZE;	// bin
+const CMD_SIZE = 2;						// bin
 
 var gTotalDataSize = -1;
 var maxCacheSize = 1024 * 1024 * 1024 * 50; // 50Go

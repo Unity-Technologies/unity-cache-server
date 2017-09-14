@@ -1,8 +1,8 @@
-var cserver = require ("./CacheServer.js");
-var clegserver = require ("./LegacyCacheServer.js");
-var os = require('os');
-var path = require('path');
-var cluster = require('cluster');
+const cserver = require ("./CacheServer.js");
+const clegserver = require ("./LegacyCacheServer.js");
+const os = require('os');
+const path = require('path');
+const cluster = require('cluster');
 const numCPUs = os.cpus().length;
 
 /**
