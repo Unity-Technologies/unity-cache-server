@@ -69,7 +69,7 @@ function uuid ()
 	});
 };
 
-var LOG_LEVEL = 4; //Required for integration tests which scan for log messages
+var LOG_LEVEL = 3;
 var ERR = 1;
 var WARN = 2;
 var INFO = 3;
@@ -661,6 +661,7 @@ function handleData (socket, data)
 
 				if (!socket.activeGetFile)
 				{
+					socket.sendFilesStartTime = (new Date).getTime();
 					sendNextGetFile (socket);
 				}
 
@@ -895,6 +896,7 @@ var server = net.createServer (function (socket)
 	socket.currentGuid = null;
 	socket.currentHash = null;
 	socket.forceQuit = false;
+	socket.writeBufferSize = 1024 * 1024;
 
 	socket.on ('data', function (data)
 	{
@@ -904,6 +906,8 @@ var server = net.createServer (function (socket)
 
 	socket.on ('close', function (had_errors)
 	{
+		var endTime = (new Date).getTime();
+		log(INFO, "Total send file time: " + (endTime - socket.sendFilesStartTime));
 		log (ERR, "Socket closed");
 		socket.isActive = false;
 		var checkFunc = function ()
@@ -978,6 +982,7 @@ function sendNextGetFile (socket)
 {
 	if (socket.getFileQueue.length == 0)
 	{
+		socket.uncork();
 		socket.activeGetFile = null;
 		return;
 	}
@@ -989,8 +994,10 @@ function sendNextGetFile (socket)
 	var resbuf = next.buffer;
 	var type = next.type;
 	var file = fs.createReadStream (next.cacheStream);
+
 	// make sure no data is read and lost before we have called file.pipe ().
 	file.pause ();
+
 	socket.activeGetFile = file;
 	var errfunc = function (err)
 	{
@@ -1041,6 +1048,16 @@ function sendNextGetFile (socket)
 		}
 	});
 
+	file.on('data', function(chunk) {
+		if(socket.bufferSize < socket.writeBufferSize && !socket._writableState.corked)
+			socket.cork();
+
+		socket.write(chunk);
+
+		if(socket.bufferSize >= socket.writeBufferSize && socket._writableState.corked)
+			process.nextTick(() => socket.uncork());
+	});
+
 	file.on ('open', function (fd)
 	{
 		fs.fstat (fd, function (err, stats)
@@ -1052,7 +1069,7 @@ function sendNextGetFile (socket)
 				resbuf[0] = CMD_GETOK;
 				resbuf[1] = type;
 
-				log (INFO, "Found: " + next.cacheStream + " size:" + stats.size);
+				log (TEST, "Found: " + next.cacheStream + " size:" + stats.size);
 				writeUInt64 (stats.size, resbuf.slice (CMD_SIZE));
 
 				// The ID is already written
@@ -1060,7 +1077,6 @@ function sendNextGetFile (socket)
 				{
 					socket.write (resbuf);
 					file.resume ();
-					file.pipe (socket, { end: false });
 				}
 				catch (err)
 				{
