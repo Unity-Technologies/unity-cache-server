@@ -481,10 +481,13 @@ function GetCachePath (guid, hash, extension, create)
 	var dir = cacheDir + "/" + guid.substring (0, 2);
 	if (create)
 	{
-		log (DBG, "Create directory " + dir);
-		if(!fs.existsSync(dir)) fs.mkdir(dir, 0777, () => {});
+		fs.access(dir, (err) => {
+			if (err)
+				log (DBG, "Create directory " + dir);
+				fs.mkdir(dir, 0777, () => {});
+			}
+		}
 	}
-
 	return dir + "/" + guid + "-" + hash + "." + extension;
 }
 
@@ -1030,10 +1033,11 @@ function sendNextGetFile (socket)
 
 		try
 		{
-			// Touch the file, so that it becomes the newest accessed file for LRU cleanup - utimes expects a Unix timestamp in seconds, Date.now() returns millis
+			// Touch the file, so that it becomes the newest accessed file for LRU cleanup -
+			// utimes expects a Unix timestamp in seconds, Date.now() returns millis
 			dateNow = Date.now() / 1000;
 			log (DBG, "Updating mtime of " + next.cacheStream + " to: " + dateNow);
-			fs.utimesSync(next.cacheStream, dateNow, dateNow);
+			fs.utimes(next.cacheStream, dateNow, dateNow, () => {});
 		}
 		catch (err)
 		{
