@@ -906,6 +906,8 @@ var server = net.createServer (function (socket)
 	
 	socket.on ('close', function (had_errors)
 	{
+		var endTime = (new Date).getTime();
+		console.log("Total send file time: " + (endTime - socket.sendFilesStartTime));
 		log (ERR, "Socket closed");
 		socket.isActive = false;
 		var checkFunc = function () 
@@ -980,8 +982,6 @@ function sendNextGetFile (socket)
 {
 	if (socket.getFileQueue.length == 0)
 	{
-		var endTime = (new Date).getTime();
-		console.log("Total send file time: " + (endTime - socket.sendFilesStartTime));
 		socket.uncork();
 		socket.activeGetFile = null;
 		return;
