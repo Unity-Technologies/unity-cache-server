@@ -69,7 +69,7 @@ function uuid ()
 	});
 };
 
-var LOG_LEVEL = 4; //Required for integration tests which scan for log messages
+var LOG_LEVEL = 3;
 var ERR = 1;
 var WARN = 2;
 var INFO = 3;
@@ -1052,7 +1052,7 @@ function sendNextGetFile (socket)
 				resbuf[0] = CMD_GETOK;
 				resbuf[1] = type;
 			
-				log (INFO, "Found: " + next.cacheStream + " size:" + stats.size);
+				log (TEST, "Found: " + next.cacheStream + " size:" + stats.size);
 				writeUInt64 (stats.size, resbuf.slice (CMD_SIZE));
 				
 				// The ID is already written
