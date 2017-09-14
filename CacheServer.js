@@ -661,6 +661,7 @@ function handleData (socket, data)
 				
 				if (!socket.activeGetFile)
 				{
+					socket.sendFilesStartTime = (new Date).getTime();
 					sendNextGetFile (socket);
 				}
 			
@@ -895,7 +896,8 @@ var server = net.createServer (function (socket)
 	socket.currentGuid = null;
 	socket.currentHash = null;
 	socket.forceQuit = false;
-	
+	socket.writeBufferSize = 1024 * 1024;
+
 	socket.on ('data', function (data)
 	{
 		socket.isActive = true;
@@ -978,6 +980,9 @@ function sendNextGetFile (socket)
 {
 	if (socket.getFileQueue.length == 0)
 	{
+		var endTime = (new Date).getTime();
+		console.log("Total send file time: " + (endTime - socket.sendFilesStartTime));
+		socket.uncork();
 		socket.activeGetFile = null;
 		return;
 	}
@@ -989,8 +994,10 @@ function sendNextGetFile (socket)
 	var resbuf = next.buffer;
 	var type = next.type;
 	var file = fs.createReadStream (next.cacheStream);
+
 	// make sure no data is read and lost before we have called file.pipe ().
 	file.pause ();
+
 	socket.activeGetFile = file;
 	var errfunc = function (err)
 	{
@@ -1040,7 +1047,17 @@ function sendNextGetFile (socket)
 			log (ERR, "Failed to update mtime of " + next.cacheStream + ": " + err);
 		}
 	});
-	
+
+	file.on('data', function(chunk) {
+		if(socket.bufferSize < socket.writeBufferSize && !socket._writableState.corked)
+			socket.cork();
+
+		socket.write(chunk);
+
+		if(socket.bufferSize >= socket.writeBufferSize && socket._writableState.corked)
+			process.nextTick(() => socket.uncork());
+	});
+
 	file.on ('open', function (fd)
 	{
 		fs.fstat (fd, function (err, stats)
@@ -1060,7 +1077,6 @@ function sendNextGetFile (socket)
 				{
 					socket.write (resbuf);
 					file.resume ();
-					file.pipe (socket, { end: false });
 				}
 				catch (err)
 				{
