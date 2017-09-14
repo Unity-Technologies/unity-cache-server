@@ -312,7 +312,7 @@ function FixFileIfRequired(path, msg, fix)
 {
 	if (fix)
 	{
-		fs.unlinkSync (path);
+		fs.unlink (path, (err) => {});
 		log (DBG, msg + " File deleted.");
 	}
 	else
@@ -356,36 +356,30 @@ function ValidateFile (dir, file, fix)
 	if (matches[4].toLowerCase() == "info" || matches[4].toLowerCase() == "resource")
 	{
 		var checkedPath = cacheDir+"/"+dir+"/"+matches[1]+matches[2]+"-"+matches[3]+".bin";
-		try
-		{
-			fs.statSync(checkedPath);
-		}
-		catch (e)
-		{
-			var path = cacheDir+"/"+dir+"/"+file;
-			var msg = "Missing file "+checkedPath+" for "+path+".";
-			FixFileIfRequired (path, msg, fix);
-			verificationFailed = true;
-			verificationNumErrors++;
-		};
+		fs.stat(checkedPath, (err, stats) => {
+			if (err) {
+				var path = cacheDir+"/"+dir+"/"+file;
+				var msg = "Missing file "+checkedPath+" for "+path+".";
+				FixFileIfRequired (path, msg, fix);
+				verificationFailed = true;
+				verificationNumErrors++;
+			};
+		});
 	}
 
 	// Check if info file exists for bin or resource file
 	if (matches[4].toLowerCase() == "bin" || matches[4].toLowerCase() == "resource")
 	{
 		var checkedPath = cacheDir+"/"+dir+"/"+matches[1]+matches[2]+"-"+matches[3]+".info";
-		try
-		{
-			fs.statSync(checkedPath);
-		}
-		catch (e)
-		{
-			var path = cacheDir+"/"+dir+"/"+file;
-			var msg = "Missing file "+checkedPath+" for "+path+".";
-			FixFileIfRequired (path, msg, fix);
-			verificationFailed = true;
-			verificationNumErrors++;
-		};
+		fs.stat(checkedPath, (err, stats) => {
+			if (err) {
+				var path = cacheDir+"/"+dir+"/"+file;
+				var msg = "Missing file "+checkedPath+" for "+path+".";
+				FixFileIfRequired (path, msg, fix);
+				verificationFailed = true;
+				verificationNumErrors++;
+			};
+		});
 	}
 
 	// check if resource file exists for audio
@@ -397,22 +391,19 @@ function ValidateFile (dir, file, fix)
 			if (contents.indexOf ("assetImporterClassID: 1020") > 0)
 			{
 				var checkedPath = cacheDir+"/"+dir+"/"+matches[1]+matches[2]+"-"+matches[3]+".resource";
-				try
-				{
-					fs.statSync(checkedPath);
-				}
-				catch (e)
-				{
-					var path = cacheDir+"/"+dir+"/"+file;
-					var msg = "Missing audio file "+checkedPath+" for "+path+".";
-					FixFileIfRequired (path, msg, fix);
-					path = cacheDir+"/"+dir+"/"+matches[1]+matches[2]+"-"+matches[3]+".bin";
-					msg = "Missing audio file "+checkedPath+" for "+path+".";
-					FixFileIfRequired (path, msg, fix);
+				fs.stat(checkedPath, (err, stats) => {
+					if(err) {
+						var path = cacheDir+"/"+dir+"/"+file;
+						var msg = "Missing audio file "+checkedPath+" for "+path+".";
+						FixFileIfRequired (path, msg, fix);
+						path = cacheDir+"/"+dir+"/"+matches[1]+matches[2]+"-"+matches[3]+".bin";
+						msg = "Missing audio file "+checkedPath+" for "+path+".";
+						FixFileIfRequired (path, msg, fix);
 
-					verificationFailed = true;
-					verificationNumErrors++;
-				};
+						verificationFailed = true;
+						verificationNumErrors++;
+					}
+				});
 			}
 		}
 		catch (e)
@@ -698,7 +689,9 @@ function handleData (socket, data)
 					log (DBG, "Cancel previous transaction");
 					for (var i = 0 ; i < socket.targets.length ; i++)
 					{
-						fs.unlinkSync (socket.targets[i].from);
+						fs.unlink(socket.targets[i].from, (err) => {
+							log(ERR, "Cancel transaction unlink failed: " + socket.targets[i].from);
+						});
 					}
 				}
 
@@ -939,7 +932,7 @@ function RenameFile (from, to, size, oldSize)
 		if (err)
 		{
 			log (DBG, "Failed to rename file " + from + " to " + to + " (" + err + ")");
-			fs.unlinkSync (from);
+			fs.unlink (from, (err) => {});
 		}
 		// When replace succeeds. We reduce the cache size by previous file size and increase by new file size.
 		else
@@ -964,7 +957,8 @@ function ReplaceFile (from, to, size)
 				if (err)
 				{
 					log (DBG, "Failed to delete file " + to + " (" + err + ")");
-					fs.unlinkSync (from);
+					// swallow the error explicitly.  it's fine
+					fs.unlink(from, (err) => {});
 				}
 				// When delete succeeds. We rename the file..
 				else
