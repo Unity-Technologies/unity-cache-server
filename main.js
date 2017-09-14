@@ -1,6 +1,9 @@
 var cserver = require ("./CacheServer.js");
 var clegserver = require ("./LegacyCacheServer.js");
+var os = require('os');
 var path = require('path');
+var cluster = require('cluster');
+const numCPUs = os.cpus().length;
 
 /**
  * parse cmd line argument
@@ -22,27 +25,27 @@ function ParseArguments ()
 	{
 		var arg = process.argv[i];
 
-		if (arg.indexOf ("--size") == 0) 
+		if (arg.indexOf ("--size") == 0)
 		{
 			res.size = parseInt (process.argv[++i]);
-		} 
-		else if (arg.indexOf ("--path") == 0) 
+		}
+		else if (arg.indexOf ("--path") == 0)
 		{
 			res.cacheDir = process.argv[++i];
-		} 
-		else if (arg.indexOf ("--legacypath") == 0) 
+		}
+		else if (arg.indexOf ("--legacypath") == 0)
 		{
 			res.legacyCacheDir = process.argv[++i];
-		} 
-		else if (arg.indexOf ("--port") == 0) 
+		}
+		else if (arg.indexOf ("--port") == 0)
 		{
 			res.port = parseInt (process.argv[++i]);
 		}
-		else if (arg.indexOf ("--nolegacy") == 0) 
+		else if (arg.indexOf ("--nolegacy") == 0)
 		{
 			res.legacy = false;
 		}
-		else if (arg.indexOf ("--monitor-parent-process") == 0) 
+		else if (arg.indexOf ("--monitor-parent-process") == 0)
 		{
 			res.monitorParentProcess = process.argv[++i];
 		}
@@ -56,11 +59,11 @@ function ParseArguments ()
 			res.verify = false;
 			res.fix = true;
 		}
-		else if (arg.indexOf ("--silent") == 0) 
+		else if (arg.indexOf ("--silent") == 0)
 		{
 			res.logFunc = function(){};
 		}
-		else 
+		else
 		{
 			if (arg.indexOf ("--help") != 0)
 			{
@@ -91,13 +94,13 @@ if (res.verify)
 	{
 		console.log ("Cache Server directory integrity verified successfully.");
 	}
-	else 
+	else
 	{
 		if (numErrors == 0)
 		{
 			console.log ("Cache Server directory contains one integrity issue.");
 		}
-		else 
+		else
 		{
 			console.log ("Cache Server directory contains "+numErrors+" integrity issues.");
 		}
@@ -120,14 +123,14 @@ if (res.legacy)
 		console.log ("Cannot start Cache Server and Legacy Cache Server on the same port.");
 		process.exit (1);
 	}
-	
+
 	if (path.resolve (res.cacheDir) == path.resolve (res.legacyCacheDir))
 	{
 		console.log ("Cannot use same cache for Cache Server and Legacy Cache Server.");
 		process.exit (1);
 	}
-	
-	clegserver.Start (res.size, res.legacyCacheDir, res.logFunc, function (res) 
+
+	clegserver.Start (res.size, res.legacyCacheDir, res.logFunc, function (res)
 	{
 		console.log ("Unable to start Legacy Cache Server");
 		process.exit (1);
@@ -160,19 +163,42 @@ if (res.monitorParentProcess != 0)
 		}
 		setTimeout(monitor, 1000);
 	}
-	monitor();	
+	monitor();
 }
 
-cserver.Start (res.size, res.port, res.cacheDir, res.logFunc, function (res) 
-{
-	cserver.log (cserver.ERR, "Unable to start Cache Server");
-	process.exit (1);
-});
+// This is our primary process, let's start all the workers
+if (cluster.isMaster) {
+  console.log(`primary process ${process.pid} is running`);
 
-setTimeout (function ()
-{
-	// Inform integration tests that the cache server is ready
-	cserver.log (cserver.INFO, "Cache Server version " + cserver.GetVersion ());
-	cserver.log (cserver.INFO, "Cache Server on port " + cserver.GetPort ());
-	cserver.log (cserver.INFO, "Cache Server is ready");
-}, 50);
+	var workerCount = numCPUs;
+	// don't make one worker per logical core if we have a lot of cores
+	if (numCPUs > 6)
+		workerCount = numCPUs - 2;
+
+	// Fork workers.
+  for (let i = 0; i < workerCount; i++) {
+    cluster.fork();
+  }
+
+  cluster.on('exit', (worker, code, signal) => {
+    console.log(`worker ${worker.process.pid} died`);
+  });
+
+	setTimeout (function ()
+	{
+		// Inform integration tests that the cache server is ready
+		cserver.log (cserver.INFO, "Cache Server version " + cserver.GetVersion ());
+		cserver.log (cserver.INFO, "Cache Server on port " + cserver.GetPort ());
+		cserver.log (cserver.INFO, "Cache Server is ready");
+	}, 50);
+}
+// this is a worker process,  start an instance of the server
+else {
+	cserver.Start (res.size, res.port, res.cacheDir, res.logFunc, function (res)
+	{
+		cserver.log (cserver.ERR, "Unable to start Cache Server worker process");
+		process.exit (1);
+	});
+
+  console.log(`Worker ${process.pid} started`);
+}
