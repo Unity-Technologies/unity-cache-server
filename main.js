@@ -53,6 +53,10 @@ function ParseArguments ()
 		{
 			res.logFunc = function(){};
 		}
+		else if (arg.indexOf ("--logfile") == 0)
+		{
+			process.env.CACHE_SERVER_LOG_FILE = process.argv[++i];
+		}
 		else
 		{
 			if (arg.indexOf ("--help") != 0)
@@ -63,6 +67,7 @@ function ParseArguments ()
 				     "--port: specify the server port, only apply to new cache server, default is 8126\n" +
 				     "--path: specify the path of the cache directory, only apply to new cache server, default is ./cache5.0\n" +
 				     "--size: specify the maximum allowed size of the LRU cache for both servers. Files that have not been used recently will automatically be discarded when the cache size is exceeded\n" +
+						 "--logfile: specify a custom path for the log file.\n" +
 						 "--verify: verify the Cache Server integrity, no fix.\n" +
 						 "--fix: fix the Cache Server integrity."
 					 );

@@ -76,12 +76,14 @@ var INFO = 3;
 var TEST = 4;
 var DBG = 5;
 
+const DEFAULT_LOG_FILE = "CacheServer_Log.txt";
+const LOG_FILE = process.env.CACHE_SERVER_LOG_FILE || DEFAULT_LOG_FILE;
+const logStream = fs.createWriteStream(LOG_FILE);
+
 function log (lvl, msg)
 {
-	if (LOG_LEVEL < lvl)
-		return;
-
-	console.log (msg);
+	if (lvl <= LOG_LEVEL)
+		logStream.write(msg + '\n');
 }
 
 const CMD_QUIT = 'q'.charCodeAt (0);
