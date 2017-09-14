@@ -1,5 +1,4 @@
 const cserver = require ("./CacheServer.js");
-const clegserver = require ("./LegacyCacheServer.js");
 const os = require('os');
 const path = require('path');
 const cluster = require('cluster');
@@ -14,8 +13,7 @@ const numCPUs = os.cpus().length;
 function ParseArguments ()
 {
 	var res = {};
-	res.legacy = true;
-	res.legacyCacheDir = "./cache";
+	res.legacy = false;
 	res.cacheDir = "./cache5.0";
 	res.verify = false;
 	res.fix = false;
@@ -33,17 +31,9 @@ function ParseArguments ()
 		{
 			res.cacheDir = process.argv[++i];
 		}
-		else if (arg.indexOf ("--legacypath") == 0)
-		{
-			res.legacyCacheDir = process.argv[++i];
-		}
 		else if (arg.indexOf ("--port") == 0)
 		{
 			res.port = parseInt (process.argv[++i]);
-		}
-		else if (arg.indexOf ("--nolegacy") == 0)
-		{
-			res.legacy = false;
 		}
 		else if (arg.indexOf ("--monitor-parent-process") == 0)
 		{
@@ -72,9 +62,7 @@ function ParseArguments ()
 			console.log ("Usage: node main.js [--port serverPort] [--path pathToCache] [--legacypath pathToCache] [--size maximumSizeOfCache] [--nolegacy] [--verify|--fix]\n" +
 				     "--port: specify the server port, only apply to new cache server, default is 8126\n" +
 				     "--path: specify the path of the cache directory, only apply to new cache server, default is ./cache5.0\n" +
-				     "--legacypath: specify the path of the cache directory, only apply to legacy cache server, default is ./cache\n" +
 				     "--size: specify the maximum allowed size of the LRU cache for both servers. Files that have not been used recently will automatically be discarded when the cache size is exceeded\n" +
-				     "--nolegacy: do not start legacy cache server, otherwise legacy cache server will start on port 8125.\n" +
 						 "--verify: verify the Cache Server integrity, no fix.\n" +
 						 "--fix: fix the Cache Server integrity."
 					 );
@@ -114,34 +102,6 @@ if (res.fix)
 	cserver.Verify (res.cacheDir, null, true)
 	console.log ("Cache Server directory integrity fixed.");
 	process.exit (0);
-}
-
-if (res.legacy)
-{
-	if (res.port && res.port == clegserver.GetPort ())
-	{
-		console.log ("Cannot start Cache Server and Legacy Cache Server on the same port.");
-		process.exit (1);
-	}
-
-	if (path.resolve (res.cacheDir) == path.resolve (res.legacyCacheDir))
-	{
-		console.log ("Cannot use same cache for Cache Server and Legacy Cache Server.");
-		process.exit (1);
-	}
-
-	clegserver.Start (res.size, res.legacyCacheDir, res.logFunc, function (res)
-	{
-		console.log ("Unable to start Legacy Cache Server");
-		process.exit (1);
-	});
-
-	setTimeout (function ()
-	{
-		clegserver.log (clegserver.INFO, "Legacy Cache Server version " + clegserver.GetVersion ());
-		clegserver.log (clegserver.INFO, "Legacy Cache Server on port " + clegserver.GetPort ());
-		clegserver.log (clegserver.INFO, "Legacy Cache Server is ready");
-	}, 50);
 }
 
 if (res.monitorParentProcess != 0)

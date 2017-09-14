@@ -4,10 +4,10 @@ const path = require ('path');
 const buffers = require ('buffer');
 const assert = require ('assert');
 
-const cacheDir = "cache5.0";
-const version = "5.3";
-const port = 8126;
 const PROTOCOL_VERSION = 254;
+var cacheDir = "cache5.0";
+var version = "5.3";
+var port = 8126;
 var verificationFailed = false;
 var verificationNumErrors = 0;
 
@@ -477,11 +477,11 @@ function UpsertCachePath (guid, hash, extension)
 {
 	var dir = cacheDir + "/" + guid.substring (0, 2);
 	fs.access(dir, (err) => {
-		if (err)
+		if (err) {
 			log (DBG, "Create directory " + dir);
 			fs.mkdir(dir, 0777, () => {});
 		}
-	}
+	});
 	return dir + "/" + guid + "-" + hash + "." + extension;
 }
 
