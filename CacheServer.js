@@ -539,8 +539,6 @@ function handleData (socket, data)
 
 	while (true)
 	{
-		assert (socket.pendingData == null, "pending data must be null")
-
 		// Get the version as the first thing
 		var idx = 0;
 		if (!socket.protocolVersion)
