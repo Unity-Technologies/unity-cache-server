@@ -40,7 +40,7 @@ function readUInt64 (data)
 function writeUInt64 (indata, outbuf)
 {
 	var str = d2h (indata);
-	for (var i = 16 - str.length; i > 0; i--) 
+	for (var i = 16 - str.length; i > 0; i--)
 	{
 		str = '0' + str;
 	}
@@ -51,7 +51,7 @@ function readHex (len, data)
 {
 	var res = '';
 	var tmp;
-	for (var i = 0; i < len; i++) 
+	for (var i = 0; i < len; i++)
 	{
 		tmp = data[i];
 		tmp = ( (tmp & 0x0F) << 4) | ( (tmp >> 4) & 0x0F );
@@ -62,7 +62,7 @@ function readHex (len, data)
 
 function uuid ()
 {
-	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace (/[xy]/g, 
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace (/[xy]/g,
 		function (c) {
 			var r = Math.random ()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
 			return v.toString (16);
@@ -80,7 +80,7 @@ function log (lvl, msg)
 {
 	if (LOG_LEVEL < lvl)
 		return;
-	
+
 	console.log (msg);
 }
 
@@ -105,7 +105,7 @@ var OPT_VERIFY = 'v'.charCodeAt (0);
 var OPT_FIX = 'f'.charCodeAt (0);
 
 var UINT32_SIZE = 8;					// hex encoded
-var UINT64_SIZE = 16;					// hex 
+var UINT64_SIZE = 16;					// hex
 var HASH_SIZE = 16;						// bin
 var GUID_SIZE = 16;						// bin
 var ID_SIZE = GUID_SIZE + HASH_SIZE;	// bin
@@ -152,7 +152,7 @@ function WalkDirectory (dir, done)
 						else
 						{
 							results.push ({ name : file, date : stat.mtime, size : stat.size });
-							if (!--pending) 
+							if (!--pending)
 							{
 								done (null, results);
 							}
@@ -177,7 +177,7 @@ function FreeSpaceOfFile (removeParam)
 		if (err)
 		{
 			log (DBG, "Freeing cache space file can not be accessed: " + removeParam.name + err);
-			
+
 			// If removing the file fails, then we have to adjust the total data size back
 			gTotalDataSize += removeParam.size;
 		}
@@ -185,7 +185,7 @@ function FreeSpaceOfFile (removeParam)
 		{
 			log (TEST, " Did remove: " + removeParam.name + ". (" + removeParam.size + ")");
 		}
-			
+
 		UnlockFreeSpace ();
 	});
 }
@@ -196,10 +196,10 @@ function FreeSpace (freeSize)
 	{
 		log (DBG, "Skip free cache space because it is already in progress: " + gFreeingSpaceLock);
 		return;
-	}	
+	}
 
 	LockFreeSpace ();
-	
+
 	log (TEST, "Begin freeing cache space. Current size: " + gTotalDataSize);
 
 	WalkDirectory (cacheDir, function (err, files)
@@ -216,17 +216,17 @@ function FreeSpace (freeSize)
 			else
 				return -1;
 		});
-		
+
 		while (gTotalDataSize > freeSize)
 		{
 			var remove = files.pop ();
 			if (!remove)
 				break;
-			
+
 			gTotalDataSize -= remove.size;
 			FreeSpaceOfFile (remove);
-		}		
-		
+		}
+
 		UnlockFreeSpace ();
 	});
 }
@@ -303,7 +303,7 @@ function InitCache ()
 	log (DBG, "Cache Server directory " + path.resolve (cacheDir));
 	log (DBG, "Cache Server size " + gTotalDataSize);
 	log (DBG, "Cache Server max cache size " + maxCacheSize);
-	
+
 	if (gTotalDataSize > maxCacheSize)
 		FreeSpace (GetFreeCacheSize ());
 }
@@ -311,11 +311,11 @@ function InitCache ()
 function FixFileIfRequired(path, msg, fix)
 {
 	if (fix)
-	{	
+	{
 		fs.unlinkSync (path);
 		log (DBG, msg + " File deleted.");
 	}
-	else 
+	else
 	{
 		log (DBG, msg + " Please delete it.");
 	}
@@ -326,7 +326,7 @@ function ValidateFile (dir, file, fix)
 	if (ShouldIgnoreFile (file))
 	{
 		return;
-	}				
+	}
 
 	// Check file name
 	var pattern = new RegExp(/^([0-9a-f]{2})([0-9a-f]{30})-([0-9a-f]{32})\.(bin|info|resource)$/i);
@@ -337,7 +337,7 @@ function ValidateFile (dir, file, fix)
 		var msg = "File "+path+" doesn t match valid pattern.";
 		FixFileIfRequired (path, msg, fix);
 		verificationFailed = true;
-		verificationNumErrors++; 
+		verificationNumErrors++;
 		return;
 	}
 
@@ -404,12 +404,12 @@ function ValidateFile (dir, file, fix)
 				catch (e)
 				{
 					var path = cacheDir+"/"+dir+"/"+file;
-					var msg = "Missing audio file "+checkedPath+" for "+path+".";	
+					var msg = "Missing audio file "+checkedPath+" for "+path+".";
 					FixFileIfRequired (path, msg, fix);
 					path = cacheDir+"/"+dir+"/"+matches[1]+matches[2]+"-"+matches[3]+".bin";
-					msg = "Missing audio file "+checkedPath+" for "+path+".";	
+					msg = "Missing audio file "+checkedPath+" for "+path+".";
 					FixFileIfRequired (path, msg, fix);
-					
+
 					verificationFailed = true;
 					verificationNumErrors++;
 				};
@@ -465,7 +465,7 @@ function AddFileToCache (bytes)
 	{
 		gTotalDataSize += bytes;
 		log (DBG, "Total Cache Size " + gTotalDataSize);
-	
+
 		if (gTotalDataSize > maxCacheSize)
 			FreeSpace (GetFreeCacheSize ());
 	}
@@ -482,7 +482,7 @@ function GetCachePath (guid, hash, extension, create)
 	if (create)
 	{
 		log (DBG, "Create directory " + dir);
-		fs.existsSync(dir) || fs.mkdirSync(dir, 0777);
+		if(!fs.existsSync(dir)) fs.mkdir(dir, 0777, () => {});
 	}
 
 	return dir + "/" + guid + "-" + hash + "." + extension;
@@ -539,14 +539,14 @@ function handleData (socket, data)
 		data = buf;
 		socket.pendingData = null;
 	}
-	
+
 	while (true)
 	{
 		assert (socket.pendingData == null, "pending data must be null")
 
 		// Get the version as the first thing
 		var idx = 0;
-		if (!socket.protocolVersion) 
+		if (!socket.protocolVersion)
 		{
 			socket.protocolVersion = readUInt32 (data);
 			var buf = new buffers.Buffer (UINT32_SIZE);
@@ -569,7 +569,7 @@ function handleData (socket, data)
 				return false;
 			}
 		}
-		
+
 		// Write a a file to a temp location and move it in place when it has completed
 		if (socket.activePutFile != null)
 		{
@@ -580,7 +580,7 @@ function handleData (socket, data)
 			}
 			socket.activePutFile.write (data.slice (0, size), "binary");
 			socket.bytesToBeWritten -= size;
-						
+
 			// If we have written all data for this file. We can close the file.
 			if (socket.bytesToBeWritten <= 0)
 			{
@@ -590,7 +590,7 @@ function handleData (socket, data)
 					socket.tempPath = null;
 					socket.activePutTarget = null;
 					socket.totalFileSize = 0;
-					if (socket.isActive) 
+					if (socket.isActive)
 						socket.resume();
 				});
 				socket.activePutFile = null;
@@ -603,20 +603,20 @@ function handleData (socket, data)
 			// Return and wait for the next call to handleData to receive more data.
 			return true;
 		}
-		
+
 		if (data.length == 0)
 		{
 			// No more data
-			return false;				
+			return false;
 		}
-		
+
 		if (data[idx] == CMD_QUIT)
 		{
 			socket.end ();
 			socket.forceQuit = true;
 			return false;
 		}
-		
+
 		if (data[idx] == CMD_GET)
 		{
 			if (data.length < CMD_SIZE + ID_SIZE)
@@ -624,19 +624,19 @@ function handleData (socket, data)
 				socket.pendingData = data;
 				return true;
 			}
-			idx += 1;		
-				
+			idx += 1;
+
 			if (data[idx] == TYPE_ASSET || data[idx] == TYPE_INFO || data[idx] == TYPE_RESOURCE)
 			{
 				var reqType = data[idx];
-				
+
 				idx += 1;
 				var guid = readHex (GUID_SIZE, data.slice (idx));
 				var hash = readHex (HASH_SIZE, data.slice (idx + GUID_SIZE));
-			
+
 				var resbuf = new buffers.Buffer (CMD_SIZE + UINT64_SIZE + ID_SIZE);
 				data.copy (resbuf, CMD_SIZE + UINT64_SIZE, idx, idx + ID_SIZE); // copy guid + hash
-			
+
 				if (reqType == TYPE_ASSET)
 				{
 					log (TEST, "Get Asset Binary " + guid + "/" + hash);
@@ -658,12 +658,12 @@ function handleData (socket, data)
 					socket.destroy ();
 					return false;
 				}
-				
+
 				if (!socket.activeGetFile)
 				{
 					sendNextGetFile (socket);
 				}
-			
+
 				data = data.slice (idx + ID_SIZE);
 				continue;
 			}
@@ -677,7 +677,7 @@ function handleData (socket, data)
 				return true;
 			}
 			idx += 1;
-			
+
 			if (data[idx] == TRX_START)
 			{
 				if (data.length < CMD_SIZE + ID_SIZE)
@@ -685,7 +685,7 @@ function handleData (socket, data)
 					socket.pendingData = data;
 					return true;
 				}
-				
+
 				// Error: The previous transaction was not completed
 				if (socket.inTransaction)
 				{
@@ -695,14 +695,14 @@ function handleData (socket, data)
 						fs.unlinkSync (socket.targets[i].from);
 					}
 				}
-				
+
 				idx += 1;
 
 				socket.targets = [];
 				socket.inTransaction = true;
 				socket.currentGuid = readHex (GUID_SIZE, data.slice (idx));
 				socket.currentHash = readHex (HASH_SIZE, data.slice (idx + GUID_SIZE));
-				
+
 				log (DBG, "Start transaction for " + socket.currentGuid + "-" + socket.currentHash);
 
 				data = data.slice (idx + ID_SIZE);
@@ -716,12 +716,12 @@ function handleData (socket, data)
 					socket.destroy ();
 					return false;
 				}
-				
+
 				// We have not completed writing the previous file
 				if (socket.activePutTarget != null)
 				{
 					// Keep the data in pending for the next handleData call
-					if (socket.isActive) 
+					if (socket.isActive)
 						socket.pause();
 					socket.pendingData = data;
 					return true;
@@ -735,7 +735,7 @@ function handleData (socket, data)
 					log (DBG, "Rename " + socket.targets[i].from + " to " + socket.targets[i].to);
 					ReplaceFile (socket.targets[i].from, socket.targets[i].to, socket.targets[i].size);
 				}
-				
+
 				socket.targets = [];
 				socket.inTransaction = false;
 				socket.currentGuid = null;
@@ -754,7 +754,7 @@ function handleData (socket, data)
 		}
 		// Put a file from the client to the cache server
 		else if (data[idx] == CMD_PUT)
-		{ 
+		{
 			if (!socket.inTransaction)
 			{
 				log (ERR, "Not in a transaction");
@@ -766,12 +766,12 @@ function handleData (socket, data)
 			if (socket.activePutTarget != null)
 			{
 				// Keep the data in pending for the next handleData call
-				if (socket.isActive) 
+				if (socket.isActive)
 					socket.pause();
 				socket.pendingData = data;
 				return true;
 			}
-			
+
 			/// * We don't have enough data to start the put request. (wait for more data)
 			if (data.length < CMD_SIZE)
 			{
@@ -783,10 +783,10 @@ function handleData (socket, data)
 			if (data[idx] == TYPE_ASSET || data[idx] == TYPE_INFO || data[idx] == TYPE_RESOURCE)
 			{
 				var reqType = data[idx];
-				
+
 				idx += 1;
 				var size = readUInt64 (data.slice (idx));
-			
+
 				if (reqType == TYPE_ASSET)
 				{
 					log (TEST, "Put Asset Binary " + socket.currentGuid + "-" + socket.currentHash + " (size " + size + ")");
@@ -808,10 +808,10 @@ function handleData (socket, data)
 					socket.destroy ();
 					return false;
 				}
-			
+
 				socket.tempPath = cacheDir + "/Temp" + uuid ();
-				socket.activePutFile = fs.createWriteStream (socket.tempPath);			
-			
+				socket.activePutFile = fs.createWriteStream (socket.tempPath);
+
 				socket.activePutFile.on ('error', function (err)
 				{
 					// Test that this codepath works correctly
@@ -822,7 +822,7 @@ function handleData (socket, data)
 				});
 				socket.bytesToBeWritten = size;
 				socket.totalFileSize = size;
-			
+
 				data = data.slice (idx + UINT64_SIZE);
 				continue;
 			}
@@ -836,18 +836,18 @@ function handleData (socket, data)
 				return true;
 			}
 			idx += 1;
-			
+
 			if (socket.inTransaction)
 			{
 				log (ERR, "In a transaction");
 				socket.destroy ();
 				return false;
 			}
-			
+
 			if (data[idx] == CMD_CHECK && (data[idx + 1] == OPT_VERIFY || data[idx + 1] == OPT_FIX))
 			{
 				var fixIt = (data[idx + 1] == OPT_FIX);
-				
+
 				verificationNumErrors = 0;
 				log (DBG, "Cache Server integrity check ("+(fixIt?"fix it":"verify only")+")");
 				VerifyCacheDirectory (null, cacheDir, fixIt);
@@ -859,11 +859,11 @@ function handleData (socket, data)
 				var buf = new buffers.Buffer (CMD_SIZE + UINT64_SIZE);
 				buf[0] = CMD_INTEGRITY;
 				buf[1] = CMD_CHECK;
-				
+
 				writeUInt64 (verificationNumErrors, buf.slice (CMD_SIZE));
 				if (socket.isActive)
 					socket.write (buf);
-					
+
 				idx += 2;
 			}
 			else
@@ -873,7 +873,7 @@ function handleData (socket, data)
 				return false;
 			}
 		}
-						
+
 		// We need more data to write the file completely
 		return true;
 	}
@@ -895,18 +895,18 @@ var server = net.createServer (function (socket)
 	socket.currentGuid = null;
 	socket.currentHash = null;
 	socket.forceQuit = false;
-	
+
 	socket.on ('data', function (data)
 	{
 		socket.isActive = true;
 		handleData (socket, data);
 	});
-	
+
 	socket.on ('close', function (had_errors)
 	{
 		log (ERR, "Socket closed");
 		socket.isActive = false;
-		var checkFunc = function () 
+		var checkFunc = function ()
 		{
 			var data = new Buffer (0);
 			if (handleData (socket, data))
@@ -914,11 +914,11 @@ var server = net.createServer (function (socket)
 				setTimeout (checkFunc, 1);
 			}
 		}
-		
+
 		if (!had_errors && !socket.forceQuit)
 			checkFunc ();
 	});
-	
+
 	socket.on ('error', function (err)
 	{
 		log (ERR, "Socket error " + err);
@@ -928,11 +928,11 @@ var server = net.createServer (function (socket)
 function RenameFile (from, to, size, oldSize)
 {
 	fs.rename (from, to, function (err)
-	{			
-		// When the rename fails. We just delete the temp file. The size of the cache has not changed.				
+	{
+		// When the rename fails. We just delete the temp file. The size of the cache has not changed.
 		if (err)
 		{
-			log (DBG, "Failed to rename file " + from + " to " + to + " (" + err + ")");				
+			log (DBG, "Failed to rename file " + from + " to " + to + " (" + err + ")");
 			fs.unlinkSync (from);
 		}
 		// When replace succeeds. We reduce the cache size by previous file size and increase by new file size.
@@ -953,11 +953,11 @@ function ReplaceFile (from, to, size)
 		{
 			oldSize = stats.size;
 			fs.unlink (to, function (err)
-			{			
-				// When the delete fails. We just delete the temp file. The size of the cache has not changed.				
+			{
+				// When the delete fails. We just delete the temp file. The size of the cache has not changed.
 				if (err)
 				{
-					log (DBG, "Failed to delete file " + to + " (" + err + ")");				
+					log (DBG, "Failed to delete file " + to + " (" + err + ")");
 					fs.unlinkSync (from);
 				}
 				// When delete succeeds. We rename the file..
@@ -967,7 +967,7 @@ function ReplaceFile (from, to, size)
 				}
 			});
 		}
-		else 
+		else
 		{
 			RenameFile (from, to, size, 0);
 		}
@@ -1008,11 +1008,11 @@ function sendNextGetFile (socket)
 		}
 		finally
 		{
-			if (socket.isActive) 
+			if (socket.isActive)
 			{
 				sendNextGetFile (socket);
-			} 
-			else 
+			}
+			else
 			{
 				log (ERR, "Socket closed, close active file");
 				file.close();
@@ -1040,21 +1040,21 @@ function sendNextGetFile (socket)
 			log (ERR, "Failed to update mtime of " + next.cacheStream + ": " + err);
 		}
 	});
-	
+
 	file.on ('open', function (fd)
 	{
 		fs.fstat (fd, function (err, stats)
 		{
-			if (err) 
+			if (err)
 				errfunc (err);
 			else
 			{
 				resbuf[0] = CMD_GETOK;
 				resbuf[1] = type;
-			
+
 				log (INFO, "Found: " + next.cacheStream + " size:" + stats.size);
 				writeUInt64 (stats.size, resbuf.slice (CMD_SIZE));
-				
+
 				// The ID is already written
 				try
 				{
@@ -1141,11 +1141,12 @@ exports.Start = function (a_cacheSize, a_port, a_path, a_logFn, a_errCallback)
 	port = a_port || port;
 	cacheDir = a_path || cacheDir;
 
-	InitCache ();
+	if (!fs.existsSync(cacheDir))
+		InitCache ();
 
-	server.on ('error', function (e) 
+	server.on ('error', function (e)
 	{
-		if (e.code == 'EADDRINUSE') 
+		if (e.code == 'EADDRINUSE')
 		{
 			log (ERR, 'Port '+ port + ' is already in use...');
 			if (a_errCallback)
