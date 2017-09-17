@@ -61,6 +61,7 @@ function generateCommandData() {
         blob: Buffer.from(crypto.randomBytes(1024).toString('ascii'), 'ascii')
     }
 }
+
 function encodeCommand(command, guid, hash, blob) {
 
     if(blob)
@@ -221,10 +222,10 @@ describe("CacheServer protocol", function() {
                 });
 
                 client.write(encodeCommand(test.cmd, null, null, self.data.blob));
+                client.write(encodeCommand(cmd.transactionEnd));
 
                 // The server is doing async file operations to move the file into place. be patient.
-                sleep(50).then(() => {
-                    client.write(encodeCommand(cmd.transactionEnd));
+                sleep(25).then(() => {
                     client.end();
                 });
             });
