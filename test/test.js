@@ -18,8 +18,27 @@ function zeroPad(len, str) {
 
     return str;
 }
-function int32ToBuffer(input) {
-    return Buffer.from(zeroPad(8, input.toString(16)), 'ascii');
+
+var cmd = {
+    quit: "q",
+    getAsset: "ga",
+    getInfo: "gi",
+    getResource: "gr",
+    putAsset: "pa",
+    putInfo: "pi",
+    putResource: "pr",
+    transactionStart: "ts",
+    transactionEnd: "te",
+    integrityVerify: "icv",
+    integrityFix: "icf"
+};
+
+function encodeInt32(input) {
+    return zeroPad(8, input.toString(16));
+}
+
+function encodeInt64(input) {
+    return zeroPad(16, input.toString(16));
 }
 
 function bufferToInt32(input) {
@@ -56,7 +75,7 @@ describe("CacheServer protocol", function() {
                 done();
             });
 
-            client.write(int32ToBuffer(cache_proto_ver));
+            client.write(encodeInt32(cache_proto_ver));
         });
 
         it("should respond with 0 if unsupported", function (done) {
@@ -66,7 +85,7 @@ describe("CacheServer protocol", function() {
                 done();
             });
 
-            client.write(int32ToBuffer(cache_proto_ver + 1));
+            client.write(encodeInt32(cache_proto_ver + 1));
         });
     });
 
@@ -74,8 +93,8 @@ describe("CacheServer protocol", function() {
 
         beforeEach(function (done) {
             client = net.connect({port: cache_port}, function (err) {
-                client.write(int32ToBuffer(cache_proto_ver));
                 assert(!err);
+                client.write(encodeInt32(cache_proto_ver));
                 done();
             });
         });
@@ -87,11 +106,11 @@ describe("CacheServer protocol", function() {
                 }
             });
 
-            var cmd = "ts"
+            var data = cmd.transactionStart
                 + crypto.randomBytes(16).toString('ascii')
                 + crypto.randomBytes(16).toString('ascii');
 
-            client.write(Buffer.from(cmd, 'ascii'));
+            client.write(data);
         });
 
         it("should cancel a pending transaction if a new (ts) command is received", function (done) {
@@ -101,12 +120,11 @@ describe("CacheServer protocol", function() {
                 }
             });
 
-            var cmd = "ts"
+            var data = cmd.transactionStart
                 + crypto.randomBytes(16).toString('ascii')
                 + crypto.randomBytes(16).toString('ascii');
 
-            client.write(Buffer.from(cmd, 'ascii'));
-            client.write(Buffer.from(cmd, 'ascii')); // again to start a new one
+            client.write(data + data);
         });
 
         it("should require a start transaction (ts) cmd before an end transaction (te) cmd", function (done) {
@@ -116,7 +134,7 @@ describe("CacheServer protocol", function() {
                 }
             });
 
-            client.write(Buffer.from("te", 'ascii'));
+            client.write(cmd.transactionEnd);
         });
 
         it("should end a transaction that was started", function (done) {
@@ -126,19 +144,87 @@ describe("CacheServer protocol", function() {
                 }
             });
 
-            var cmd = "ts"
+            var data = cmd.transactionStart
                 + crypto.randomBytes(16).toString('ascii')
                 + crypto.randomBytes(16).toString('ascii');
 
-            client.write(Buffer.from(cmd, 'ascii'));
-            client.write(Buffer.from("te", 'ascii'));
+            client.write(data);
+            client.write(cmd.transactionEnd);
         });
     });
 
     describe("PUT requests", function () {
-        it("should store an asset with a put asset (pa) cmd");
-        it("should store an info with a put info(pi) cmd");
-        it("should store a resource with a put resource (pr) cmd");
+
+        before(function (done) {
+            client = net.connect({port: cache_port}, function (err) {
+                assert(!err);
+
+                // Write version
+                client.write(encodeInt32(cache_proto_ver));
+
+                // Start transaction
+                var data = cmd.transactionStart
+                    + crypto.randomBytes(16).toString('ascii')
+                    + crypto.randomBytes(16).toString('ascii');
+
+                client.write(data);
+
+                done();
+            });
+        });
+
+        it("should store an asset with a put asset (pa) cmd", function(done) {
+            cserver.SetLogger(function(lvl, msg) {
+                if(msg.startsWith("Put Asset Binary")) {
+                    done();
+                }
+            });
+
+            var data = cmd.putAsset //cmd
+                + encodeInt64(1024) // size
+                + crypto.randomBytes(1024).toString('ascii'); // blob
+
+            client.write(data);
+        });
+
+        it("should store an info with a put info(pi) cmd", function(done) {
+            cserver.SetLogger(function(lvl, msg) {
+                if(msg.startsWith("Put Asset Info")) {
+                    done();
+                }
+            });
+
+            var data = cmd.putInfo //cmd
+                + encodeInt64(1024) // size
+                + crypto.randomBytes(1024).toString('ascii'); // blob
+
+            client.write(data);
+        });
+
+        it("should store a resource with a put resource (pr) cmd", function(done) {
+            cserver.SetLogger(function(lvl, msg) {
+                if(msg.startsWith("Put Asset Resource")) {
+                    done();
+                }
+            });
+
+            var data = cmd.putResource //cmd
+                + encodeInt64(1024) // size
+                + crypto.randomBytes(1024).toString('ascii'); // blob
+
+            client.write(data);
+        });
+
+        it("should move temp uploaded files into place when the transaction is ended", function(done) {
+            cserver.SetLogger(function(lvl, msg) {
+                if(msg.startsWith("Rename ")) {
+                    cserver.SetLogger(null);
+                    done();
+                }
+            });
+
+            client.write(cmd.transactionEnd);
+        });
     });
 
     describe("GET requests", function() {
@@ -151,6 +237,7 @@ describe("CacheServer protocol", function() {
     });
 
     describe("Integrity check", function() {
+        it("should not allow an integrity check while in a transaction");
         it("should only verify integrity with the integrity check-verify command (icv)");
         it("should verify and fix errors with the integrity check-fix command (icf)");
         it("should respond with the number of errors detected with any integrity check command");

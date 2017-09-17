@@ -590,8 +590,14 @@ function handleData (socket, data)
 					socket.tempPath = null;
 					socket.activePutTarget = null;
 					socket.totalFileSize = 0;
-					if (socket.isActive) 
+					if (socket.isActive) {
 						socket.resume();
+
+						// It's possible to have already processed a 'te' (transaction end) event before this callback is called.
+						// Emit an empty data event on the socket to ensure the 'te' event is re-processed now that we finished
+						// saving this file
+						socket.emit('data', Buffer.from([]));
+					}
 				});
 				socket.activePutFile = null;
 
