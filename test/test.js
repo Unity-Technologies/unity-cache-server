@@ -5,6 +5,8 @@ const fs = require('fs');
 const cserver = require('../CacheServer.js');
 
 const CACHE_SIZE = 1024 * 1024;
+const MIN_BLOB_SIZE = 64;
+const MAX_BLOB_SIZE = 2048;
 
 var cache_port = 0;
 var cache_proto_ver = 0;
@@ -55,10 +57,12 @@ function sleep(ms) {
 }
 
 function generateCommandData() {
+    var blobSize = Math.max(MIN_BLOB_SIZE, Math.floor(Math.random() * MAX_BLOB_SIZE));
+
     return {
         guid: Buffer.from(crypto.randomBytes(16).toString('ascii'), 'ascii'),
         hash: Buffer.from(crypto.randomBytes(16).toString('ascii'), 'ascii'),
-        blob: Buffer.from(crypto.randomBytes(1024).toString('ascii'), 'ascii')
+        blob: Buffer.from(crypto.randomBytes(blobSize).toString('ascii'), 'ascii')
     }
 }
 
