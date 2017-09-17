@@ -20,8 +20,6 @@ function readUInt32 (data)
 	return h2d (data.toString ('ascii', 0, 8));
 }
 
-exports.readUInt32 = readUInt32;
-
 function writeUInt32 (indata, outbuf)
 {
 	var str = d2h (indata);
@@ -31,8 +29,6 @@ function writeUInt32 (indata, outbuf)
 	outbuf.write (str, 0, 'ascii');
 }
 
-exports.writeUInt32 = writeUInt32;
-
 // All numbers in js is 64 floats which means
 // man 2^52 is the max integer size that does not
 // use the exponent. This should not be a problem.
@@ -40,8 +36,6 @@ function readUInt64 (data)
 {
 	return h2d (data.toString ('ascii', 0, 16));
 }
-
-exports.readUInt64 = readUInt64;
 
 function writeUInt64 (indata, outbuf)
 {
@@ -52,8 +46,6 @@ function writeUInt64 (indata, outbuf)
 	}
 	outbuf.write (str, 0, 'ascii');
 }
-
-exports.writeUInt64 = writeUInt64;
 
 function readHex (len, data)
 {
