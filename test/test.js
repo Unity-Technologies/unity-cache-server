@@ -1,20 +1,25 @@
 const assert = require('assert');
 const net = require('net');
+const crypto = require('crypto');
 const cserver = require('../CacheServer.js');
 
 const CACHE_SIZE = 1024 * 1024;
-const DEBUG_SERVER_OUPUT = false;
 
 var cache_port = 0;
+var cache_proto_ver = 0;
 var cache_path = require('os').tmpdir() + "/" + cserver.UUID();
 
-var logger = function(lvl, msg) {
-    if(DEBUG_SERVER_OUPUT)
-        console.log(msg);
-};
+var client;
 
-function getWriteBuffer(input) {
-    return Buffer.from(input.toString(16), 'ascii');
+function zeroPad(len, str) {
+    for (var i = len - str.length; i > 0; i--) {
+        str = '0' + str;
+    }
+
+    return str;
+}
+function int32ToBuffer(input) {
+    return Buffer.from(zeroPad(8, input.toString(16)), 'ascii');
 }
 
 function bufferToInt32(input) {
@@ -25,54 +30,112 @@ function bufferToInt64(input) {
     return parseInt(input.toString('ascii', 0, 16), 16);
 }
 
-var client;
-
 describe("CacheServer protocol", function() {
 
-    before(function(done) {
-        cserver.Start(CACHE_SIZE, 0, cache_path, logger, function(err) {
+    before(function (done) {
+        cserver.Start(CACHE_SIZE, 0, cache_path, function (lvl, msg) {
+        }, function (err) {
             assert(!err, "Cache Server reported error!");
         });
 
         cache_port = cserver.GetPort();
+        cache_proto_ver = cserver.GetProtocolVersion();
         done();
     });
 
-    beforeEach(function(done) {
-        client = net.connect({port: cache_port}, done);
-    });
+    describe("Version check", function () {
 
-    describe("Version check", function() {
-        it("should echo the version if supported", function(done) {
-            var pv = cserver.GetProtocolVersion();
+        beforeEach(function (done) {
+            client = net.connect({port: cache_port}, done);
+        });
 
-            client.on('data', function(data) {
+        it("should echo the version if supported", function (done) {
+            client.on('data', function (data) {
                 var ver = bufferToInt32(data);
-                assert(ver == pv, "Expected " + pv + " Received " + ver);
+                assert(ver == cache_proto_ver, "Expected " + cache_proto_ver + " Received " + ver);
                 done();
             });
 
-            client.write(getWriteBuffer(pv));
+            client.write(int32ToBuffer(cache_proto_ver));
         });
 
-        it("should respond with 0 if unsupported", function(done) {
-            client.on('data', function(data) {
+        it("should respond with 0 if unsupported", function (done) {
+            client.on('data', function (data) {
                 var ver = bufferToInt32(data);
                 assert(ver == 0, "Expected 0, Received " + ver);
                 done();
             });
 
-            client.write(getWriteBuffer(cserver.GetProtocolVersion() + 1));
+            client.write(int32ToBuffer(cache_proto_ver + 1));
+        });
+    });
+
+    describe("Transactions", function () {
+
+        beforeEach(function (done) {
+            client = net.connect({port: cache_port}, function (err) {
+                client.write(int32ToBuffer(cache_proto_ver));
+                assert(!err);
+                done();
+            });
+        });
+
+        it("should handle the start transaction (ts) command", function (done) {
+            cserver.SetLogger(function (lvl, msg) {
+                if (msg.startsWith("Start transaction")) {
+                    done();
+                }
+            });
+
+            var cmd = "ts"
+                + crypto.randomBytes(16).toString('ascii')
+                + crypto.randomBytes(16).toString('ascii');
+
+            client.write(Buffer.from(cmd, 'ascii'));
+        });
+
+        it("should cancel a pending transaction if a new (ts) command is received", function (done) {
+            cserver.SetLogger(function (lvl, msg) {
+                if (msg.startsWith("Cancel previous transaction")) {
+                    done();
+                }
+            });
+
+            var cmd = "ts"
+                + crypto.randomBytes(16).toString('ascii')
+                + crypto.randomBytes(16).toString('ascii');
+
+            client.write(Buffer.from(cmd, 'ascii'));
+            client.write(Buffer.from(cmd, 'ascii')); // again to start a new one
+        });
+
+        it("should require a start transaction (ts) cmd before an end transaction (te) cmd", function (done) {
+            cserver.SetLogger(function (lvl, msg) {
+                if (msg.startsWith("Invalid transaction isolation")) {
+                    done();
+                }
+            });
+
+            client.write(Buffer.from("te", 'ascii'));
+        });
+
+        it("should end a transaction that was started", function (done) {
+            cserver.SetLogger(function (lvl, msg) {
+                if (msg.startsWith("End transaction for")) {
+                    done();
+                }
+            });
+
+            var cmd = "ts"
+                + crypto.randomBytes(16).toString('ascii')
+                + crypto.randomBytes(16).toString('ascii');
+
+            client.write(Buffer.from(cmd, 'ascii'));
+            client.write(Buffer.from("te", 'ascii'));
         });
     });
 
     describe("PUT requests", function () {
-        it("should handle the start transaction (ts) command", function(done) {
-            done();
-        });
-
-        it("should cancel a pending transaction if a new (ts) command is received");
-        it("should require a start transaction (ts) cmd before an end transaction (te) cmd");
         it("should store an asset with a put asset (pa) cmd");
         it("should store an info with a put info(pi) cmd");
         it("should store a resource with a put resource (pr) cmd");

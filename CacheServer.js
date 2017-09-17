@@ -1184,3 +1184,7 @@ exports.UUID = function()
 {
 	return uuid();
 };
+
+exports.SetLogger = function(logger) {
+	log = logger;
+};
