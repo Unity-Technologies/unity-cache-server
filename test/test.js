@@ -1,6 +1,7 @@
 const assert = require('assert');
 const net = require('net');
 const crypto = require('crypto');
+const fs = require('fs');
 const cserver = require('../CacheServer.js');
 
 const CACHE_SIZE = 1024 * 1024;
@@ -49,7 +50,15 @@ function bufferToInt64(input) {
     return parseInt(input.toString('ascii', 0, 16), 16);
 }
 
+function sleep (ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 describe("CacheServer protocol", function() {
+
+    beforeEach(function() {
+        cserver.SetLogger(function(lvl, msg) {});
+    });
 
     before(function (done) {
         cserver.Start(CACHE_SIZE, 0, cache_path, function (lvl, msg) {
@@ -155,7 +164,15 @@ describe("CacheServer protocol", function() {
 
     describe("PUT requests", function () {
 
-        before(function (done) {
+        var self = this;
+        this.getCachePath = function(extension) {
+            return cserver.GetCachePath(
+                cserver.readHex(self.guid.length, self.guid),
+                cserver.readHex(self.hash.length, self.hash),
+                extension, false);
+        };
+
+        beforeEach(function (done) {
             client = net.connect({port: cache_port}, function (err) {
                 assert(!err);
 
@@ -163,67 +180,42 @@ describe("CacheServer protocol", function() {
                 client.write(encodeInt32(cache_proto_ver));
 
                 // Start transaction
-                var data = cmd.transactionStart
-                    + crypto.randomBytes(16).toString('ascii')
-                    + crypto.randomBytes(16).toString('ascii');
-
-                client.write(data);
-
+                var ts = Buffer.from(cmd.transactionStart);
+                self.guid = Buffer.from(crypto.randomBytes(16), 'ascii');
+                self.hash = Buffer.from(crypto.randomBytes(16), 'ascii');
+                client.write(Buffer.concat([ts, self.guid, self.hash]));
                 done();
             });
         });
 
-        it("should store an asset with a put asset (pa) cmd", function(done) {
-            cserver.SetLogger(function(lvl, msg) {
-                if(msg.startsWith("Put Asset Binary")) {
-                    done();
-                }
+        var tests = [
+            {ext: 'bin', cmd: cmd.putAsset},
+            {ext: 'info', cmd: cmd.putInfo},
+            {ext: 'resource', cmd: cmd.putResource}
+        ];
+
+        tests.forEach(function(test) {
+            it("should store " + test.ext + " with a (" + test.cmd + ") cmd", function(done) {
+                client.on('close', function() {
+                    fs.open(self.getCachePath(test.ext), 'r', function(err, fd) {
+                        assert(!err, err);
+                        var buf = fs.readFileSync(fd);
+                        assert(buf.compare(data) == 0);
+                        done();
+                    });
+                });
+
+                var data = Buffer.from(crypto.randomBytes(1024).toString('ascii'));
+                var size = encodeInt64(data.length);
+
+                client.write(test.cmd + size + data.toString('ascii'));
+                client.write(cmd.transactionEnd);
+
+                // The server is doing async file operations to move the file into place. be patient.
+                sleep(50).then(() => {
+                    client.end();
+                });
             });
-
-            var data = cmd.putAsset //cmd
-                + encodeInt64(1024) // size
-                + crypto.randomBytes(1024).toString('ascii'); // blob
-
-            client.write(data);
-        });
-
-        it("should store an info with a put info(pi) cmd", function(done) {
-            cserver.SetLogger(function(lvl, msg) {
-                if(msg.startsWith("Put Asset Info")) {
-                    done();
-                }
-            });
-
-            var data = cmd.putInfo //cmd
-                + encodeInt64(1024) // size
-                + crypto.randomBytes(1024).toString('ascii'); // blob
-
-            client.write(data);
-        });
-
-        it("should store a resource with a put resource (pr) cmd", function(done) {
-            cserver.SetLogger(function(lvl, msg) {
-                if(msg.startsWith("Put Asset Resource")) {
-                    done();
-                }
-            });
-
-            var data = cmd.putResource //cmd
-                + encodeInt64(1024) // size
-                + crypto.randomBytes(1024).toString('ascii'); // blob
-
-            client.write(data);
-        });
-
-        it("should move temp uploaded files into place when the transaction is ended", function(done) {
-            cserver.SetLogger(function(lvl, msg) {
-                if(msg.startsWith("Rename ")) {
-                    cserver.SetLogger(null);
-                    done();
-                }
-            });
-
-            client.write(cmd.transactionEnd);
         });
     });
 

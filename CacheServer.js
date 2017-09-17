@@ -60,6 +60,8 @@ function readHex (len, data)
 	return res;
 }
 
+exports.readHex = readHex;
+
 function uuid ()
 {
 	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace (/[xy]/g, 
@@ -488,6 +490,8 @@ function GetCachePath (guid, hash, extension, create)
 	return dir + "/" + guid + "-" + hash + "." + extension;
 }
 
+exports.GetCachePath = GetCachePath;
+
 /*
 Protocol
 ========
@@ -594,9 +598,9 @@ function handleData (socket, data)
 						socket.resume();
 
 						// It's possible to have already processed a 'te' (transaction end) event before this callback is called.
-						// Emit an empty data event on the socket to ensure the 'te' event is re-processed now that we finished
+						// Call handleData again to ensure the 'te' event is re-processed now that we finished
 						// saving this file
-						socket.emit('data', Buffer.from([]));
+						handleData(socket, Buffer.from([]));
 					}
 				});
 				socket.activePutFile = null;
