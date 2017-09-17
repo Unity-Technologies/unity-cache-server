@@ -12,14 +12,6 @@ var cache_path = require('os').tmpdir() + "/" + cserver.UUID();
 
 var client;
 
-function zeroPad(len, str) {
-    for (var i = len - str.length; i > 0; i--) {
-        str = '0' + str;
-    }
-
-    return str;
-}
-
 var cmd = {
     quit: "q",
     getAsset: "ga",
@@ -33,6 +25,14 @@ var cmd = {
     integrityVerify: "icv",
     integrityFix: "icf"
 };
+
+function zeroPad(len, str) {
+    for (var i = len - str.length; i > 0; i--) {
+        str = '0' + str;
+    }
+
+    return str;
+}
 
 function encodeInt32(input) {
     return zeroPad(8, input.toString(16));
@@ -50,8 +50,32 @@ function bufferToInt64(input) {
     return parseInt(input.toString('ascii', 0, 16), 16);
 }
 
-function sleep (ms) {
+function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function generateCommandData() {
+    return {
+        guid: Buffer.from(crypto.randomBytes(16).toString('ascii'), 'ascii'),
+        hash: Buffer.from(crypto.randomBytes(16).toString('ascii'), 'ascii'),
+        blob: Buffer.from(crypto.randomBytes(1024).toString('ascii'), 'ascii')
+    }
+}
+function encodeCommand(command, guid, hash, blob) {
+
+    if(blob)
+        command += encodeInt64(blob.length);
+
+    if(guid)
+        command += guid;
+
+    if(hash)
+        command += hash;
+
+    if(blob)
+        command += blob;
+
+    return command;
 }
 
 describe("CacheServer protocol", function() {
@@ -100,9 +124,12 @@ describe("CacheServer protocol", function() {
 
     describe("Transactions", function () {
 
+        var self = this;
+
         beforeEach(function (done) {
             client = net.connect({port: cache_port}, function (err) {
                 assert(!err);
+                self.data = generateCommandData();
                 client.write(encodeInt32(cache_proto_ver));
                 done();
             });
@@ -115,11 +142,7 @@ describe("CacheServer protocol", function() {
                 }
             });
 
-            var data = cmd.transactionStart
-                + crypto.randomBytes(16).toString('ascii')
-                + crypto.randomBytes(16).toString('ascii');
-
-            client.write(data);
+            client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
         });
 
         it("should cancel a pending transaction if a new (ts) command is received", function (done) {
@@ -129,11 +152,9 @@ describe("CacheServer protocol", function() {
                 }
             });
 
-            var data = cmd.transactionStart
-                + crypto.randomBytes(16).toString('ascii')
-                + crypto.randomBytes(16).toString('ascii');
-
-            client.write(data + data);
+            var d = encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash);
+            client.write(d);
+            client.write(d);
         });
 
         it("should require a start transaction (ts) cmd before an end transaction (te) cmd", function (done) {
@@ -153,11 +174,7 @@ describe("CacheServer protocol", function() {
                 }
             });
 
-            var data = cmd.transactionStart
-                + crypto.randomBytes(16).toString('ascii')
-                + crypto.randomBytes(16).toString('ascii');
-
-            client.write(data);
+            client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
             client.write(cmd.transactionEnd);
         });
     });
@@ -167,23 +184,21 @@ describe("CacheServer protocol", function() {
         var self = this;
         this.getCachePath = function(extension) {
             return cserver.GetCachePath(
-                cserver.readHex(self.guid.length, self.guid),
-                cserver.readHex(self.hash.length, self.hash),
+                cserver.readHex(self.data.guid.length, self.data.guid),
+                cserver.readHex(self.data.hash.length, self.data.hash),
                 extension, false);
         };
 
         beforeEach(function (done) {
             client = net.connect({port: cache_port}, function (err) {
                 assert(!err);
+                self.data = generateCommandData();
 
                 // Write version
                 client.write(encodeInt32(cache_proto_ver));
 
                 // Start transaction
-                var ts = Buffer.from(cmd.transactionStart);
-                self.guid = Buffer.from(crypto.randomBytes(16), 'ascii');
-                self.hash = Buffer.from(crypto.randomBytes(16), 'ascii');
-                client.write(Buffer.concat([ts, self.guid, self.hash]));
+                client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
                 done();
             });
         });
@@ -200,19 +215,16 @@ describe("CacheServer protocol", function() {
                     fs.open(self.getCachePath(test.ext), 'r', function(err, fd) {
                         assert(!err, err);
                         var buf = fs.readFileSync(fd);
-                        assert(buf.compare(data) == 0);
+                        assert(buf.compare(self.data.blob) == 0);
                         done();
                     });
                 });
 
-                var data = Buffer.from(crypto.randomBytes(1024).toString('ascii'));
-                var size = encodeInt64(data.length);
-
-                client.write(test.cmd + size + data.toString('ascii'));
-                client.write(cmd.transactionEnd);
+                client.write(encodeCommand(test.cmd, null, null, self.data.blob));
 
                 // The server is doing async file operations to move the file into place. be patient.
                 sleep(50).then(() => {
+                    client.write(encodeCommand(cmd.transactionEnd));
                     client.end();
                 });
             });

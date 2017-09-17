@@ -600,7 +600,8 @@ function handleData (socket, data)
 						// It's possible to have already processed a 'te' (transaction end) event before this callback is called.
 						// Call handleData again to ensure the 'te' event is re-processed now that we finished
 						// saving this file
-						handleData(socket, Buffer.from([]));
+						if(socket.inTransaction)
+							handleData(socket, Buffer.from([]));
 					}
 				});
 				socket.activePutFile = null;
