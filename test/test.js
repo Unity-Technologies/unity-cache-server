@@ -277,7 +277,6 @@ describe("CacheServer protocol", function() {
                 client.pipe(new CmdResponseListener())
                     .on('header', function(header) {
                         assert(header.cmd[0] === '-');
-                        assert(header.size === 0);
                         done();
                     });
 

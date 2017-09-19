@@ -17,19 +17,8 @@ class CacheServerResponseTransform extends Transform {
         this.blobBytesRead = 0;
         this.doReadSize = false;
         this.doReadId = false;
-        this.didReadVersion = false;
-        this.didReadCommand = false;
-        this.didReadSize = false;
-        this.didReadId = false;
         this.didReadHeader = false;
-
-        this.headerData = {
-            version: 0,
-            cmd: "",
-            size: 0,
-            guid: null,
-            hash: null
-        }
+        this.headerData = {};
     }
 
     _transform(data, encoding, callback) {
@@ -63,16 +52,19 @@ class CacheServerResponseTransform extends Transform {
             return dataPos >= data.length || self.didReadHeader;
         }
 
+        function didWrite(key) {
+            return self.headerData.hasOwnProperty(key);
+        }
+
         // Read version
-        if(!this.didReadVersion && writeHeaderBuffer(globals.VERSION_SIZE)) {
+        if(!didWrite('version') && writeHeaderBuffer(globals.VERSION_SIZE)) {
             this.headerData.version = globals.bufferToInt32(this.headerBuf.slice(0, globals.VERSION_SIZE));
-            this.didReadVersion = true;
         }
 
         if(isDone()) { return callback(); }
 
         // Read command
-        if(!this.didReadCommand && writeHeaderBuffer(globals.CMD_SIZE)) {
+        if(!didWrite('cmd') && writeHeaderBuffer(globals.CMD_SIZE)) {
             var cmd = this.headerBuf.slice(0, globals.CMD_SIZE).toString('ascii');
             this.headerData.cmd = cmd;
             switch(cmd[0]) {
@@ -90,35 +82,30 @@ class CacheServerResponseTransform extends Transform {
                     break;
                 default:
                     return callback(new Error("Unrecognized command response, aborting!"));
-                    return;
             }
-
-            this.didReadCommand = true;
         }
 
         if(isDone()) { return callback(); }
 
         // Read size
-        if(this.doReadSize && !this.didReadSize && writeHeaderBuffer(globals.SIZE_SIZE)) {
+        if(this.doReadSize && !didWrite('size') && writeHeaderBuffer(globals.SIZE_SIZE)) {
             this.headerData.size = globals.bufferToInt64(this.headerBuf.slice(0, globals.UINT64_SIZE));
-            this.didReadSize = true;
         }
 
         if(isDone()) { return callback(); }
 
         // Read ID
-        if(this.doReadId && !this.didReadId && writeHeaderBuffer(globals.ID_SIZE)) {
+        if(this.doReadId && !didWrite('guid') && writeHeaderBuffer(globals.ID_SIZE)) {
             this.headerData.guid = this.headerBuf.slice(0, globals.GUID_SIZE);
             this.headerData.hash = this.headerBuf.slice(globals.GUID_SIZE);
-            this.didReadId = true;
         }
 
         this.didReadHeader = true;
-        this.emit('header', this.headerData);
+        this.emit('header', Object.assign({}, this.headerData));
 
         // Send any remaining bytes in the buffer as blob data
         if(dataPos < data.length) {
-            process.nextTick(this._sendData.bind(this, data.slice(dataPos), callback));
+            this._sendData(data.slice(dataPos), callback);
         }
         else {
             callback();
@@ -135,7 +122,7 @@ class CacheServerResponseTransform extends Transform {
         }
         else {
             this.push(data.slice(0, len));
-            process.nextTick(this._emitHeader.bind(this, data.slice(len), callback));
+            this._emitHeader(data.slice(len), callback);
         }
 
         if(this.blobBytesRead === this.headerData.size) {
