@@ -60,6 +60,23 @@ function encodeCommand(command, guid, hash, blob) {
     return command;
 }
 
+function expectLog(client, regex, condition, callback) {
+    if(callback == null) {
+        callback = condition;
+        condition = true;
+    }
+
+    var match;
+    cserver.SetLogger(function (lvl, msg) {
+        match = match || regex.test(msg);
+    });
+
+    client.on('close', function() {
+        assert(match == condition);
+        callback();
+    });
+}
+
 describe("CacheServer protocol", function() {
 
     beforeEach(function() {
@@ -118,46 +135,26 @@ describe("CacheServer protocol", function() {
         });
 
         it("should handle the start transaction (ts) command", function (done) {
-            cserver.SetLogger(function (lvl, msg) {
-                if (msg.startsWith("Start transaction")) {
-                    done();
-                }
-            });
-
-            client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
+            expectLog(client, /Start transaction/, done);
+            client.end(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
         });
 
         it("should cancel a pending transaction if a new (ts) command is received", function (done) {
-            cserver.SetLogger(function (lvl, msg) {
-                if (msg.startsWith("Cancel previous transaction")) {
-                    done();
-                }
-            });
-
+            expectLog(client, /Cancel previous transaction/, done);
             var d = encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash);
             client.write(d);
-            client.write(d);
+            client.end(d);
         });
 
         it("should require a start transaction (ts) cmd before an end transaction (te) cmd", function (done) {
-            cserver.SetLogger(function (lvl, msg) {
-                if (msg.startsWith("Invalid transaction isolation")) {
-                    done();
-                }
-            });
-
-            client.write(cmd.transactionEnd);
+            expectLog(client, /Invalid transaction isolation/, done);
+            client.end(cmd.transactionEnd);
         });
 
         it("should end a transaction that was started", function (done) {
-            cserver.SetLogger(function (lvl, msg) {
-                if (msg.startsWith("End transaction for")) {
-                    done();
-                }
-            });
-
+            expectLog(client, /End transaction for/, done);
             client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
-            client.write(cmd.transactionEnd);
+            client.end(cmd.transactionEnd);
         });
     });
 
@@ -175,8 +172,6 @@ describe("CacheServer protocol", function() {
             client = net.connect({port: cache_port}, function (err) {
                 assert(!err);
                 self.data = generateCommandData();
-
-                // Write version
                 client.write(globals.encodeInt32(cache_proto_ver));
 
                 // Start transaction
@@ -288,13 +283,54 @@ describe("CacheServer protocol", function() {
      });
 
     describe("Integrity check", function() {
-        it("should not allow an integrity check while in a transaction");
-        it("should only verify integrity with the integrity check-verify command (icv)");
-        it("should verify and fix errors with the integrity check-fix command (icf)");
-        it("should respond with the number of errors detected with any integrity check command");
+
+        var self = this;
+
+        beforeEach(function (done) {
+            client = net.connect({port: cache_port}, function (err) {
+                assert(!err);
+                self.data = generateCommandData();
+                client.write(globals.encodeInt32(cache_proto_ver));
+                done();
+            });
+        });
+
+        it("should not allow an integrity check while in a transaction", function(done) {
+            expectLog(client, /In a transaction/, done);
+            client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
+            client.end(cmd.integrityVerify);
+        });
+
+        it("should only verify integrity with the integrity check-verify command (icv)", function(done) {
+            expectLog(client, /fix/, false, done);
+            client.end(cmd.integrityVerify);
+        });
+
+        it("should verify and fix errors with the integrity check-fix command (icf)", function (done) {
+            expectLog(client, /File deleted/, done);
+            client.end(cmd.integrityFix);
+        });
+
+        it("should respond with the number of errors detected with any integrity check command", function(done) {
+            expectLog(client, /fix \d+ issue/, done);
+            client.end(cmd.integrityFix);
+        });
     });
 
     describe("Other", function() {
-        it("should force close the socket when a quit (q) command is received");
+        it("should force close the socket when a quit (q) command is received", function(done) {
+            var gotErr = false;
+
+            try {
+                client.end(cmd.quit);
+            }
+            catch(err) {
+                gotErr = err.toString().startsWith("Error: This socket has been ended");
+                done();
+            }
+
+            assert(gotErr);
+            callback();
+        });
     })
 });

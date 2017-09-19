@@ -313,9 +313,14 @@ function InitCache ()
 function FixFileIfRequired(path, msg, fix)
 {
 	if (fix)
-	{	
-		fs.unlinkSync (path);
-		log (DBG, msg + " File deleted.");
+	{
+		try {
+			fs.unlinkSync(path);
+			log(DBG, msg + " File deleted.");
+		}
+		catch(err) {
+			log(DBG, err);
+		}
 	}
 	else 
 	{
