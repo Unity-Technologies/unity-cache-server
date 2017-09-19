@@ -134,7 +134,7 @@ describe("CacheServer protocol", function() {
             });
         });
 
-        it("should handle the start transaction (ts) command", function (done) {
+        it("should start a transaction with the (ts) command", function (done) {
             expectLog(client, /Start transaction/, done);
             client.end(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
         });
@@ -151,7 +151,7 @@ describe("CacheServer protocol", function() {
             client.end(cmd.transactionEnd);
         });
 
-        it("should end a transaction that was started", function (done) {
+        it("should end a transaction that was started with the (te) command", function (done) {
             expectLog(client, /End transaction for/, done);
             client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
             client.end(cmd.transactionEnd);
@@ -187,7 +187,7 @@ describe("CacheServer protocol", function() {
         ];
 
         tests.forEach(function(test) {
-            it("should store " + test.ext + " with a (" + test.cmd + ") cmd", function(done) {
+            it("should store " + test.ext + " data with a (" + test.cmd + ") cmd", function(done) {
                 client.on('close', function() {
                     fs.open(self.getCachePath(test.ext), 'r', function(err, fd) {
                         assert(!err, err);
@@ -241,13 +241,13 @@ describe("CacheServer protocol", function() {
         });
 
         var tests = [
-            { cmd: cmd.getAsset, blob: self.data.asset },
-            { cmd: cmd.getInfo, blob: self.data.info },
-            { cmd: cmd.getResource, blob: self.data.resource }
+            { cmd: cmd.getAsset, blob: self.data.asset, type: 'bin' },
+            { cmd: cmd.getInfo, blob: self.data.info, type: 'info' },
+            { cmd: cmd.getResource, blob: self.data.resource, type: 'resource' }
         ];
 
         tests.forEach(function(test) {
-            it("should respond correctly to (" + test.cmd + ") for an existing item", function(done) {
+            it("should retrieve stored " + test.type + " data with the (" + test.cmd + ") command", function(done) {
                 var dataBuf;
                 var pos = 0;
                 client.pipe(new CmdResponseListener())
@@ -268,7 +268,7 @@ describe("CacheServer protocol", function() {
 
             });
 
-            it("should respond correctly to (" + test.cmd + ") for a missing item", function(done) {
+            it("should respond with not found (-) for missing " + test.type + " data with the (" + test.cmd + ") command", function(done) {
                 client.pipe(new CmdResponseListener())
                     .on('header', function(header) {
                         assert(header.cmd[0] === '-');
