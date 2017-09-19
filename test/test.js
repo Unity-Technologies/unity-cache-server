@@ -2,7 +2,9 @@ const assert = require('assert');
 const net = require('net');
 const crypto = require('crypto');
 const fs = require('fs');
+const globals = require('./globals');
 const cserver = require('../CacheServer.js');
+const CmdResponseListener = require('./cmd_response_listener.js');
 
 const CACHE_SIZE = 1024 * 1024;
 const MIN_BLOB_SIZE = 64;
@@ -28,48 +30,23 @@ var cmd = {
     integrityFix: "icf"
 };
 
-function zeroPad(len, str) {
-    for (var i = len - str.length; i > 0; i--) {
-        str = '0' + str;
-    }
-
-    return str;
-}
-
-function encodeInt32(input) {
-    return zeroPad(8, input.toString(16));
-}
-
-function encodeInt64(input) {
-    return zeroPad(16, input.toString(16));
-}
-
-function bufferToInt32(input) {
-    return parseInt(input.toString('ascii', 0, 8), 16);
-}
-
-function bufferToInt64(input) {
-    return parseInt(input.toString('ascii', 0, 16), 16);
-}
-
-function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 function generateCommandData() {
-    var blobSize = Math.max(MIN_BLOB_SIZE, Math.floor(Math.random() * MAX_BLOB_SIZE));
+
+    function getSize() { return Math.max(MIN_BLOB_SIZE, Math.floor(Math.random() * MAX_BLOB_SIZE)); }
 
     return {
-        guid: Buffer.from(crypto.randomBytes(16).toString('ascii'), 'ascii'),
-        hash: Buffer.from(crypto.randomBytes(16).toString('ascii'), 'ascii'),
-        blob: Buffer.from(crypto.randomBytes(blobSize).toString('ascii'), 'ascii')
+        guid: Buffer.from(crypto.randomBytes(globals.GUID_SIZE).toString('ascii'), 'ascii'),
+        hash: Buffer.from(crypto.randomBytes(globals.HASH_SIZE).toString('ascii'), 'ascii'),
+        asset: Buffer.from(crypto.randomBytes(getSize()).toString('ascii'), 'ascii'),
+        info: Buffer.from(crypto.randomBytes(getSize()).toString('ascii'), 'ascii'),
+        resource: Buffer.from(crypto.randomBytes(getSize()).toString('ascii'), 'ascii')
     }
 }
 
 function encodeCommand(command, guid, hash, blob) {
 
     if(blob)
-        command += encodeInt64(blob.length);
+        command += globals.encodeInt64(blob.length);
 
     if(guid)
         command += guid;
@@ -108,22 +85,22 @@ describe("CacheServer protocol", function() {
 
         it("should echo the version if supported", function (done) {
             client.on('data', function (data) {
-                var ver = bufferToInt32(data);
+                var ver = globals.bufferToInt32(data);
                 assert(ver == cache_proto_ver, "Expected " + cache_proto_ver + " Received " + ver);
                 done();
             });
 
-            client.write(encodeInt32(cache_proto_ver));
+            client.write(globals.encodeInt32(cache_proto_ver));
         });
 
         it("should respond with 0 if unsupported", function (done) {
             client.on('data', function (data) {
-                var ver = bufferToInt32(data);
+                var ver = globals.bufferToInt32(data);
                 assert(ver == 0, "Expected 0, Received " + ver);
                 done();
             });
 
-            client.write(encodeInt32(cache_proto_ver + 1));
+            client.write(globals.encodeInt32(cache_proto_ver + 1));
         });
     });
 
@@ -135,7 +112,7 @@ describe("CacheServer protocol", function() {
             client = net.connect({port: cache_port}, function (err) {
                 assert(!err);
                 self.data = generateCommandData();
-                client.write(encodeInt32(cache_proto_ver));
+                client.write(globals.encodeInt32(cache_proto_ver));
                 done();
             });
         });
@@ -200,7 +177,7 @@ describe("CacheServer protocol", function() {
                 self.data = generateCommandData();
 
                 // Write version
-                client.write(encodeInt32(cache_proto_ver));
+                client.write(globals.encodeInt32(cache_proto_ver));
 
                 // Start transaction
                 client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
@@ -220,16 +197,16 @@ describe("CacheServer protocol", function() {
                     fs.open(self.getCachePath(test.ext), 'r', function(err, fd) {
                         assert(!err, err);
                         var buf = fs.readFileSync(fd);
-                        assert(buf.compare(self.data.blob) == 0);
+                        assert(buf.compare(self.data.asset) == 0);
                         done();
                     });
                 });
 
-                client.write(encodeCommand(test.cmd, null, null, self.data.blob));
+                client.write(encodeCommand(test.cmd, null, null, self.data.asset));
                 client.write(encodeCommand(cmd.transactionEnd));
 
                 // The server is doing async file operations to move the file into place. be patient.
-                sleep(25).then(() => {
+                globals.sleep(25).then(() => {
                     client.end();
                 });
             });
@@ -237,13 +214,74 @@ describe("CacheServer protocol", function() {
     });
 
     describe("GET requests", function() {
-        it("should respond correctly to a get asset (ga) request for an existing item");
-        it('should respond correctly to a get asset (ga) request for a missing item');
-        it("should respond correctly to a get info (gi) request for an existing item");
-        it("should respond correctly to a get info (gi) request for a missing item");
-        it("should respond correctly to a get resource (gr) request for an existing item");
-        it("should respond correctly to a get resource (gr) request for a missing item");
-    });
+
+        var self = this;
+        self.data = generateCommandData();
+
+
+        before(function(done) {
+            client = net.connect({port: cache_port}, function (err) {
+                assert(!err);
+                client.write(globals.encodeInt32(cache_proto_ver));
+                client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
+                client.write(encodeCommand(cmd.putAsset, null, null, self.data.asset));
+                client.write(encodeCommand(cmd.putInfo, null, null, self.data.info));
+                client.write(encodeCommand(cmd.putResource, null, null, self.data.resource));
+                client.write(cmd.transactionEnd);
+
+                globals.sleep(25).then(() => {
+                    done();
+                });
+            });
+        });
+
+        beforeEach(function (done) {
+            client = net.connect({port: cache_port}, function (err) {
+                assert(!err);
+
+                // Write version
+                client.write(globals.encodeInt32(cache_proto_ver));
+                done();
+            });
+        });
+
+        var tests = [
+            { cmd: cmd.getAsset, blob: self.data.asset },
+            { cmd: cmd.getInfo, blob: self.data.info },
+            { cmd: cmd.getResource, blob: self.data.resource }
+        ];
+
+        tests.forEach(function(test) {
+            it("should respond correctly to (" + test.cmd + ") for an existing item", function(done) {
+                var listener = new CmdResponseListener(client);
+                listener.on('header', function(header) {
+                    assert(header.cmd[0] === '+');
+                    assert(header.size === test.blob.length, "Expected size " + test.blob.length);
+                });
+
+                listener.on('data', function(data, more) {
+                    assert(!more);
+                    assert(data.compare(test.blob) === 0);
+                    done();
+                });
+
+                client.write(encodeCommand(test.cmd, self.data.guid, self.data.hash));
+            });
+
+            it("should respond correctly to (" + test.cmd + ") for a missing item", function(done) {
+                var listener = new CmdResponseListener(client);
+                listener.on('header', function(header) {
+                    assert(header.cmd[0] === '-');
+                    assert(header.size === 0);
+                    done();
+                });
+
+                var badGuid = Buffer.allocUnsafe(globals.GUID_SIZE).fill(0);
+                var badHash = Buffer.allocUnsafe(globals.HASH_SIZE).fill(0);
+                client.write(encodeCommand(test.cmd, badGuid, badHash));
+            });
+        });
+     });
 
     describe("Integrity check", function() {
         it("should not allow an integrity check while in a transaction");
