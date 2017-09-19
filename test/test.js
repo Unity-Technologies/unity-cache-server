@@ -12,7 +12,7 @@ const MAX_BLOB_SIZE = 2048;
 
 var cache_port = 0;
 var cache_proto_ver = 0;
-var cache_path = require('os').tmpdir() + "/" + cserver.UUID();
+var cache_path = require('os').tmpdir() + "/" + crypto.randomBytes(32).toString('hex');
 
 var client;
 

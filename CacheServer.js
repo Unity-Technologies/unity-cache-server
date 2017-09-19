@@ -1196,11 +1196,6 @@ exports.Verify = function (a_path, a_logFn, a_fix)
 	return VerifyCache (a_fix);
 }
 
-exports.UUID = function()
-{
-	return uuid();
-};
-
 exports.SetLogger = function(logger) {
 	log = logger;
 };
