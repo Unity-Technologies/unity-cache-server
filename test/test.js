@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const globals = require('./globals');
 const cserver = require('../CacheServer.js');
-const CmdResponseListener = require('./cmd_response_listener.js');
+const CmdResponseListener = require('./response_transform.js');
 
 const CACHE_SIZE = 1024 * 1024;
 const MIN_BLOB_SIZE = 64;
@@ -253,28 +253,33 @@ describe("CacheServer protocol", function() {
 
         tests.forEach(function(test) {
             it("should respond correctly to (" + test.cmd + ") for an existing item", function(done) {
-                var listener = new CmdResponseListener(client);
-                listener.on('header', function(header) {
-                    assert(header.cmd[0] === '+');
-                    assert(header.size === test.blob.length, "Expected size " + test.blob.length);
-                });
-
-                listener.on('data', function(data, more) {
-                    assert(!more);
-                    assert(data.compare(test.blob) === 0);
-                    done();
-                });
+                var dataBuf;
+                var pos = 0;
+                client.pipe(new CmdResponseListener())
+                    .on('header', function(header) {
+                        assert(header.cmd[0] === '+');
+                        assert(header.size === test.blob.length, "Expected size " + test.blob.length);
+                        dataBuf = Buffer.allocUnsafe(header.size);
+                    })
+                    .on('data', function(data) {
+                        pos += data.copy(dataBuf, pos, 0);
+                    })
+                    .on('dataEnd', function() {
+                        assert(dataBuf.compare(test.blob) === 0);
+                        done();
+                    });
 
                 client.write(encodeCommand(test.cmd, self.data.guid, self.data.hash));
+
             });
 
             it("should respond correctly to (" + test.cmd + ") for a missing item", function(done) {
-                var listener = new CmdResponseListener(client);
-                listener.on('header', function(header) {
-                    assert(header.cmd[0] === '-');
-                    assert(header.size === 0);
-                    done();
-                });
+                client.pipe(new CmdResponseListener())
+                    .on('header', function(header) {
+                        assert(header.cmd[0] === '-');
+                        assert(header.size === 0);
+                        done();
+                    });
 
                 var badGuid = Buffer.allocUnsafe(globals.GUID_SIZE).fill(0);
                 var badHash = Buffer.allocUnsafe(globals.HASH_SIZE).fill(0);
