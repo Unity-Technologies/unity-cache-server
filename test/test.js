@@ -156,6 +156,11 @@ describe("CacheServer protocol", function() {
             client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
             client.end(cmd.transactionEnd);
         });
+        
+        it("should require a transaction start (te) command before a put command", function(done) {
+            expectLog(client, /Not in a transaction/, done);
+            client.write(encodeCommand(cmd.putAsset, null, null, self.data.asset));
+        });
     });
 
     describe("PUT requests", function () {
