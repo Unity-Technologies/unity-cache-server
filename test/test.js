@@ -319,18 +319,16 @@ describe("CacheServer protocol", function() {
 
     describe("Other", function() {
         it("should force close the socket when a quit (q) command is received", function(done) {
-            var gotErr = false;
+            client = net.connect({port: cache_port}, function (err) {
+                assert(!err);
 
-            try {
-                client.end(cmd.quit);
-            }
-            catch(err) {
-                gotErr = err.toString().startsWith("Error: This socket has been ended");
-                done();
-            }
+                client.on('close', function() {
+                    done();
+                });
 
-            assert(gotErr);
-            callback();
+                client.write(globals.encodeInt32(cache_proto_ver));
+                client.write(cmd.quit);
+            });
         });
     })
 });
