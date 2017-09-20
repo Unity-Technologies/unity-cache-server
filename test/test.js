@@ -2,9 +2,12 @@ const assert = require('assert');
 const net = require('net');
 const crypto = require('crypto');
 const fs = require('fs');
-const globals = require('./globals');
-const cserver = require('../CacheServer.js');
-const CmdResponseListener = require('./response_transform.js');
+const globals = require('../lib/globals');
+const consts = require('../lib/constants').Constants;
+const cserver = require('../lib/server.js');
+const cachefs = require("../lib/cache_fs");
+
+const CmdResponseListener = require('./../lib/client/server_response_transform.js');
 
 const CACHE_SIZE = 1024 * 1024;
 const MIN_BLOB_SIZE = 64;
@@ -35,8 +38,8 @@ function generateCommandData() {
     function getSize() { return Math.max(MIN_BLOB_SIZE, Math.floor(Math.random() * MAX_BLOB_SIZE)); }
 
     return {
-        guid: Buffer.from(crypto.randomBytes(globals.GUID_SIZE).toString('ascii'), 'ascii'),
-        hash: Buffer.from(crypto.randomBytes(globals.HASH_SIZE).toString('ascii'), 'ascii'),
+        guid: Buffer.from(crypto.randomBytes(consts.GUID_SIZE).toString('ascii'), 'ascii'),
+        hash: Buffer.from(crypto.randomBytes(consts.HASH_SIZE).toString('ascii'), 'ascii'),
         asset: Buffer.from(crypto.randomBytes(getSize()).toString('ascii'), 'ascii'),
         info: Buffer.from(crypto.randomBytes(getSize()).toString('ascii'), 'ascii'),
         resource: Buffer.from(crypto.randomBytes(getSize()).toString('ascii'), 'ascii')
@@ -67,7 +70,7 @@ function expectLog(client, regex, condition, callback) {
     }
 
     var match;
-    cserver.SetLogger(function (lvl, msg) {
+    globals.SetLogger(function (lvl, msg) {
         match = match || regex.test(msg);
     });
 
@@ -77,10 +80,14 @@ function expectLog(client, regex, condition, callback) {
     });
 }
 
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 describe("CacheServer protocol", function() {
 
     beforeEach(function() {
-        cserver.SetLogger(function(lvl, msg) {});
+        globals.SetLogger(function(lvl, msg) {});
     });
 
     before(function (done) {
@@ -102,7 +109,7 @@ describe("CacheServer protocol", function() {
 
         it("should echo the version if supported", function (done) {
             client.on('data', function (data) {
-                var ver = globals.bufferToInt32(data);
+                var ver = globals.readUInt32(data);
                 assert(ver == cache_proto_ver, "Expected " + cache_proto_ver + " Received " + ver);
                 done();
             });
@@ -112,7 +119,7 @@ describe("CacheServer protocol", function() {
 
         it("should respond with 0 if unsupported", function (done) {
             client.on('data', function (data) {
-                var ver = globals.bufferToInt32(data);
+                var ver = globals.readUInt32(data);
                 assert(ver == 0, "Expected 0, Received " + ver);
                 done();
             });
@@ -167,9 +174,9 @@ describe("CacheServer protocol", function() {
 
         var self = this;
         this.getCachePath = function(extension) {
-            return cserver.GetCachePath(
-                cserver.readHex(self.data.guid.length, self.data.guid),
-                cserver.readHex(self.data.hash.length, self.data.hash),
+            return cachefs.GetCachePath(
+                globals.readHex(self.data.guid.length, self.data.guid),
+                globals.readHex(self.data.hash.length, self.data.hash),
                 extension, false);
         };
 
@@ -206,7 +213,7 @@ describe("CacheServer protocol", function() {
                 client.write(encodeCommand(cmd.transactionEnd));
 
                 // The server is doing async file operations to move the file into place. be patient.
-                globals.sleep(25).then(() => {
+                sleep(25).then(() => {
                     client.end();
                 });
             });
@@ -229,7 +236,7 @@ describe("CacheServer protocol", function() {
                 client.write(encodeCommand(cmd.putResource, null, null, self.data.resource));
                 client.write(cmd.transactionEnd);
 
-                globals.sleep(25).then(() => {
+                sleep(25).then(() => {
                     done();
                 });
             });
@@ -280,8 +287,8 @@ describe("CacheServer protocol", function() {
                         done();
                     });
 
-                var badGuid = Buffer.allocUnsafe(globals.GUID_SIZE).fill(0);
-                var badHash = Buffer.allocUnsafe(globals.HASH_SIZE).fill(0);
+                var badGuid = Buffer.allocUnsafe(consts.GUID_SIZE).fill(0);
+                var badHash = Buffer.allocUnsafe(consts.HASH_SIZE).fill(0);
                 client.write(encodeCommand(test.cmd, badGuid, badHash));
             });
         });
