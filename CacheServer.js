@@ -557,6 +557,12 @@ function handleData (socket, data)
 		var idx = 0;
 		if (!socket.protocolVersion) 
 		{
+			if(data.length < UINT32_SIZE)
+			{
+				socket.pendingData = data;
+				return false;
+			}
+
 			socket.protocolVersion = readUInt32 (data);
 			var buf = new buffers.Buffer (UINT32_SIZE);
 			if (socket.protocolVersion == PROTOCOL_VERSION)
@@ -565,7 +571,7 @@ function handleData (socket, data)
 				writeUInt32 (socket.protocolVersion, buf);
 				if (socket.isActive)
 					socket.write (buf);
-				idx += UINT32_SIZE;
+				data = data.slice(UINT32_SIZE);
 			}
 			else
 			{
@@ -789,7 +795,7 @@ function handleData (socket, data)
 			}
 			
 			/// * We don't have enough data to start the put request. (wait for more data)
-			if (data.length < CMD_SIZE)
+			if (data.length < CMD_SIZE + UINT64_SIZE)
 			{
 				socket.pendingData = data;
 				return true;

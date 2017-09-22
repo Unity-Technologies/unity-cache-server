@@ -177,10 +177,6 @@ describe("CacheServer protocol", function() {
             client = net.connect({port: cache_port}, function (err) {
                 assert(!err);
                 self.data = generateCommandData();
-                client.write(globals.encodeInt32(cache_proto_ver));
-
-                // Start transaction
-                client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
                 done();
             });
         });
@@ -202,13 +198,30 @@ describe("CacheServer protocol", function() {
                     });
                 });
 
-                client.write(encodeCommand(test.cmd, null, null, self.data.asset));
-                client.write(encodeCommand(cmd.transactionEnd));
+                var buf = Buffer.from(
+                    globals.encodeInt32(cache_proto_ver) +
+                    encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
+                    encodeCommand(test.cmd, null, null, self.data.asset) +
+                    encodeCommand(cmd.transactionEnd), 'ascii');
 
-                // The server is doing async file operations to move the file into place. be patient.
-                globals.sleep(25).then(() => {
-                    client.end();
-                });
+                var sentBytes = 0;
+                function sendBytesAsync() {
+                    setTimeout(() => {
+                        var packetSize = Math.min(buf.length - sentBytes, Math.ceil(Math.random() * 10));
+                        client.write(buf.slice(sentBytes, sentBytes + packetSize), function() {
+                            sentBytes += packetSize;
+                            if(sentBytes < buf.length)
+                                return sendBytesAsync();
+                            else
+                                globals.sleep(50).then(() => {
+                                    client.end();
+                                });
+                        });
+                    }, 1);
+                }
+
+                sendBytesAsync();
+
             });
         });
     });
@@ -238,9 +251,6 @@ describe("CacheServer protocol", function() {
         beforeEach(function (done) {
             client = net.connect({port: cache_port}, function (err) {
                 assert(!err);
-
-                // Write version
-                client.write(globals.encodeInt32(cache_proto_ver));
                 done();
             });
         });
@@ -269,7 +279,22 @@ describe("CacheServer protocol", function() {
                         done();
                     });
 
-                client.write(encodeCommand(test.cmd, self.data.guid, self.data.hash));
+                var buf = Buffer.from(globals.encodeInt32(cache_proto_ver) +
+                    encodeCommand(test.cmd, self.data.guid, self.data.hash), 'ascii');
+
+                var sentBytes = 0;
+                function sendBytesAsync() {
+                    setTimeout(() => {
+                        var packetSize = Math.min(buf.length - sentBytes, Math.ceil(Math.random() * 10));
+                        client.write(buf.slice(sentBytes, sentBytes + packetSize), function() {
+                            sentBytes += packetSize;
+                            if(sentBytes < buf.length)
+                                return sendBytesAsync();
+                        });
+                    }, 1);
+                }
+
+                sendBytesAsync();
 
             });
 
@@ -282,7 +307,7 @@ describe("CacheServer protocol", function() {
 
                 var badGuid = Buffer.allocUnsafe(globals.GUID_SIZE).fill(0);
                 var badHash = Buffer.allocUnsafe(globals.HASH_SIZE).fill(0);
-                client.write(encodeCommand(test.cmd, badGuid, badHash));
+                client.write(globals.encodeInt32(cache_proto_ver) + encodeCommand(test.cmd, badGuid, badHash));
             });
         });
      });
