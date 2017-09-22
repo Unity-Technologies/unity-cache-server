@@ -221,7 +221,7 @@ describe("CacheServer protocol", function() {
                             if(sentBytes < buf.length)
                                 return sendBytesAsync();
                             else
-                                globals.sleep(50).then(() => { client.end(); });
+                                sleep(50).then(() => { client.end(); });
                         });
                     }, 1);
                 }
@@ -248,7 +248,7 @@ describe("CacheServer protocol", function() {
                 client.write(encodeCommand(cmd.putResource, null, null, self.data.resource));
                 client.write(cmd.transactionEnd);
 
-                return globals.sleep(25).then(done);
+                return sleep(25).then(done);
             });
         });
 
