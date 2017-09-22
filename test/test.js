@@ -127,10 +127,10 @@ describe("CacheServer protocol", function() {
 
         beforeEach(function (done) {
             client = net.connect({port: cache_port}, function (err) {
-                assert(!err);
+                assert(!err, err);
                 self.data = generateCommandData();
                 client.write(globals.encodeInt32(cache_proto_ver));
-                done();
+                done(err);
             });
         });
 
@@ -214,9 +214,7 @@ describe("CacheServer protocol", function() {
                             if(sentBytes < buf.length)
                                 return sendBytesAsync();
                             else
-                                globals.sleep(50).then(() => {
-                                    client.end();
-                                });
+                                globals.sleep(50).then(() => { client.end(); });
                         });
                     }, 1);
                 }
@@ -233,7 +231,6 @@ describe("CacheServer protocol", function() {
         var self = this;
         self.data = generateCommandData();
 
-
         before(function(done) {
             client = net.connect({port: cache_port}, function (err) {
                 assert(!err);
@@ -244,9 +241,7 @@ describe("CacheServer protocol", function() {
                 client.write(encodeCommand(cmd.putResource, null, null, self.data.resource));
                 client.write(cmd.transactionEnd);
 
-                globals.sleep(25).then(() => {
-                    done();
-                });
+                return globals.sleep(25).then(done);
             });
         });
 
