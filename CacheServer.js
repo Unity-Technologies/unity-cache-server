@@ -60,6 +60,8 @@ function readHex (len, data)
 	return res;
 }
 
+exports.readHex = readHex;
+
 function uuid ()
 {
 	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace (/[xy]/g, 
@@ -311,9 +313,14 @@ function InitCache ()
 function FixFileIfRequired(path, msg, fix)
 {
 	if (fix)
-	{	
-		fs.unlinkSync (path);
-		log (DBG, msg + " File deleted.");
+	{
+		try {
+			fs.unlinkSync(path);
+			log(DBG, msg + " File deleted.");
+		}
+		catch(err) {
+			log(DBG, err);
+		}
 	}
 	else 
 	{
@@ -488,6 +495,8 @@ function GetCachePath (guid, hash, extension, create)
 	return dir + "/" + guid + "-" + hash + "." + extension;
 }
 
+exports.GetCachePath = GetCachePath;
+
 /*
 Protocol
 ========
@@ -548,6 +557,12 @@ function handleData (socket, data)
 		var idx = 0;
 		if (!socket.protocolVersion) 
 		{
+			if(data.length < UINT32_SIZE)
+			{
+				socket.pendingData = data;
+				return false;
+			}
+
 			socket.protocolVersion = readUInt32 (data);
 			var buf = new buffers.Buffer (UINT32_SIZE);
 			if (socket.protocolVersion == PROTOCOL_VERSION)
@@ -556,7 +571,7 @@ function handleData (socket, data)
 				writeUInt32 (socket.protocolVersion, buf);
 				if (socket.isActive)
 					socket.write (buf);
-				idx += UINT32_SIZE;
+				data = data.slice(UINT32_SIZE);
 			}
 			else
 			{
@@ -590,8 +605,15 @@ function handleData (socket, data)
 					socket.tempPath = null;
 					socket.activePutTarget = null;
 					socket.totalFileSize = 0;
-					if (socket.isActive) 
+					if (socket.isActive) {
 						socket.resume();
+
+						// It's possible to have already processed a 'te' (transaction end) event before this callback is called.
+						// Call handleData again to ensure the 'te' event is re-processed now that we finished
+						// saving this file
+						if(socket.inTransaction)
+							handleData(socket, Buffer.from([]));
+					}
 				});
 				socket.activePutFile = null;
 
@@ -773,7 +795,7 @@ function handleData (socket, data)
 			}
 			
 			/// * We don't have enough data to start the put request. (wait for more data)
-			if (data.length < CMD_SIZE)
+			if (data.length < CMD_SIZE + UINT64_SIZE)
 			{
 				socket.pendingData = data;
 				return true;
@@ -1092,6 +1114,16 @@ exports.GetVersion = function ()
 }
 
 /**
+ *
+ * @returns {number}
+ * @constructor
+ */
+exports.GetProtocolVersion = function()
+{
+	return PROTOCOL_VERSION;
+}
+
+/**
  * Get cache max size
  *
  * @return cache max size
@@ -1169,3 +1201,7 @@ exports.Verify = function (a_path, a_logFn, a_fix)
 
 	return VerifyCache (a_fix);
 }
+
+exports.SetLogger = function(logger) {
+	log = logger;
+};
