@@ -164,6 +164,7 @@ describe("CacheServer protocol", function() {
     });
 
     describe("PUT requests", function () {
+        this.slow(1500);
 
         var self = this;
         this.getCachePath = function(extension) {
@@ -227,6 +228,7 @@ describe("CacheServer protocol", function() {
     });
 
     describe("GET requests", function() {
+        this.slow(1000);
 
         var self = this;
         self.data = generateCommandData();
