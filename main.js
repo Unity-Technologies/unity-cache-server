@@ -1,85 +1,45 @@
-var cserver = require('./lib/server');
-var globals = require('./lib/globals');
-var consts = require('./lib/constants').Constants;
+const cserver = require('./lib/server');
+const globals = require('./lib/globals');
+const consts = require('./lib/constants').Constants;
+const program = require('commander');
+const path = require('path');
 
-var path = require('path');
+const DEFAULT_PATH = __dirname + '/cache5.0';
+const DEFAULT_SIZE = 1024 * 1024 * 1024 * 50;
+const DEFAULT_PORT = 8126;
+const DEFAULT_LOG_LEVEL = consts.LOG_TEST;
 
-/**
- * parse cmd line argument
- * @todo should use existing module, like optimist
- *
- * @return {Object} an object containing the parsed arguments if found
- */
-function ParseArguments() {
-    var res = {};
-    res.legacy = true;
-    res.legacyCacheDir = "./cache";
-    res.cacheDir = "./cache5.0";
-    res.verify = false;
-    res.fix = false;
-    res.monitorParentProcess = 0;
-    res.logFunc = null;
-    for (var i = 2; i < process.argv.length; i++) {
-        var arg = process.argv[i];
-
-        if (arg.indexOf("--size") == 0) {
-            res.size = parseInt(process.argv[++i]);
-        }
-        else if (arg.indexOf("--path") == 0) {
-            res.cacheDir = process.argv[++i];
-        }
-        else if (arg.indexOf("--port") == 0) {
-            res.port = parseInt(process.argv[++i]);
-        }
-        else if (arg.indexOf("--monitor-parent-process") == 0) {
-            res.monitorParentProcess = process.argv[++i];
-        }
-        else if (arg.indexOf("--verify") == 0) {
-            res.verify = true;
-            res.fix = false;
-        }
-        else if (arg.indexOf("--fix") == 0) {
-            res.verify = false;
-            res.fix = true;
-        }
-        else if (arg.indexOf("--silent") == 0) {
-            res.logFunc = function () {
-            };
-        }
-        else {
-            if (arg.indexOf("--help") != 0) {
-                console.log("Unknown option: " + arg);
-            }
-            console.log("Usage: node main.js [--port serverPort] [--path pathToCache] [--legacypath pathToCache] [--size maximumSizeOfCache] [--nolegacy] [--verify|--fix]\n" +
-                "--port: specify the server port, only apply to new cache server, default is 8126\n" +
-                "--path: specify the path of the cache directory, only apply to new cache server, default is ./cache5.0\n" +
-                "--size: specify the maximum allowed size of the LRU cache for both servers. Files that have not been used recently will automatically be discarded when the cache size is exceeded\n" +
-                "--verify: verify the Cache Server integrity, no fix.\n" +
-                "--fix: fix the Cache Server integrity."
-            );
-            process.exit(0);
-        }
-    }
-
-    return res;
+function myParseInt(val, def) {
+    return parseInt(val) || def;
 }
 
-var res = ParseArguments();
-if (res.verify) {
-    console.log("Verifying integrity of Cache Server directory " + res.cacheDir);
-    var numErrors = cserver.Verify(res.cacheDir, null, false);
+program.description("Unity Cache Server")
+    .version(consts.VERSION)
+    .option('-s, --size <n>', 'Specify the maximum allowed size of the LRU cache. Files that have not been used recently will automatically be discarded when the cache size is exceeded. Default is 50Gb', myParseInt, DEFAULT_SIZE)
+    .option('-p, --port <n>', 'Specify the server port, only apply to new cache server, default is 8126', myParseInt, DEFAULT_PORT)
+    .option('-P, --path [path]', 'Specify the path of the cache directory. Default is ./cache5.0', DEFAULT_PATH)
+    .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug). Default is 4 (test)', myParseInt, DEFAULT_LOG_LEVEL)
+    .option('-v, --verify', 'Verify the Cache Server integrity, without fixing errors')
+    .option('-f, --fix', 'Fix errors found while verifying the Cache Server integrity')
+    .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0)
+    .parse(process.argv);
+
+globals.SetLogLevel(program.logLevel);
+
+if (program.verify) {
+    console.log("Verifying integrity of Cache Server directory " + program.path);
+    var numErrors = cserver.Verify(program.path, null, false);
     console.log("Cache Server directory contains " + numErrors + " integrity issue(s)");
     process.exit(0);
 }
-
-if (res.fix) {
-    console.log("Fixing integrity of Cache Server directory " + res.cacheDir);
-    cserver.Verify(res.cacheDir, null, true);
+else if (program.fix) {
+    console.log("Fixing integrity of Cache Server directory " + program.path);
+    cserver.Verify(program.path, null, true);
     console.log("Cache Server directory integrity fixed.");
     process.exit(0);
 }
 
-if (res.monitorParentProcess != 0) {
+if (program.monitorParentProcess > 0) {
     function monitor() {
         function is_running(pid) {
             try {
@@ -90,7 +50,7 @@ if (res.monitorParentProcess != 0) {
             }
         }
 
-        if (!is_running(res.monitorParentProcess)) {
+        if (!is_running(program.monitorParentProcess)) {
             globals.log(consts.LOG_INFO, "monitored parent process has died");
             process.exit(1);
         }
@@ -100,7 +60,7 @@ if (res.monitorParentProcess != 0) {
     monitor();
 }
 
-cserver.Start(res.size, res.port, res.cacheDir, res.logFunc, function () {
+cserver.Start(program.size, program.port, program.path, null, function () {
     globals.log(consts.LOG_ERR, "Unable to start Cache Server");
     process.exit(1);
 });
