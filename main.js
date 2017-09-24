@@ -68,17 +68,7 @@ var res = ParseArguments();
 if (res.verify) {
     console.log("Verifying integrity of Cache Server directory " + res.cacheDir);
     var numErrors = cserver.Verify(res.cacheDir, null, false);
-    if (numErrors == 0) {
-        console.log("Cache Server directory integrity verified successfully.");
-    }
-    else {
-        if (numErrors == 0) {
-            console.log("Cache Server directory contains one integrity issue.");
-        }
-        else {
-            console.log("Cache Server directory contains " + numErrors + " integrity issues.");
-        }
-    }
+    console.log("Cache Server directory contains " + numErrors + " integrity issue(s)");
     process.exit(0);
 }
 
