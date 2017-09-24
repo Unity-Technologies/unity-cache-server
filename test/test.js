@@ -3,8 +3,8 @@ const net = require('net');
 const crypto = require('crypto');
 const fs = require('fs');
 const globals = require('./globals');
-const cserver = require('../CacheServer.js');
-const CmdResponseListener = require('./response_transform.js');
+const cserver = require('../CacheServer');
+const CmdResponseListener = require('./response_transform');
 
 const CACHE_SIZE = 1024 * 1024;
 const MIN_BLOB_SIZE = 64;
@@ -12,7 +12,7 @@ const MAX_BLOB_SIZE = 2048;
 
 var cache_port = 0;
 var cache_proto_ver = 0;
-var cache_path = require('os').tmpdir() + "/" + crypto.randomBytes(32).toString('hex');
+var cache_path = generateTempDir();
 
 var client;
 
@@ -30,9 +30,15 @@ var cmd = {
     integrityFix: "icf"
 };
 
-function generateCommandData() {
+function generateTempDir() {
+    return require('os').tmpdir() + "/" + crypto.randomBytes(32).toString('hex');
+}
 
-    function getSize() { return Math.max(MIN_BLOB_SIZE, Math.floor(Math.random() * MAX_BLOB_SIZE)); }
+function generateCommandData(minSize, maxSize) {
+    minSize = minSize || MIN_BLOB_SIZE;
+    maxSize = maxSize || MAX_BLOB_SIZE;
+
+    function getSize() { return Math.max(minSize, Math.floor(Math.random() * maxSize)); }
 
     return {
         guid: Buffer.from(crypto.randomBytes(globals.GUID_SIZE).toString('ascii'), 'ascii'),
@@ -76,6 +82,28 @@ function expectLog(client, regex, condition, callback) {
         callback();
     });
 }
+describe("CacheServer", function() {
+    this.slow(250);
+
+    it("should fail to start if the given cache folder is not recognized as a valid cache", function(done) {
+        var p = generateTempDir();
+        fs.mkdirSync(p);
+        var f = p + "/veryImportantDoc.doc";
+        fs.writeFileSync(f);
+
+        var error = null;
+        try {
+            cserver.Start(1024, 0, p, null, null);
+        }
+        catch(e) {
+            error = e;
+        }
+        finally {
+            assert(error);
+            done();
+        }
+    });
+});
 
 describe("CacheServer protocol", function() {
 
@@ -86,7 +114,7 @@ describe("CacheServer protocol", function() {
     before(function (done) {
         cserver.Start(CACHE_SIZE, 0, cache_path, function (lvl, msg) {
         }, function (err) {
-            assert(!err, "Cache Server reported error!");
+            assert(!err, "Cache Server reported error! " + err);
         });
 
         cache_port = cserver.GetPort();
@@ -142,8 +170,8 @@ describe("CacheServer protocol", function() {
         it("should cancel a pending transaction if a new (ts) command is received", function (done) {
             expectLog(client, /Cancel previous transaction/, done);
             var d = encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash);
-            client.write(d);
-            client.end(d);
+            client.write(d); // first one ...
+            client.end(d); // ... canceled by this one
         });
 
         it("should require a start transaction (ts) cmd before an end transaction (te) cmd", function (done) {
@@ -161,6 +189,11 @@ describe("CacheServer protocol", function() {
             expectLog(client, /Not in a transaction/, done);
             client.write(encodeCommand(cmd.putAsset, null, null, self.data.asset));
         });
+
+        it("should close the socket on an invalid transaction command", function(done) {
+            expectLog(client, /invalid data receive/i, done);
+            client.write('tx', self.data.guid, self.data.hash);
+        });
     });
 
     describe("PUT requests", function () {
@@ -174,12 +207,55 @@ describe("CacheServer protocol", function() {
                 extension, false);
         };
 
+        before(function() {
+            self.data = generateCommandData();
+        });
+
         beforeEach(function (done) {
-            client = net.connect({port: cache_port}, function (err) {
+            client = net.connect({port: cache_port}, function(err) {
                 assert(!err);
-                self.data = generateCommandData();
+
+                // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
+                // to other request data in the tests below.
+                client.write(globals.encodeInt32(cache_proto_ver));
                 done();
             });
+
+        });
+
+        it("should close the socket on an invalid PUT type", function(done) {
+            expectLog(client, /invalid data receive/i, done);
+            client.write(
+                encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
+                encodeCommand("px", null, null, self.data.asset));
+        });
+
+        it("should try to free cache space if the cache size exceeds the max cache size after writing a file", function(done) {
+            var match1 = false;
+            var match2 = false;
+
+            cserver.SetMaxCacheSize(1024);
+
+            cserver.SetLogger(function(lvl, msg) {
+                match1 = match1 || /Begin.*1200/.test(msg);
+                match2 = match2 || /Completed.*800/.test(msg);
+            });
+
+            client.on('close', function() {
+                assert(match1 && match2);
+                cserver.SetMaxCacheSize(CACHE_SIZE);
+                done();
+            });
+
+            var data = generateCommandData(400, 400);
+            client.write(
+                encodeCommand(cmd.transactionStart, data.guid, data.hash) +
+                encodeCommand(cmd.putAsset, null, null, data.asset) +
+                encodeCommand(cmd.putResource, null, null, data.resource) +
+                encodeCommand(cmd.putInfo, null, null, data.resource) +
+                encodeCommand(cmd.transactionEnd));
+
+            globals.sleep(50).then(() => { client.end(); })
         });
 
         var tests = [
@@ -200,7 +276,6 @@ describe("CacheServer protocol", function() {
                 });
 
                 var buf = Buffer.from(
-                    globals.encodeInt32(cache_proto_ver) +
                     encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
                     encodeCommand(test.cmd, null, null, self.data.asset) +
                     encodeCommand(cmd.transactionEnd), 'ascii');
@@ -222,6 +297,26 @@ describe("CacheServer protocol", function() {
                 sendBytesAsync();
 
             });
+        });
+
+        it("should replace an existing file with the same guid and hash", function(done) {
+            var asset = Buffer.from(crypto.randomBytes(self.data.asset.length).toString('ascii'), 'ascii');
+
+            client.on('close', function() {
+                fs.open(self.getCachePath('bin'), 'r', function(err, fd) {
+                    assert(!err, err);
+                    var buf = fs.readFileSync(fd);
+                    assert(buf.compare(asset) == 0);
+                    done();
+                });
+            });
+
+            client.write(
+                encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
+                encodeCommand(cmd.putAsset, null, null, asset) +
+                encodeCommand(cmd.transactionEnd));
+
+            globals.sleep(50).then(() => { client.end(); });
         });
     });
 
@@ -248,8 +343,17 @@ describe("CacheServer protocol", function() {
         beforeEach(function (done) {
             client = net.connect({port: cache_port}, function (err) {
                 assert(!err);
+
+                // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
+                // to other request data in the tests below.
+                client.write(globals.encodeInt32(cache_proto_ver));
                 done();
             });
+        });
+
+        it("should close the socket on an invalid GET type", function(done) {
+            expectLog(client, /invalid data receive/i, done);
+            client.write(encodeCommand('gx', self.data.guid, self.data.hash));
         });
 
         var tests = [
@@ -276,8 +380,7 @@ describe("CacheServer protocol", function() {
                         done();
                     });
 
-                var buf = Buffer.from(globals.encodeInt32(cache_proto_ver) +
-                    encodeCommand(test.cmd, self.data.guid, self.data.hash), 'ascii');
+                var buf = Buffer.from(encodeCommand(test.cmd, self.data.guid, self.data.hash), 'ascii');
 
                 var sentBytes = 0;
                 function sendBytesAsync() {
@@ -304,7 +407,7 @@ describe("CacheServer protocol", function() {
 
                 var badGuid = Buffer.allocUnsafe(globals.GUID_SIZE).fill(0);
                 var badHash = Buffer.allocUnsafe(globals.HASH_SIZE).fill(0);
-                client.write(globals.encodeInt32(cache_proto_ver) + encodeCommand(test.cmd, badGuid, badHash));
+                client.write(encodeCommand(test.cmd, badGuid, badHash));
             });
         });
      });
@@ -313,10 +416,13 @@ describe("CacheServer protocol", function() {
 
         var self = this;
 
+        before(function() {
+            self.data = generateCommandData();
+        });
+
         beforeEach(function (done) {
             client = net.connect({port: cache_port}, function (err) {
                 assert(!err);
-                self.data = generateCommandData();
                 client.write(globals.encodeInt32(cache_proto_ver));
                 done();
             });
@@ -333,14 +439,197 @@ describe("CacheServer protocol", function() {
             client.end(cmd.integrityVerify);
         });
 
-        it("should verify and fix errors with the integrity check-fix command (icf)", function (done) {
-            expectLog(client, /File deleted/, done);
-            client.end(cmd.integrityFix);
-        });
-
         it("should respond with the number of errors detected with any integrity check command", function(done) {
             expectLog(client, /fix \d+ issue/, done);
             client.end(cmd.integrityFix);
+        });
+
+        it("should close the socket on an invalid integrity command type", function(done) {
+            expectLog(client, /invalid data receive/i, done);
+            client.write('icx');
+        });
+
+        describe("Validations", function() {
+            this.slow(250);
+
+            it("should remove unrecognized files from the cache root dir", function(done) {
+                var filePath = cache_path + "/file.rogue";
+                fs.writeFileSync(filePath, "");
+
+                client.on('close', function() {
+                    fs.access(filePath, function(error) {
+                        assert(!!error);
+                        done();
+                    })
+                });
+
+                client.write(cmd.integrityFix);
+                globals.sleep(50).then(() => { client.end(); });
+            });
+
+            it("should remove unrecognized files from cache subdirs", function(done) {
+                var filePath = cache_path + "/00/file.rogue";
+                fs.writeFileSync(filePath, "");
+
+                client.on('close', function() {
+                    fs.access(filePath, function(error) {
+                        assert(!!error);
+                        done();
+                    })
+                });
+
+                client.write(cmd.integrityFix);
+                globals.sleep(50).then(() => { client.end(); });
+            });
+
+            it("should remove unrecognized directories from the cache root dir", function(done) {
+                var dirPath = cache_path + "/dir.rogue";
+                fs.mkdirSync(dirPath);
+
+                client.on('close', function() {
+                    fs.access(dirPath, function(error) {
+                        assert(!!error);
+                        done();
+                    })
+                });
+
+                client.write(cmd.integrityFix);
+                globals.sleep(50).then(() => { client.end(); });
+            });
+
+            it("should remove unrecognized directories from cache subdirs", function(done) {
+                var dirPath = cache_path + "/00/dir.rogue";
+                fs.mkdirSync(dirPath);
+
+                client.on('close', function() {
+                    fs.access(dirPath, function(error) {
+                        assert(!!error);
+                        done();
+                    })
+                });
+
+                client.write(cmd.integrityFix);
+                globals.sleep(50).then(() => { client.end(); });
+            });
+
+            it("should ensure that cache files match their parent dir namespace", function(done) {
+                var data = generateCommandData();
+                var fileName = data.guid.toString('hex') + "-" + data.hash.toString('hex') + ".bin";
+
+                // Put a valid cache file into the wrong sub directory
+                fileName = "ff" + fileName.slice(2);
+                var filePath = cache_path + "/00/" + fileName;
+
+                fs.writeFileSync(filePath, "");
+
+                client.on('close', function() {
+                    fs.access(filePath, function(error) {
+                        assert(!!error);
+                        done();
+                    })
+                });
+
+                client.write(cmd.integrityFix);
+                globals.sleep(50).then(() => { client.end(); });
+            });
+
+            it("should ensure each .resource file has a corresponding .bin file", function(done) {
+                expectLog(client, /fix 1 issue/, done);
+
+                var data = generateCommandData();
+                client.write(encodeCommand(cmd.transactionStart, data.guid, data.hash));
+                client.write(encodeCommand(cmd.putResource, null, null, data.resource));
+                client.write(encodeCommand(cmd.transactionEnd));
+
+                globals.sleep(50).then(() => {
+                    client.end(cmd.integrityFix);
+                });
+            });
+
+            it("should ensure each .info file has a corresponding .bin file", function(done) {
+                expectLog(client, /fix 1 issue/, done);
+
+                var data = generateCommandData();
+                client.write(encodeCommand(cmd.transactionStart, data.guid, data.hash));
+                client.write(encodeCommand(cmd.putInfo, null, null, data.info));
+                client.write(encodeCommand(cmd.transactionEnd));
+
+                globals.sleep(50).then(() => {
+                    client.end(cmd.integrityFix);
+                });
+            });
+
+            it("should ensure each .bin file has a corresponding .info file", function(done) {
+                expectLog(client, /fix 1 issue/, done);
+
+                var data = generateCommandData();
+                client.write(encodeCommand(cmd.transactionStart, data.guid, data.hash));
+                client.write(encodeCommand(cmd.putAsset, null, null, data.asset));
+                client.write(encodeCommand(cmd.transactionEnd));
+
+                globals.sleep(50).then(() => {
+                    client.end(cmd.integrityFix);
+                });
+            });
+
+            it("should ensure each .resource file has a corresponding .info file", function(done) {
+                expectLog(client, /fix 2 issue/, done);
+
+                var data = generateCommandData();
+                client.write(encodeCommand(cmd.transactionStart, data.guid, data.hash));
+                client.write(encodeCommand(cmd.putAsset, null, null, data.asset));
+                client.write(encodeCommand(cmd.putResource, null, null, data.resource));
+                client.write(encodeCommand(cmd.transactionEnd));
+
+                globals.sleep(50).then(() => {
+                    client.end(cmd.integrityFix);
+                });
+            });
+
+            var requiredResourceTests = [
+                { type: "audio", classId: "1020" }
+            ];
+
+            requiredResourceTests.forEach(function(test) {
+                it("should ensure " + test.type + " files have a corresponding .resource file", function(done) {
+                    expectLog(client, /fix 1 issue/, done);
+
+                    var data = generateCommandData();
+                    data.info = Buffer.from("  assetImporterClassID: " + test.classId, 'ascii');
+                    client.write(encodeCommand(cmd.transactionStart, data.guid, data.hash));
+                    client.write(encodeCommand(cmd.putAsset, null, null, data.asset));
+                    client.write(encodeCommand(cmd.putInfo, null, null, data.info));
+                    client.write(encodeCommand(cmd.transactionEnd));
+
+                    globals.sleep(50).then(() => {
+                        client.end(cmd.integrityFix);
+                    });
+
+                });
+            });
+
+            var skipFiles = [
+                "desktop.ini",
+                "temp",
+                ".ds_store"
+            ]
+
+            skipFiles.forEach(function(test) {
+                it("should skip validation for certain system specific files (" + test + ")", function(done) {
+                    var filePath = cache_path + "/" + test;
+                    fs.writeFileSync(filePath, "");
+
+                    client.on('close', function() {
+                        fs.access(filePath, function(error) {
+                            assert(!error);
+                            done();
+                        })
+                    });
+
+                    client.write(cmd.integrityFix);
+                    globals.sleep(50).then(() => { client.end(); });
+                })
+            })
         });
     });
 
