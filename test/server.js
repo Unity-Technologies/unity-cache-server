@@ -459,7 +459,7 @@ describe("CacheServer protocol", function() {
 
         describe("Validations", function() {
             this.slow(250);
-            
+
             it("should remove unrecognized files from the cache root dir", function(done) {
                 var filePath = cache_path + "/file.rogue";
                 fs.writeFileSync(filePath, "");
@@ -600,7 +600,7 @@ describe("CacheServer protocol", function() {
 
             requiredResourceTests.forEach(function(test) {
                 it("should ensure " + test.type + " files have a corresponding .resource file", function(done) {
-                    expectLog(client, /fix 1 issue/, done);
+                    expectLog(client, /fix 2 issue/, done);
 
                     var data = generateCommandData();
                     data.info = Buffer.from("  assetImporterClassID: " + test.classId, 'ascii');
