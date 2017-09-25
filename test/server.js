@@ -5,7 +5,7 @@ const fs = require('fs');
 const globals = require('../lib/globals');
 const consts = require('../lib/constants').Constants;
 const cserver = require('../lib/server.js');
-const cachefs = require("../lib/cache_fs");
+const CacheFS = require("../lib/cache_fs");
 
 const CmdResponseListener = require('./../lib/client/server_response_transform.js');
 
@@ -14,8 +14,8 @@ const MIN_BLOB_SIZE = 64;
 const MAX_BLOB_SIZE = 2048;
 
 var cache_port = 0;
-var cache_path = generateTempDir();
 
+var cache;
 var client;
 
 var cmd = {
@@ -31,10 +31,6 @@ var cmd = {
     integrityVerify: "icv",
     integrityFix: "icf"
 };
-
-function generateTempDir() {
-    return require('os').tmpdir() + "/" + crypto.randomBytes(32).toString('hex');
-}
 
 function generateCommandData(minSize, maxSize) {
     minSize = minSize || MIN_BLOB_SIZE;
@@ -89,29 +85,6 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-describe("CacheServer", function() {
-    this.slow(250);
-
-    it("should fail to start if the given cache folder is not recognized as a valid cache", function(done) {
-        var p = generateTempDir();
-        fs.mkdirSync(p);
-        var f = p + "/veryImportantDoc.doc";
-        fs.writeFileSync(f);
-
-        var error = null;
-        try {
-            cserver.Start(1024, 0, p, null, null);
-        }
-        catch(e) {
-            error = e;
-        }
-        finally {
-            assert(error);
-            done();
-        }
-    });
-});
-
 describe("CacheServer protocol", function() {
 
     beforeEach(function() {
@@ -119,8 +92,9 @@ describe("CacheServer protocol", function() {
     });
 
     before(function (done) {
-        let server = cserver.Start(CACHE_SIZE, 0, cache_path, function (lvl, msg) {
-        }, function (err) {
+        cache = new CacheFS(globals.generateTempDir(), CACHE_SIZE);
+        globals.SetLogger(()=>{});
+        let server = cserver.Start(cache, 0, function (err) {
             assert(!err, "Cache Server reported error! " + err);
         });
 
@@ -207,7 +181,7 @@ describe("CacheServer protocol", function() {
 
         var self = this;
         this.getCachePath = function(extension) {
-            return cachefs.GetCachePath(
+            return cache.GetCachePath(
                 globals.readHex(self.data.guid.length, self.data.guid),
                 globals.readHex(self.data.hash.length, self.data.hash),
                 extension, false);
@@ -240,7 +214,7 @@ describe("CacheServer protocol", function() {
             var match1 = false;
             var match2 = false;
 
-            cachefs.SetMaxCacheSize(1024);
+            cache.maxCacheSize = 1024;
 
             globals.SetLogger(function(lvl, msg) {
                 match1 = match1 || /Begin.*1200/.test(msg);
@@ -249,7 +223,7 @@ describe("CacheServer protocol", function() {
 
             client.on('close', function() {
                 assert(match1 && match2);
-                cachefs.SetMaxCacheSize(CACHE_SIZE);
+                cache.maxCacheSize = CACHE_SIZE;
                 done();
             });
 
@@ -459,7 +433,7 @@ describe("CacheServer protocol", function() {
             this.slow(250);
 
             it("should remove unrecognized files from the cache root dir", function(done) {
-                var filePath = cache_path + "/file.rogue";
+                var filePath = cache.cacheDir + "/file.rogue";
                 fs.writeFileSync(filePath, "");
 
                 client.on('close', function() {
@@ -474,7 +448,7 @@ describe("CacheServer protocol", function() {
             });
 
             it("should remove unrecognized files from cache subdirs", function(done) {
-                var filePath = cache_path + "/00/file.rogue";
+                var filePath = cache.cacheDir + "/00/file.rogue";
                 fs.writeFileSync(filePath, "");
 
                 client.on('close', function() {
@@ -489,7 +463,7 @@ describe("CacheServer protocol", function() {
             });
 
             it("should remove unrecognized directories from the cache root dir", function(done) {
-                var dirPath = cache_path + "/dir.rogue";
+                var dirPath = cache.cacheDir + "/dir.rogue";
                 fs.mkdirSync(dirPath);
 
                 client.on('close', function() {
@@ -504,7 +478,7 @@ describe("CacheServer protocol", function() {
             });
 
             it("should remove unrecognized directories from cache subdirs", function(done) {
-                var dirPath = cache_path + "/00/dir.rogue";
+                var dirPath = cache.cacheDir + "/00/dir.rogue";
                 fs.mkdirSync(dirPath);
 
                 client.on('close', function() {
@@ -524,7 +498,7 @@ describe("CacheServer protocol", function() {
 
                 // Put a valid cache file into the wrong sub directory
                 fileName = "ff" + fileName.slice(2);
-                var filePath = cache_path + "/00/" + fileName;
+                var filePath = cache.cacheDir + "/00/" + fileName;
 
                 fs.writeFileSync(filePath, "");
 
@@ -622,7 +596,7 @@ describe("CacheServer protocol", function() {
 
             skipFiles.forEach(function(test) {
                 it("should skip validation for certain system specific files (" + test + ")", function(done) {
-                    var filePath = cache_path + "/" + test;
+                    var filePath = cache.cacheDir + "/" + test;
                     fs.writeFileSync(filePath, "");
 
                     client.on('close', function() {
