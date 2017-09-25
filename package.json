@@ -3,6 +3,9 @@
   "version": "6.0.0",
   "description": "Unity Cache Server",
   "main": "main.js",
+  "engines": {
+    "node" : ">=6.11.0"
+  },
   "directories": {
     "test": "test"
   },

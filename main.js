@@ -28,7 +28,7 @@ globals.SetLogLevel(program.logLevel);
 var cache;
 
 try {
-    cache = new CacheFS(program.path, program.port);
+    cache = new CacheFS(program.path, program.size);
 }
 catch(e) {
     console.log(e);
