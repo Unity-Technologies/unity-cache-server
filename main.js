@@ -1,13 +1,18 @@
-const cserver = require('./lib/server');
+const cluster = require('cluster');
 const globals = require('./lib/globals');
 const consts = require('./lib/constants').Constants;
 const program = require('commander');
 const path = require('path');
+const CacheServer = require('./lib/server');
 const CacheFS = require('./lib/cache_fs');
 
 function myParseInt(val, def) {
     val = parseInt(val);
     return (!val && val !== 0) ? def : val;
+}
+
+function atLeastOne(val) {
+    return Math.max(1, val);
 }
 
 program.description("Unity Cache Server")
@@ -16,7 +21,7 @@ program.description("Unity Cache Server")
     .option('-p, --port <n>', 'Specify the server port, only apply to new cache server, default is 8126', myParseInt, consts.DEFAULT_PORT)
     .option('-P, --path [path]', 'Specify the path of the cache directory. Default is ./cache5.0', consts.DEFAULT_CACHE_DIR)
     .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug). Default is 4 (test)', myParseInt, consts.DEFAULT_LOG_LEVEL)
-    .option('-w, --workers', 'Number of worker threads to spawn. Default is one per CPU reported by the OS', consts.DEFAULT_WORKERS)
+    .option('-w, --workers <n>', 'Number of worker threads to spawn. Default is 1 for every 2 CPUs reported by the OS', atLeastOne, consts.DEFAULT_WORKERS)
     .option('-v, --verify', 'Verify the Cache Server integrity, without fixing errors')
     .option('-f, --fix', 'Fix errors found while verifying the Cache Server integrity')
     .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0)
@@ -65,14 +70,22 @@ if (program.monitorParentProcess > 0) {
     monitor();
 }
 
-var server = cserver.Start(cache, program.port, function () {
+var errHandler = function () {
     globals.log(consts.LOG_ERR, "Unable to start Cache Server");
     process.exit(1);
-});
+};
 
-setTimeout(function () {
-    // Inform integration tests that the cache server is ready
+var server = new CacheServer(cache, program.port);
+
+if(cluster.isMaster) {
     globals.log(consts.LOG_INFO, "Cache Server version " + consts.VERSION);
-    globals.log(consts.LOG_INFO, "Cache Server on port " + server.address().port);
-    globals.log(consts.LOG_INFO, "Cache Server is ready");
-}, 50);
+    for(let i = 0; i < program.workers; i++) {
+        var worker = cluster.fork();
+        cache.RegisterClusterWorker(worker);
+    }
+}
+else {
+    server.Start(errHandler, function () {
+        globals.log(consts.LOG_INFO, `Cache Server worker ${cluster.worker.id} ready on port ${server.port}`);
+    });
+}

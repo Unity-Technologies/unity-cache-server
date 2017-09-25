@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const globals = require('../lib/globals');
 const consts = require('../lib/constants').Constants;
-const cserver = require('../lib/server.js');
+const CacheServer = require('../lib/server.js');
 const CacheFS = require("../lib/cache_fs");
 
 const CmdResponseListener = require('./../lib/client/server_response_transform.js');
@@ -13,9 +13,9 @@ const CACHE_SIZE = 1024 * 1024;
 const MIN_BLOB_SIZE = 64;
 const MAX_BLOB_SIZE = 2048;
 
-var cache_port = 0;
-
-var cache;
+globals.SetLogger(()=>{});
+var cache = new CacheFS(globals.generateTempDir(), CACHE_SIZE);
+var server = new CacheServer(cache, 0);
 var client;
 
 var cmd = {
@@ -92,20 +92,15 @@ describe("CacheServer protocol", function() {
     });
 
     before(function (done) {
-        cache = new CacheFS(globals.generateTempDir(), CACHE_SIZE);
-        globals.SetLogger(()=>{});
-        let server = cserver.Start(cache, 0, function (err) {
+        server.Start(function (err) {
             assert(!err, "Cache Server reported error! " + err);
-        });
-
-        cache_port = server.address().port;
-        done();
+        }, done);
     });
 
     describe("Version check", function () {
 
         beforeEach(function (done) {
-            client = net.connect({port: cache_port}, done);
+            client = net.connect({port: server.port}, done);
         });
 
         it("should echo the version if supported", function (done) {
@@ -134,7 +129,7 @@ describe("CacheServer protocol", function() {
         var self = this;
 
         beforeEach(function (done) {
-            client = net.connect({port: cache_port}, function (err) {
+            client = net.connect({port: server.port}, function (err) {
                 assert(!err, err);
                 self.data = generateCommandData();
                 client.write(globals.encodeInt32(consts.PROTOCOL_VERSION));
@@ -192,7 +187,7 @@ describe("CacheServer protocol", function() {
         });
 
         beforeEach(function (done) {
-            client = net.connect({port: cache_port}, function(err) {
+            client = net.connect({port: server.port}, function(err) {
                 assert(!err);
 
                 // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
@@ -307,7 +302,7 @@ describe("CacheServer protocol", function() {
         self.data = generateCommandData();
 
         before(function(done) {
-            client = net.connect({port: cache_port}, function (err) {
+            client = net.connect({port: server.port}, function (err) {
                 assert(!err);
                 client.write(globals.encodeInt32(consts.PROTOCOL_VERSION));
                 client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
@@ -321,7 +316,7 @@ describe("CacheServer protocol", function() {
         });
 
         beforeEach(function (done) {
-            client = net.connect({port: cache_port}, function (err) {
+            client = net.connect({port: server.port}, function (err) {
                 assert(!err);
 
                 // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
@@ -401,7 +396,7 @@ describe("CacheServer protocol", function() {
         });
 
         beforeEach(function (done) {
-            client = net.connect({port: cache_port}, function (err) {
+            client = net.connect({port: server.port}, function (err) {
                 assert(!err);
                 client.write(globals.encodeInt32(consts.PROTOCOL_VERSION));
                 done();
@@ -615,7 +610,7 @@ describe("CacheServer protocol", function() {
 
     describe("Other", function() {
         it("should force close the socket when a quit (q) command is received", function(done) {
-            client = net.connect({port: cache_port}, function (err) {
+            client = net.connect({port: server.port}, function (err) {
                 assert(!err);
 
                 client.on('close', function() {
