@@ -1,12 +1,12 @@
-# Fast-CacheServer
+# unity-cache-server
 > The Unity Cache Server, with clustering (multi-process)
 
 ## Setup
 Download and install the latest LTS version of node from the [Node.JS website](https://nodejs.org/en/download/).
 
 ```bash
-git clone git@github.com:Unity-Technologies/Fast-CacheServer.git
-cd Fast-CacheServer
+git clone git@github.com:Unity-Technologies/unity-cache-server.git
+cd unity-cache-server
 npm install
 ```
 ## Usage
