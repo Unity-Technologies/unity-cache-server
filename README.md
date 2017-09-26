@@ -1,5 +1,5 @@
 # Fast-CacheServer
-> The is an open-source version of the Unity Cache Server
+> The Unity Cache Server, with clustering (multi-process)
 
 ## Setup
 Download and install the latest LTS version of node from the [Node.JS website](https://nodejs.org/en/download/).
@@ -30,4 +30,4 @@ node main.js
 ```
 ## License
 
-MIT © [Unity Technologies](http://www.unity3d.com)
+Apache-2.0 © [Unity Technologies](http://www.unity3d.com)
