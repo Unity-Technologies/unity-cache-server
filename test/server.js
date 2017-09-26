@@ -432,10 +432,8 @@ describe("CacheServer protocol", function() {
                 fs.writeFileSync(filePath, "");
 
                 client.on('close', function() {
-                    fs.access(filePath, function(error) {
-                        assert(!!error);
-                        done();
-                    })
+                    assert(!fs.existsSync(filePath));
+                    done();
                 });
 
                 client.write(cmd.integrityFix);
@@ -447,10 +445,8 @@ describe("CacheServer protocol", function() {
                 fs.writeFileSync(filePath, "");
 
                 client.on('close', function() {
-                    fs.access(filePath, function(error) {
-                        assert(!!error);
-                        done();
-                    })
+                    assert(!fs.existsSync(filePath));
+                    done();
                 });
 
                 client.write(cmd.integrityFix);
@@ -462,10 +458,8 @@ describe("CacheServer protocol", function() {
                 fs.mkdirSync(dirPath);
 
                 client.on('close', function() {
-                    fs.access(dirPath, function(error) {
-                        assert(!!error);
-                        done();
-                    })
+                    assert(!fs.existsSync(dirPath));
+                    done();
                 });
 
                 client.write(cmd.integrityFix);
@@ -477,10 +471,8 @@ describe("CacheServer protocol", function() {
                 fs.mkdirSync(dirPath);
 
                 client.on('close', function() {
-                    fs.access(dirPath, function(error) {
-                        assert(!!error);
-                        done();
-                    })
+                    assert(!fs.existsSync(dirPath));
+                    done();
                 });
 
                 client.write(cmd.integrityFix);
@@ -498,10 +490,8 @@ describe("CacheServer protocol", function() {
                 fs.writeFileSync(filePath, "");
 
                 client.on('close', function() {
-                    fs.access(filePath, function(error) {
-                        assert(!!error);
-                        done();
-                    })
+                    assert(!fs.existsSync(filePath));
+                    done();
                 });
 
                 client.write(cmd.integrityFix);
