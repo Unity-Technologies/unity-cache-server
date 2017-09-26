@@ -6,7 +6,7 @@ const CacheFS = require('../lib/cache_fs');
 
 describe("CacheFS", function() {
     describe("Init", function() {
-        it("should throw an erro if the given cache folder is not recognized as a valid cache", function() {
+        it("should throw an error if the given cache folder is not recognized as a valid cache", function() {
             var p = globals.generateTempDir();
             fs.mkdirSync(p);
             var f = p + "/veryImportantDoc.doc";

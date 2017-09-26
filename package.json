@@ -1,5 +1,5 @@
 {
-  "name": "Fast-CachServer",
+  "name": "Fast-CacheServer",
   "version": "6.0.0",
   "description": "Unity Cache Server",
   "main": "main.js",
@@ -10,7 +10,8 @@
     "test": "test"
   },
   "scripts": {
-    "test": "mocha test"
+    "test": "mocha test",
+    "start": "node main.js"
   },
   "repository": {
     "type": "git",
