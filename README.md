@@ -29,6 +29,8 @@ node main.js
     -h, --help                        output usage information
 ```
 
+## Contributors
+The server protocol is described in [protocol.md](./protocol.md)
 
 ## License
 
