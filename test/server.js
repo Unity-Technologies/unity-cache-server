@@ -2,7 +2,7 @@ const assert = require('assert');
 const net = require('net');
 const crypto = require('crypto');
 const fs = require('fs');
-const globals = require('../lib/globals');
+const helpers = require('../lib/helpers');
 const consts = require('../lib/constants').Constants;
 const CacheServer = require('../lib/server.js');
 const CacheFS = require("../lib/cache_fs");
@@ -13,8 +13,8 @@ const CACHE_SIZE = 1024 * 1024;
 const MIN_BLOB_SIZE = 64;
 const MAX_BLOB_SIZE = 2048;
 
-globals.SetLogger(()=>{});
-var cache = new CacheFS(globals.generateTempDir(), CACHE_SIZE);
+helpers.SetLogger(()=>{});
+var cache = new CacheFS(helpers.generateTempDir(), CACHE_SIZE);
 var server = new CacheServer(cache, 0);
 var client;
 
@@ -50,7 +50,7 @@ function generateCommandData(minSize, maxSize) {
 function encodeCommand(command, guid, hash, blob) {
 
     if(blob)
-        command += globals.encodeInt64(blob.length);
+        command += helpers.encodeInt64(blob.length);
 
     if(guid)
         command += guid;
@@ -71,7 +71,7 @@ function expectLog(client, regex, condition, callback) {
     }
 
     var match;
-    globals.SetLogger(function (lvl, msg) {
+    helpers.SetLogger(function (lvl, msg) {
         match = match || regex.test(msg);
     });
 
@@ -88,7 +88,7 @@ function sleep(ms) {
 describe("CacheServer protocol", function() {
 
     beforeEach(function() {
-        globals.SetLogger(function(lvl, msg) {});
+        helpers.SetLogger(function(lvl, msg) {});
     });
 
     before(function (done) {
@@ -105,22 +105,22 @@ describe("CacheServer protocol", function() {
 
         it("should echo the version if supported", function (done) {
             client.on('data', function (data) {
-                var ver = globals.readUInt32(data);
+                var ver = helpers.readUInt32(data);
                 assert(ver == consts.PROTOCOL_VERSION, "Expected " + consts.PROTOCOL_VERSION + " Received " + ver);
                 done();
             });
 
-            client.write(globals.encodeInt32(consts.PROTOCOL_VERSION));
+            client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
         });
 
         it("should respond with 0 if unsupported", function (done) {
             client.on('data', function (data) {
-                var ver = globals.readUInt32(data);
+                var ver = helpers.readUInt32(data);
                 assert(ver == 0, "Expected 0, Received " + ver);
                 done();
             });
 
-            client.write(globals.encodeInt32(consts.PROTOCOL_VERSION + 1));
+            client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION + 1));
         });
     });
 
@@ -132,7 +132,7 @@ describe("CacheServer protocol", function() {
             client = net.connect({port: server.port}, function (err) {
                 assert(!err, err);
                 self.data = generateCommandData();
-                client.write(globals.encodeInt32(consts.PROTOCOL_VERSION));
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 done(err);
             });
         });
@@ -177,8 +177,8 @@ describe("CacheServer protocol", function() {
         var self = this;
         this.getCachePath = function(extension) {
             return cache.GetCachePath(
-                globals.readHex(self.data.guid.length, self.data.guid),
-                globals.readHex(self.data.hash.length, self.data.hash),
+                helpers.readHex(self.data.guid.length, self.data.guid),
+                helpers.readHex(self.data.hash.length, self.data.hash),
                 extension, false);
         };
 
@@ -192,7 +192,7 @@ describe("CacheServer protocol", function() {
 
                 // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
                 // to other request data in the tests below.
-                client.write(globals.encodeInt32(consts.PROTOCOL_VERSION));
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 done();
             });
 
@@ -211,7 +211,7 @@ describe("CacheServer protocol", function() {
 
             cache.maxCacheSize = 1024;
 
-            globals.SetLogger(function(lvl, msg) {
+            helpers.SetLogger(function(lvl, msg) {
                 match1 = match1 || /Begin.*1200/.test(msg);
                 match2 = match2 || /Completed.*800/.test(msg);
             });
@@ -304,7 +304,7 @@ describe("CacheServer protocol", function() {
         before(function(done) {
             client = net.connect({port: server.port}, function (err) {
                 assert(!err);
-                client.write(globals.encodeInt32(consts.PROTOCOL_VERSION));
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
                 client.write(encodeCommand(cmd.putAsset, null, null, self.data.asset));
                 client.write(encodeCommand(cmd.putInfo, null, null, self.data.info));
@@ -321,7 +321,7 @@ describe("CacheServer protocol", function() {
 
                 // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
                 // to other request data in the tests below.
-                client.write(globals.encodeInt32(consts.PROTOCOL_VERSION));
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 done();
             });
         });
@@ -398,7 +398,7 @@ describe("CacheServer protocol", function() {
         beforeEach(function (done) {
             client = net.connect({port: server.port}, function (err) {
                 assert(!err);
-                client.write(globals.encodeInt32(consts.PROTOCOL_VERSION));
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 done();
             });
         });
@@ -607,7 +607,7 @@ describe("CacheServer protocol", function() {
                     done();
                 });
 
-                client.write(globals.encodeInt32(consts.PROTOCOL_VERSION));
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 client.write(cmd.quit);
             });
         });
