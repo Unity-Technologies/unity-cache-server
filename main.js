@@ -1,5 +1,5 @@
 const cluster = require('cluster');
-const globals = require('./lib/globals');
+const helpers = require('./lib/helpers');
 const consts = require('./lib/constants').Constants;
 const program = require('commander');
 const path = require('path');
@@ -27,7 +27,7 @@ program.description("Unity Cache Server")
     .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0)
     .parse(process.argv);
 
-globals.SetLogLevel(program.logLevel);
+helpers.SetLogLevel(program.logLevel);
 
 // Initialize cache
 var cache;
@@ -61,7 +61,7 @@ if (program.monitorParentProcess > 0) {
         }
 
         if (!is_running(program.monitorParentProcess)) {
-            globals.log(consts.LOG_INFO, "monitored parent process has died");
+            helpers.log(consts.LOG_INFO, "monitored parent process has died");
             process.exit(1);
         }
         setTimeout(monitor, 1000);
@@ -71,14 +71,14 @@ if (program.monitorParentProcess > 0) {
 }
 
 var errHandler = function () {
-    globals.log(consts.LOG_ERR, "Unable to start Cache Server");
+    helpers.log(consts.LOG_ERR, "Unable to start Cache Server");
     process.exit(1);
 };
 
 var server = new CacheServer(cache, program.port);
 
 if(cluster.isMaster) {
-    globals.log(consts.LOG_INFO, "Cache Server version " + consts.VERSION);
+    helpers.log(consts.LOG_INFO, "Cache Server version " + consts.VERSION);
     for(let i = 0; i < program.workers; i++) {
         var worker = cluster.fork();
         cache.RegisterClusterWorker(worker);
@@ -86,6 +86,6 @@ if(cluster.isMaster) {
 }
 else {
     server.Start(errHandler, function () {
-        globals.log(consts.LOG_INFO, `Cache Server worker ${cluster.worker.id} ready on port ${server.port}`);
+        helpers.log(consts.LOG_INFO, `Cache Server worker ${cluster.worker.id} ready on port ${server.port}`);
     });
 }

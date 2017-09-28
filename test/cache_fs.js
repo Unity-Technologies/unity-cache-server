@@ -1,13 +1,13 @@
 'use strict';
 const assert = require('assert');
 const fs = require('fs');
-const globals = require('../lib/globals');
+const helpers = require('../lib/helpers');
 const CacheFS = require('../lib/cache_fs');
 
 describe("CacheFS", function() {
     describe("Init", function() {
         it("should throw an error if the given cache folder is not recognized as a valid cache", function() {
-            var p = globals.generateTempDir();
+            var p = helpers.generateTempDir();
             fs.mkdirSync(p);
             var f = p + "/veryImportantDoc.doc";
             fs.writeFileSync(f);
