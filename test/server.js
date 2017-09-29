@@ -2,18 +2,20 @@ const assert = require('assert');
 const net = require('net');
 const crypto = require('crypto');
 const fs = require('fs');
-const globals = require('./globals');
-const cserver = require('../CacheServer');
-const CmdResponseListener = require('./response_transform');
+const helpers = require('../lib/helpers');
+const consts = require('../lib/constants').Constants;
+const CacheServer = require('../lib/server.js');
+const CacheFS = require("../lib/cache_fs");
+
+const CmdResponseListener = require('./../lib/client/server_response_transform.js');
 
 const CACHE_SIZE = 1024 * 1024;
 const MIN_BLOB_SIZE = 64;
 const MAX_BLOB_SIZE = 2048;
 
-var cache_port = 0;
-var cache_proto_ver = 0;
-var cache_path = generateTempDir();
-
+helpers.SetLogger(()=>{});
+var cache = new CacheFS(helpers.generateTempDir(), CACHE_SIZE);
+var server = new CacheServer(cache, 0);
 var client;
 
 var cmd = {
@@ -30,10 +32,6 @@ var cmd = {
     integrityFix: "icf"
 };
 
-function generateTempDir() {
-    return require('os').tmpdir() + "/" + crypto.randomBytes(32).toString('hex');
-}
-
 function generateCommandData(minSize, maxSize) {
     minSize = minSize || MIN_BLOB_SIZE;
     maxSize = maxSize || MAX_BLOB_SIZE;
@@ -41,8 +39,8 @@ function generateCommandData(minSize, maxSize) {
     function getSize() { return Math.max(minSize, Math.floor(Math.random() * maxSize)); }
 
     return {
-        guid: Buffer.from(crypto.randomBytes(globals.GUID_SIZE).toString('ascii'), 'ascii'),
-        hash: Buffer.from(crypto.randomBytes(globals.HASH_SIZE).toString('ascii'), 'ascii'),
+        guid: Buffer.from(crypto.randomBytes(consts.GUID_SIZE).toString('ascii'), 'ascii'),
+        hash: Buffer.from(crypto.randomBytes(consts.HASH_SIZE).toString('ascii'), 'ascii'),
         asset: Buffer.from(crypto.randomBytes(getSize()).toString('ascii'), 'ascii'),
         info: Buffer.from(crypto.randomBytes(getSize()).toString('ascii'), 'ascii'),
         resource: Buffer.from(crypto.randomBytes(getSize()).toString('ascii'), 'ascii')
@@ -52,7 +50,7 @@ function generateCommandData(minSize, maxSize) {
 function encodeCommand(command, guid, hash, blob) {
 
     if(blob)
-        command += globals.encodeInt64(blob.length);
+        command += helpers.encodeInt64(blob.length);
 
     if(guid)
         command += guid;
@@ -73,7 +71,7 @@ function expectLog(client, regex, condition, callback) {
     }
 
     var match;
-    cserver.SetLogger(function (lvl, msg) {
+    helpers.SetLogger(function (lvl, msg) {
         match = match || regex.test(msg);
     });
 
@@ -82,70 +80,47 @@ function expectLog(client, regex, condition, callback) {
         callback();
     });
 }
-describe("CacheServer", function() {
-    this.slow(250);
 
-    it("should fail to start if the given cache folder is not recognized as a valid cache", function(done) {
-        var p = generateTempDir();
-        fs.mkdirSync(p);
-        var f = p + "/veryImportantDoc.doc";
-        fs.writeFileSync(f);
-
-        var error = null;
-        try {
-            cserver.Start(1024, 0, p, null, null);
-        }
-        catch(e) {
-            error = e;
-        }
-        finally {
-            assert(error);
-            done();
-        }
-    });
-});
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 describe("CacheServer protocol", function() {
 
     beforeEach(function() {
-        cserver.SetLogger(function(lvl, msg) {});
+        helpers.SetLogger(function(lvl, msg) {});
     });
 
     before(function (done) {
-        cserver.Start(CACHE_SIZE, 0, cache_path, function (lvl, msg) {
-        }, function (err) {
+        server.Start(function (err) {
             assert(!err, "Cache Server reported error! " + err);
-        });
-
-        cache_port = cserver.GetPort();
-        cache_proto_ver = cserver.GetProtocolVersion();
-        done();
+        }, done);
     });
 
     describe("Version check", function () {
 
         beforeEach(function (done) {
-            client = net.connect({port: cache_port}, done);
+            client = net.connect({port: server.port}, done);
         });
 
         it("should echo the version if supported", function (done) {
             client.on('data', function (data) {
-                var ver = globals.bufferToInt32(data);
-                assert(ver == cache_proto_ver, "Expected " + cache_proto_ver + " Received " + ver);
+                var ver = helpers.readUInt32(data);
+                assert(ver == consts.PROTOCOL_VERSION, "Expected " + consts.PROTOCOL_VERSION + " Received " + ver);
                 done();
             });
 
-            client.write(globals.encodeInt32(cache_proto_ver));
+            client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
         });
 
         it("should respond with 0 if unsupported", function (done) {
             client.on('data', function (data) {
-                var ver = globals.bufferToInt32(data);
+                var ver = helpers.readUInt32(data);
                 assert(ver == 0, "Expected 0, Received " + ver);
                 done();
             });
 
-            client.write(globals.encodeInt32(cache_proto_ver + 1));
+            client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION + 1));
         });
     });
 
@@ -154,10 +129,10 @@ describe("CacheServer protocol", function() {
         var self = this;
 
         beforeEach(function (done) {
-            client = net.connect({port: cache_port}, function (err) {
+            client = net.connect({port: server.port}, function (err) {
                 assert(!err, err);
                 self.data = generateCommandData();
-                client.write(globals.encodeInt32(cache_proto_ver));
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 done(err);
             });
         });
@@ -201,9 +176,9 @@ describe("CacheServer protocol", function() {
 
         var self = this;
         this.getCachePath = function(extension) {
-            return cserver.GetCachePath(
-                cserver.readHex(self.data.guid.length, self.data.guid),
-                cserver.readHex(self.data.hash.length, self.data.hash),
+            return cache.GetCachePath(
+                helpers.readHex(self.data.guid.length, self.data.guid),
+                helpers.readHex(self.data.hash.length, self.data.hash),
                 extension, false);
         };
 
@@ -212,12 +187,12 @@ describe("CacheServer protocol", function() {
         });
 
         beforeEach(function (done) {
-            client = net.connect({port: cache_port}, function(err) {
+            client = net.connect({port: server.port}, function(err) {
                 assert(!err);
 
                 // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
                 // to other request data in the tests below.
-                client.write(globals.encodeInt32(cache_proto_ver));
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 done();
             });
 
@@ -234,16 +209,16 @@ describe("CacheServer protocol", function() {
             var match1 = false;
             var match2 = false;
 
-            cserver.SetMaxCacheSize(1024);
+            cache.maxCacheSize = 1024;
 
-            cserver.SetLogger(function(lvl, msg) {
+            helpers.SetLogger(function(lvl, msg) {
                 match1 = match1 || /Begin.*1200/.test(msg);
                 match2 = match2 || /Completed.*800/.test(msg);
             });
 
             client.on('close', function() {
                 assert(match1 && match2);
-                cserver.SetMaxCacheSize(CACHE_SIZE);
+                cache.maxCacheSize = CACHE_SIZE;
                 done();
             });
 
@@ -255,7 +230,7 @@ describe("CacheServer protocol", function() {
                 encodeCommand(cmd.putInfo, null, null, data.resource) +
                 encodeCommand(cmd.transactionEnd));
 
-            globals.sleep(50).then(() => { client.end(); })
+            sleep(50).then(() => { client.end(); })
         });
 
         var tests = [
@@ -289,7 +264,7 @@ describe("CacheServer protocol", function() {
                             if(sentBytes < buf.length)
                                 return sendBytesAsync();
                             else
-                                globals.sleep(50).then(() => { client.end(); });
+                                sleep(50).then(() => { client.end(); });
                         });
                     }, 1);
                 }
@@ -316,7 +291,7 @@ describe("CacheServer protocol", function() {
                 encodeCommand(cmd.putAsset, null, null, asset) +
                 encodeCommand(cmd.transactionEnd));
 
-            globals.sleep(50).then(() => { client.end(); });
+            sleep(50).then(() => { client.end(); });
         });
     });
 
@@ -327,26 +302,26 @@ describe("CacheServer protocol", function() {
         self.data = generateCommandData();
 
         before(function(done) {
-            client = net.connect({port: cache_port}, function (err) {
+            client = net.connect({port: server.port}, function (err) {
                 assert(!err);
-                client.write(globals.encodeInt32(cache_proto_ver));
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
                 client.write(encodeCommand(cmd.putAsset, null, null, self.data.asset));
                 client.write(encodeCommand(cmd.putInfo, null, null, self.data.info));
                 client.write(encodeCommand(cmd.putResource, null, null, self.data.resource));
                 client.write(cmd.transactionEnd);
 
-                return globals.sleep(25).then(done);
+                return sleep(25).then(done);
             });
         });
 
         beforeEach(function (done) {
-            client = net.connect({port: cache_port}, function (err) {
+            client = net.connect({port: server.port}, function (err) {
                 assert(!err);
 
                 // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
                 // to other request data in the tests below.
-                client.write(globals.encodeInt32(cache_proto_ver));
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 done();
             });
         });
@@ -405,8 +380,8 @@ describe("CacheServer protocol", function() {
                         done();
                     });
 
-                var badGuid = Buffer.allocUnsafe(globals.GUID_SIZE).fill(0);
-                var badHash = Buffer.allocUnsafe(globals.HASH_SIZE).fill(0);
+                var badGuid = Buffer.allocUnsafe(consts.GUID_SIZE).fill(0);
+                var badHash = Buffer.allocUnsafe(consts.HASH_SIZE).fill(0);
                 client.write(encodeCommand(test.cmd, badGuid, badHash));
             });
         });
@@ -421,9 +396,9 @@ describe("CacheServer protocol", function() {
         });
 
         beforeEach(function (done) {
-            client = net.connect({port: cache_port}, function (err) {
+            client = net.connect({port: server.port}, function (err) {
                 assert(!err);
-                client.write(globals.encodeInt32(cache_proto_ver));
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 done();
             });
         });
@@ -453,7 +428,7 @@ describe("CacheServer protocol", function() {
             this.slow(250);
 
             it("should remove unrecognized files from the cache root dir", function(done) {
-                var filePath = cache_path + "/file.rogue";
+                var filePath = cache.cacheDir + "/file.rogue";
                 fs.writeFileSync(filePath, "");
 
                 client.on('close', function() {
@@ -462,11 +437,11 @@ describe("CacheServer protocol", function() {
                 });
 
                 client.write(cmd.integrityFix);
-                globals.sleep(50).then(() => { client.end(); });
+                sleep(50).then(() => { client.end(); });
             });
 
             it("should remove unrecognized files from cache subdirs", function(done) {
-                var filePath = cache_path + "/00/file.rogue";
+                var filePath = cache.cacheDir + "/00/file.rogue";
                 fs.writeFileSync(filePath, "");
 
                 client.on('close', function() {
@@ -475,11 +450,11 @@ describe("CacheServer protocol", function() {
                 });
 
                 client.write(cmd.integrityFix);
-                globals.sleep(50).then(() => { client.end(); });
+                sleep(50).then(() => { client.end(); });
             });
 
             it("should remove unrecognized directories from the cache root dir", function(done) {
-                var dirPath = cache_path + "/dir.rogue";
+                var dirPath = cache.cacheDir + "/dir.rogue";
                 fs.mkdirSync(dirPath);
 
                 client.on('close', function() {
@@ -488,11 +463,11 @@ describe("CacheServer protocol", function() {
                 });
 
                 client.write(cmd.integrityFix);
-                globals.sleep(50).then(() => { client.end(); });
+                sleep(50).then(() => { client.end(); });
             });
 
             it("should remove unrecognized directories from cache subdirs", function(done) {
-                var dirPath = cache_path + "/00/dir.rogue";
+                var dirPath = cache.cacheDir + "/00/dir.rogue";
                 fs.mkdirSync(dirPath);
 
                 client.on('close', function() {
@@ -501,7 +476,7 @@ describe("CacheServer protocol", function() {
                 });
 
                 client.write(cmd.integrityFix);
-                globals.sleep(50).then(() => { client.end(); });
+                sleep(50).then(() => { client.end(); });
             });
 
             it("should ensure that cache files match their parent dir namespace", function(done) {
@@ -510,7 +485,7 @@ describe("CacheServer protocol", function() {
 
                 // Put a valid cache file into the wrong sub directory
                 fileName = "ff" + fileName.slice(2);
-                var filePath = cache_path + "/00/" + fileName;
+                var filePath = cache.cacheDir + "/00/" + fileName;
 
                 fs.writeFileSync(filePath, "");
 
@@ -520,7 +495,7 @@ describe("CacheServer protocol", function() {
                 });
 
                 client.write(cmd.integrityFix);
-                globals.sleep(50).then(() => { client.end(); });
+                sleep(50).then(() => { client.end(); });
             });
 
             it("should ensure each .resource file has a corresponding .bin file", function(done) {
@@ -531,7 +506,7 @@ describe("CacheServer protocol", function() {
                 client.write(encodeCommand(cmd.putResource, null, null, data.resource));
                 client.write(encodeCommand(cmd.transactionEnd));
 
-                globals.sleep(50).then(() => {
+                sleep(50).then(() => {
                     client.end(cmd.integrityFix);
                 });
             });
@@ -544,7 +519,7 @@ describe("CacheServer protocol", function() {
                 client.write(encodeCommand(cmd.putInfo, null, null, data.info));
                 client.write(encodeCommand(cmd.transactionEnd));
 
-                globals.sleep(50).then(() => {
+                sleep(50).then(() => {
                     client.end(cmd.integrityFix);
                 });
             });
@@ -557,7 +532,7 @@ describe("CacheServer protocol", function() {
                 client.write(encodeCommand(cmd.putAsset, null, null, data.asset));
                 client.write(encodeCommand(cmd.transactionEnd));
 
-                globals.sleep(50).then(() => {
+                sleep(50).then(() => {
                     client.end(cmd.integrityFix);
                 });
             });
@@ -571,7 +546,7 @@ describe("CacheServer protocol", function() {
                 client.write(encodeCommand(cmd.putResource, null, null, data.resource));
                 client.write(encodeCommand(cmd.transactionEnd));
 
-                globals.sleep(50).then(() => {
+                sleep(50).then(() => {
                     client.end(cmd.integrityFix);
                 });
             });
@@ -582,7 +557,7 @@ describe("CacheServer protocol", function() {
 
             requiredResourceTests.forEach(function(test) {
                 it("should ensure " + test.type + " files have a corresponding .resource file", function(done) {
-                    expectLog(client, /fix 1 issue/, done);
+                    expectLog(client, /fix 2 issue/, done);
 
                     var data = generateCommandData();
                     data.info = Buffer.from("  assetImporterClassID: " + test.classId, 'ascii');
@@ -591,7 +566,7 @@ describe("CacheServer protocol", function() {
                     client.write(encodeCommand(cmd.putInfo, null, null, data.info));
                     client.write(encodeCommand(cmd.transactionEnd));
 
-                    globals.sleep(50).then(() => {
+                    sleep(50).then(() => {
                         client.end(cmd.integrityFix);
                     });
 
@@ -606,7 +581,7 @@ describe("CacheServer protocol", function() {
 
             skipFiles.forEach(function(test) {
                 it("should skip validation for certain system specific files (" + test + ")", function(done) {
-                    var filePath = cache_path + "/" + test;
+                    var filePath = cache.cacheDir + "/" + test;
                     fs.writeFileSync(filePath, "");
 
                     client.on('close', function() {
@@ -617,7 +592,7 @@ describe("CacheServer protocol", function() {
                     });
 
                     client.write(cmd.integrityFix);
-                    globals.sleep(50).then(() => { client.end(); });
+                    sleep(50).then(() => { client.end(); });
                 })
             })
         });
@@ -625,14 +600,14 @@ describe("CacheServer protocol", function() {
 
     describe("Other", function() {
         it("should force close the socket when a quit (q) command is received", function(done) {
-            client = net.connect({port: cache_port}, function (err) {
+            client = net.connect({port: server.port}, function (err) {
                 assert(!err);
 
                 client.on('close', function() {
                     done();
                 });
 
-                client.write(globals.encodeInt32(cache_proto_ver));
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 client.write(cmd.quit);
             });
         });

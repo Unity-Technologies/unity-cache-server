@@ -1,178 +1,91 @@
-var cserver = require ("./CacheServer.js");
-var clegserver = require ("./LegacyCacheServer.js");
-var path = require('path');
+const cluster = require('cluster');
+const helpers = require('./lib/helpers');
+const consts = require('./lib/constants').Constants;
+const program = require('commander');
+const path = require('path');
+const CacheServer = require('./lib/server');
+const CacheFS = require('./lib/cache_fs');
 
-/**
- * parse cmd line argument
- * @todo should use existing module, like optimist
- *
- * @return {Object} an object containing the parsed arguments if found
- */
-function ParseArguments ()
-{
-	var res = {};
-	res.legacy = true;
-	res.legacyCacheDir = "./cache";
-	res.cacheDir = "./cache5.0";
-	res.verify = false;
-	res.fix = false;
-	res.monitorParentProcess = 0;
-	res.logFunc = null;
-	for (var i = 2; i<process.argv.length; i++)
-	{
-		var arg = process.argv[i];
-
-		if (arg.indexOf ("--size") == 0) 
-		{
-			res.size = parseInt (process.argv[++i]);
-		} 
-		else if (arg.indexOf ("--path") == 0) 
-		{
-			res.cacheDir = process.argv[++i];
-		} 
-		else if (arg.indexOf ("--legacypath") == 0) 
-		{
-			res.legacyCacheDir = process.argv[++i];
-		} 
-		else if (arg.indexOf ("--port") == 0) 
-		{
-			res.port = parseInt (process.argv[++i]);
-		}
-		else if (arg.indexOf ("--nolegacy") == 0) 
-		{
-			res.legacy = false;
-		}
-		else if (arg.indexOf ("--monitor-parent-process") == 0) 
-		{
-			res.monitorParentProcess = process.argv[++i];
-		}
-		else if (arg.indexOf ("--verify") == 0)
-		{
-			res.verify = true;
-			res.fix = false;
-		}
-		else if (arg.indexOf ("--fix") == 0)
-		{
-			res.verify = false;
-			res.fix = true;
-		}
-		else if (arg.indexOf ("--silent") == 0) 
-		{
-			res.logFunc = function(){};
-		}
-		else 
-		{
-			if (arg.indexOf ("--help") != 0)
-			{
-				console.log("Unknown option: " + arg);
-			}
-			console.log ("Usage: node main.js [--port serverPort] [--path pathToCache] [--legacypath pathToCache] [--size maximumSizeOfCache] [--nolegacy] [--verify|--fix]\n" +
-				     "--port: specify the server port, only apply to new cache server, default is 8126\n" +
-				     "--path: specify the path of the cache directory, only apply to new cache server, default is ./cache5.0\n" +
-				     "--legacypath: specify the path of the cache directory, only apply to legacy cache server, default is ./cache\n" +
-				     "--size: specify the maximum allowed size of the LRU cache for both servers. Files that have not been used recently will automatically be discarded when the cache size is exceeded\n" +
-				     "--nolegacy: do not start legacy cache server, otherwise legacy cache server will start on port 8125.\n" +
-						 "--verify: verify the Cache Server integrity, no fix.\n" +
-						 "--fix: fix the Cache Server integrity."
-					 );
-			process.exit (0);
-		}
-	}
-
-	return res;
+function myParseInt(val, def) {
+    val = parseInt(val);
+    return (!val && val !== 0) ? def : val;
 }
 
-var res = ParseArguments ();
-if (res.verify)
-{
-	console.log ("Verifying integrity of Cache Server directory " + res.cacheDir);
-	var numErrors = cserver.Verify (res.cacheDir, null, false)
-	if (numErrors == 0)
-	{
-		console.log ("Cache Server directory integrity verified successfully.");
-	}
-	else 
-	{
-		if (numErrors == 0)
-		{
-			console.log ("Cache Server directory contains one integrity issue.");
-		}
-		else 
-		{
-			console.log ("Cache Server directory contains "+numErrors+" integrity issues.");
-		}
-	}
-	process.exit (0);
+function atLeastOne(val) {
+    return Math.max(1, val);
 }
 
-if (res.fix)
-{
-	console.log ("Fixing integrity of Cache Server directory " + res.cacheDir);
-	cserver.Verify (res.cacheDir, null, true)
-	console.log ("Cache Server directory integrity fixed.");
-	process.exit (0);
+program.description("Unity Cache Server")
+    .version(consts.VERSION)
+    .option('-s, --size <n>', 'Specify the maximum allowed size of the LRU cache. Files that have not been used recently will automatically be discarded when the cache size is exceeded. Default is 50Gb', myParseInt, consts.DEFAULT_CACHE_SIZE)
+    .option('-p, --port <n>', 'Specify the server port, only apply to new cache server, default is 8126', myParseInt, consts.DEFAULT_PORT)
+    .option('-P, --path [path]', 'Specify the path of the cache directory. Default is ./cache5.0', consts.DEFAULT_CACHE_DIR)
+    .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug). Default is 4 (test)', myParseInt, consts.DEFAULT_LOG_LEVEL)
+    .option('-w, --workers <n>', 'Number of worker threads to spawn. Default is 1 for every 2 CPUs reported by the OS', atLeastOne, consts.DEFAULT_WORKERS)
+    .option('-v, --verify', 'Verify the Cache Server integrity, without fixing errors')
+    .option('-f, --fix', 'Fix errors found while verifying the Cache Server integrity')
+    .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0)
+    .parse(process.argv);
+
+helpers.SetLogLevel(program.logLevel);
+
+// Initialize cache
+var cache;
+
+try {
+    cache = new CacheFS(program.path, program.size);
+}
+catch(e) {
+    console.log(e);
+    process.exit(1);
 }
 
-if (res.legacy)
-{
-	if (res.port && res.port == clegserver.GetPort ())
-	{
-		console.log ("Cannot start Cache Server and Legacy Cache Server on the same port.");
-		process.exit (1);
-	}
-	
-	if (path.resolve (res.cacheDir) == path.resolve (res.legacyCacheDir))
-	{
-		console.log ("Cannot use same cache for Cache Server and Legacy Cache Server.");
-		process.exit (1);
-	}
-	
-	clegserver.Start (res.size, res.legacyCacheDir, res.logFunc, function (res) 
-	{
-		console.log ("Unable to start Legacy Cache Server");
-		process.exit (1);
-	});
-
-	setTimeout (function ()
-	{
-		clegserver.log (clegserver.INFO, "Legacy Cache Server version " + clegserver.GetVersion ());
-		clegserver.log (clegserver.INFO, "Legacy Cache Server on port " + clegserver.GetPort ());
-		clegserver.log (clegserver.INFO, "Legacy Cache Server is ready");
-	}, 50);
+if (program.verify || program.fix) {
+    console.log("Verifying integrity of Cache Server directory " + program.path);
+    var numErrors = cache.VerifyCache(program.fix);
+    console.log("Cache Server directory contains " + numErrors + " integrity issue(s)");
+    if (program.fix)
+        console.log("Cache Server directory integrity fixed.");
+    process.exit(0);
 }
 
-if (res.monitorParentProcess != 0)
-{
-	function monitor()
-	{
-		function is_running(pid) {
-			try {
-				return process.kill(pid,0)
-			}
-			catch (e) {
-				return e.code === 'EPERM'
-			}
-		}
-		if (!is_running(res.monitorParentProcess))
-		{
-			cserver.log (cserver.INFO, "monitored parent process has died");
-			process.exit (1);
-		}
-		setTimeout(monitor, 1000);
-	}
-	monitor();	
+if (program.monitorParentProcess > 0) {
+    function monitor() {
+        function is_running(pid) {
+            try {
+                return process.kill(pid, 0)
+            }
+            catch (e) {
+                return e.code === 'EPERM'
+            }
+        }
+
+        if (!is_running(program.monitorParentProcess)) {
+            helpers.log(consts.LOG_INFO, "monitored parent process has died");
+            process.exit(1);
+        }
+        setTimeout(monitor, 1000);
+    }
+
+    monitor();
 }
 
-cserver.Start (res.size, res.port, res.cacheDir, res.logFunc, function (res) 
-{
-	cserver.log (cserver.ERR, "Unable to start Cache Server");
-	process.exit (1);
-});
+var errHandler = function () {
+    helpers.log(consts.LOG_ERR, "Unable to start Cache Server");
+    process.exit(1);
+};
 
-setTimeout (function ()
-{
-	// Inform integration tests that the cache server is ready
-	cserver.log (cserver.INFO, "Cache Server version " + cserver.GetVersion ());
-	cserver.log (cserver.INFO, "Cache Server on port " + cserver.GetPort ());
-	cserver.log (cserver.INFO, "Cache Server is ready");
-}, 50);
+var server = new CacheServer(cache, program.port);
+
+if(cluster.isMaster) {
+    helpers.log(consts.LOG_INFO, "Cache Server version " + consts.VERSION);
+    for(let i = 0; i < program.workers; i++) {
+        var worker = cluster.fork();
+        cache.RegisterClusterWorker(worker);
+    }
+}
+else {
+    server.Start(errHandler, function () {
+        helpers.log(consts.LOG_INFO, `Cache Server worker ${cluster.worker.id} ready on port ${server.port}`);
+    });
+}
