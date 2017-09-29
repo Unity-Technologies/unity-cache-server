@@ -16,7 +16,7 @@ node main.js
 ```
 
 ## Options
-```bash
+```
     -V, --version                     output the version number
     -s, --size <n>                    Specify the maximum allowed size of the LRU cache. Files that have not been used recently will automatically be discarded when the cache size is exceeded. Default is 50Gb
     -p, --port <n>                    Specify the server port, only apply to new cache server, default is 8126
@@ -30,6 +30,7 @@ node main.js
 ```
 
 ## Contributors
+
 The server protocol is described in [protocol.md](./protocol.md)
 
 ## License
