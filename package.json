@@ -16,15 +16,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Unity-Technologies/Fast-CachServer.git"
+    "url": "git+https://github.com/Unity-Technologies/unity-cache-server.git"
   },
   "keywords": [],
   "author": "Unity Technologies",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/Unity-Technologies/Fast-CachServer/issues"
+    "url": "https://github.com/Unity-Technologies/unity-cache-server/issues"
   },
-  "homepage": "https://github.com/Unity-Technologies/Fast-CachServer#readme",
+  "homepage": "https://github.com/Unity-Technologies/unity-cache-server#readme",
   "devDependencies": {
     "coveralls": "^3.0.0",
     "istanbul": "^0.4.5",
