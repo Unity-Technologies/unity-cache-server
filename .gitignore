@@ -2,3 +2,4 @@ cache/
 cache5.0/
 coverage/
 node_modules/
+.coveralls.yml
