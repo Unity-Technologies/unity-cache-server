@@ -1,7 +1,12 @@
 # unity-cache-server
-> The Unity Cache Server, with clustering (multi-process)
+> The Unity Cache Server, optimized for networked team environments.
 
-## Setup
+## Overview
+This is the officially maintained open-source implementation of the Unity Cache Server, specifically optimized for LAN connected teams. The Unity Cache Server speeds up initial import of project data, as well as platform switching within a project.
+
+At present time this open-source repository is maintained separately from the Cache Server available on the Unity website, as well as the version packaged with the Unity installer. It is possible that compatibility with specific versions of Unity will diverge between these separate implementations. Check the release notes for specific compatibility information prior to usage.
+
+## Server Setup
 Download and install the latest LTS version of node from the [Node.JS website](https://nodejs.org/en/download/).
 
 ```bash
@@ -29,7 +34,12 @@ node main.js
     -h, --help                        output usage information
 ```
 
+## Client Configuration
+The [Cache Server](https://docs.unity3d.com/Manual/CacheServer.html) section of the Unity Manual contains detailed information on connecting clients to remote Cache Servers.
+
 ## Contributors
+
+Contributions are welcome! Before submitting pull requests please note the Submission of Contributions section of the Apache 2.0 license.
 
 The server protocol is described in [protocol.md](./protocol.md)
 
