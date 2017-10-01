@@ -1,4 +1,4 @@
-# unity-cache-server [![Build Status](https://travis-ci.com/Unity-Technologies/unity-cache-server.svg)](https://travis-ci.com/Unity-Technologies/unity-cache-server)[![Coverage Status](https://coveralls.io/repos/github/Unity-Technologies/unity-cache-server/badge.svg)](https://coveralls.io/github/Unity-Technologies/unity-cache-server)
+# unity-cache-server [![Build Status](https://travis-ci.org/Unity-Technologies/unity-cache-server.svg?branch=master)](https://travis-ci.org/Unity-Technologies/unity-cache-server) [![Coverage Status](https://coveralls.io/repos/github/Unity-Technologies/unity-cache-server/badge.svg)](https://coveralls.io/github/Unity-Technologies/unity-cache-server)
 > The Unity Cache Server, optimized for networked team environments.
 
 ## Overview
