@@ -1,4 +1,4 @@
-# unity-cache-server
+# unity-cache-server [![Coverage Status](https://coveralls.io/repos/github/Unity-Technologies/unity-cache-server/badge.svg)](https://coveralls.io/github/Unity-Technologies/unity-cache-server)
 > The Unity Cache Server, optimized for networked team environments.
 
 ## Overview
