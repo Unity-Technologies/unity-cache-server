@@ -122,6 +122,20 @@ describe("CacheServer protocol", function() {
 
             client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION + 1));
         });
+
+        it("should recognize a 2 byte version sent 1 byte at a time", function (done) {
+            this.slow(250);
+
+            client.on('data', function(data) {
+                var ver = helpers.readUInt32(data);
+                assert(ver == consts.PROTOCOL_VERSION, "Expected " + consts.PROTOCOL_VERSION + " Received " + ver);
+                done();
+            });
+
+            var ver = "fe";
+            client.write(ver[0]);
+            sleep(50).then(() => { client.write(ver[1]); });
+        });
     });
 
     describe("Transactions", function () {
