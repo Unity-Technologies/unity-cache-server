@@ -1,6 +1,6 @@
 {
-  "name": "Fast-CacheServer",
-  "version": "6.0.0",
+  "name": "unity-cache-server",
+  "version": "5.4.1",
   "description": "Unity Cache Server",
   "main": "main.js",
   "engines": {
