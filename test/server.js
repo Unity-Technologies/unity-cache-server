@@ -189,11 +189,11 @@ describe("CacheServer protocol", function() {
         this.slow(1500);
 
         var self = this;
-        this.getCachePath = function(extension) {
+        this.getCachePath = function(extension, callback) {
             return cache.GetCachePath(
                 helpers.readHex(self.data.guid.length, self.data.guid),
                 helpers.readHex(self.data.hash.length, self.data.hash),
-                extension, false);
+                extension, false, callback);
         };
 
         before(function() {
@@ -256,12 +256,15 @@ describe("CacheServer protocol", function() {
         tests.forEach(function(test) {
             it("should store " + test.ext + " data with a (" + test.cmd + ") cmd", function(done) {
                 client.on('close', function() {
-                    fs.open(self.getCachePath(test.ext), 'r', function(err, fd) {
-                        assert(!err, err);
-                        var buf = fs.readFileSync(fd);
-                        assert(buf.compare(self.data.asset) == 0);
-                        done();
-                    });
+                    self.getCachePath(test.ext, function(err, cachePath) {
+                        fs.open(cachePath, 'r', function(err, fd) {
+                            assert(!err, err);
+                            var buf = fs.readFileSync(fd);
+                            assert(buf.compare(self.data.asset) == 0);
+                            done();
+                        });
+                    })
+
                 });
 
                 var buf = Buffer.from(
@@ -292,11 +295,13 @@ describe("CacheServer protocol", function() {
             var asset = Buffer.from(crypto.randomBytes(self.data.asset.length).toString('ascii'), 'ascii');
 
             client.on('close', function() {
-                fs.open(self.getCachePath('bin'), 'r', function(err, fd) {
-                    assert(!err, err);
-                    var buf = fs.readFileSync(fd);
-                    assert(buf.compare(asset) == 0);
-                    done();
+                self.getCachePath('bin', function(err, cachePath) {
+                    fs.open(cachePath, 'r', function(err, fd) {
+                        assert(!err, err);
+                        var buf = fs.readFileSync(fd);
+                        assert(buf.compare(asset) == 0);
+                        done();
+                    });
                 });
             });
 

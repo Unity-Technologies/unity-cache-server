@@ -24,4 +24,8 @@ describe("CacheFS", function() {
             }
         });
     });
+
+    describe("GetCacheFileStream", function() {
+        it("should update the timestamp of the retrieved file to support LRU cleanup");
+    })
 });

@@ -1,0 +1,11 @@
+Cache:
+  module: "cache_membuf"
+  path: "lib/cache"
+  options:
+    cache_debug:
+      minFileSize: 100000
+      maxFileSize: 1000000
+    cache_membuf:
+      initialPageSize: 10000000
+      growPageSize: 10000000
+      minFreeBlockSize: 1024

@@ -3,12 +3,16 @@ const helpers = require('./lib/helpers');
 const consts = require('./lib/constants').Constants;
 const program = require('commander');
 const path = require('path');
-const CacheServer = require('./lib/server');
-const CacheFS = require('./lib/cache_fs');
+const CacheServer = require('./lib/server_v2');
+const config = require('config');
 
 function myParseInt(val, def) {
     val = parseInt(val);
     return (!val && val !== 0) ? def : val;
+}
+
+function zeroOrMore(val) {
+    return Math.max(0, val);
 }
 
 function atLeastOne(val) {
@@ -17,11 +21,11 @@ function atLeastOne(val) {
 
 program.description("Unity Cache Server")
     .version(consts.VERSION)
-    .option('-s, --size <n>', 'Specify the maximum allowed size of the LRU cache. Files that have not been used recently will automatically be discarded when the cache size is exceeded. Default is 50Gb', myParseInt, consts.DEFAULT_CACHE_SIZE)
+    //.option('-s, --size <n>', 'Specify the maximum allowed size of the LRU cache. Files that have not been used recently will automatically be discarded when the cache size is exceeded. Default is 50Gb', myParseInt, consts.DEFAULT_CACHE_SIZE)
     .option('-p, --port <n>', 'Specify the server port, only apply to new cache server, default is 8126', myParseInt, consts.DEFAULT_PORT)
-    .option('-P, --path [path]', 'Specify the path of the cache directory. Default is ./cache5.0', consts.DEFAULT_CACHE_DIR)
+    //.option('-P, --path [path]', 'Specify the path of the cache directory. Default is ./cache5.0', consts.DEFAULT_CACHE_DIR)
     .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug). Default is 4 (test)', myParseInt, consts.DEFAULT_LOG_LEVEL)
-    .option('-w, --workers <n>', 'Number of worker threads to spawn. Default is 1 for every 2 CPUs reported by the OS', atLeastOne, consts.DEFAULT_WORKERS)
+    .option('-w, --workers <n>', 'Number of worker threads to spawn. Default is 1 for every 2 CPUs reported by the OS', zeroOrMore, consts.DEFAULT_WORKERS)
     .option('-v, --verify', 'Verify the Cache Server integrity, without fixing errors')
     .option('-f, --fix', 'Fix errors found while verifying the Cache Server integrity')
     .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0)
@@ -33,7 +37,11 @@ helpers.SetLogLevel(program.logLevel);
 var cache;
 
 try {
-    cache = new CacheFS(program.path, program.size);
+    var moduleName = config.get("Cache.module");
+    var modulePath = path.resolve(config.get("Cache.path"), moduleName);
+    helpers.log(consts.LOG_INFO, "Loading Cache module at " + modulePath);
+    const Cache = require(modulePath);
+    cache = new Cache();
 }
 catch(e) {
     console.log(e);
@@ -79,9 +87,16 @@ var server = new CacheServer(cache, program.port);
 
 if(cluster.isMaster) {
     helpers.log(consts.LOG_INFO, "Cache Server version " + consts.VERSION);
+
+    if(program.workers === 0) {
+        server.Start(errHandler, function () {
+            helpers.log(consts.LOG_INFO, `Cache Server ready on port ${server.port}`);
+        });
+    }
+
     for(let i = 0; i < program.workers; i++) {
         var worker = cluster.fork();
-        cache.RegisterClusterWorker(worker);
+        cache.registerClusterWorker(worker);
     }
 }
 else {
