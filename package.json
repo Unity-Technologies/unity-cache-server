@@ -4,7 +4,7 @@
   "description": "Unity Cache Server",
   "main": "main.js",
   "engines": {
-    "node": ">=6.11.0"
+    "node": "^8.9.1"
   },
   "directories": {
     "test": "test"

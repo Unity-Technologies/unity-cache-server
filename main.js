@@ -3,7 +3,7 @@ const helpers = require('./lib/helpers');
 const consts = require('./lib/constants').Constants;
 const program = require('commander');
 const path = require('path');
-const CacheServer = require('./lib/server_v2');
+const CacheServer = require('./lib/server');
 const config = require('config');
 
 function myParseInt(val, def) {
@@ -34,11 +34,11 @@ program.description("Unity Cache Server")
 helpers.SetLogLevel(program.logLevel);
 
 // Initialize cache
-var cache;
+let cache;
 
 try {
-    var moduleName = config.get("Cache.module");
-    var modulePath = path.resolve(config.get("Cache.path"), moduleName);
+    const moduleName = config.get("Cache.module");
+    const modulePath = path.resolve(config.get("Cache.path"), moduleName);
     helpers.log(consts.LOG_INFO, "Loading Cache module at " + modulePath);
     const Cache = require(modulePath);
     cache = new Cache();
@@ -50,7 +50,7 @@ catch(e) {
 
 if (program.verify || program.fix) {
     console.log("Verifying integrity of Cache Server directory " + program.path);
-    var numErrors = cache.VerifyCache(program.fix);
+    const numErrors = cache.VerifyCache(program.fix);
     console.log("Cache Server directory contains " + numErrors + " integrity issue(s)");
     if (program.fix)
         console.log("Cache Server directory integrity fixed.");
@@ -78,12 +78,12 @@ if (program.monitorParentProcess > 0) {
     monitor();
 }
 
-var errHandler = function () {
+const errHandler = function () {
     helpers.log(consts.LOG_ERR, "Unable to start Cache Server");
     process.exit(1);
 };
 
-var server = new CacheServer(cache, program.port);
+const server = new CacheServer(cache, program.port);
 
 if(cluster.isMaster) {
     helpers.log(consts.LOG_INFO, "Cache Server version " + consts.VERSION);
@@ -95,7 +95,7 @@ if(cluster.isMaster) {
     }
 
     for(let i = 0; i < program.workers; i++) {
-        var worker = cluster.fork();
+        const worker = cluster.fork();
         cache.registerClusterWorker(worker);
     }
 }
