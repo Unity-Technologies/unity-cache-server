@@ -9,7 +9,6 @@
   "directories": {
     "test": "test"
   },
-  "preferGlobal": true,
   "bin": {
     "unity-cache-server": "./main.js"
   },
