@@ -123,7 +123,7 @@ describe("CacheServer protocol", function() {
             client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION + 1));
         });
 
-        it.skip("should recognize a 2 byte version sent 1 byte at a time", function (done) {
+        it("should recognize a 2 byte version sent 1 byte at a time", function (done) {
             this.slow(250);
 
             client.on('data', function(data) {
@@ -218,35 +218,6 @@ describe("CacheServer protocol", function() {
                 encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
                 encodeCommand("px", null, null, self.data.bin));
         });
-
-        it.skip("should try to free cache space if the cache size exceeds the max cache size after writing a file", function(done) {
-            let match1 = false;
-            let match2 = false;
-
-            cache.maxCacheSize = 1024;
-
-            helpers.SetLogger(function(lvl, msg) {
-                match1 = match1 || /Begin.*1200/.test(msg);
-                match2 = match2 || /Completed.*800/.test(msg);
-            });
-
-            client.on('close', function() {
-                assert(match1 && match2);
-                cache.maxCacheSize = CACHE_SIZE;
-                done();
-            });
-
-            const data = generateCommandData(400, 400);
-            client.write(
-                encodeCommand(cmd.transactionStart, data.guid, data.hash) +
-                encodeCommand(cmd.putAsset, null, null, data.bin) +
-                encodeCommand(cmd.putResource, null, null, data.resource) +
-                encodeCommand(cmd.putInfo, null, null, data.info) +
-                encodeCommand(cmd.transactionEnd));
-
-            sleep(50).then(() => { client.end(); })
-        });
-
 
         const tests = [
             {ext: 'bin', cmd: cmd.putAsset},
