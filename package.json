@@ -1,6 +1,6 @@
 {
   "name": "unity-cache-server",
-  "version": "5.4.1",
+  "version": "5.5.0",
   "description": "Unity Cache Server",
   "main": "main.js",
   "engines": {
@@ -8,6 +8,9 @@
   },
   "directories": {
     "test": "test"
+  },
+  "bin": {
+    "unity-cache-server": "./main.js"
   },
   "scripts": {
     "test": "mocha test",
