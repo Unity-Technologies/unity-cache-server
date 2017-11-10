@@ -28,9 +28,5 @@ client --- 'pr' (size <uint64>) + size bytes --> server
 ## end transaction (ie rename targets to their final names)
 client --- 'te' --> server
 
-## cache server integrity
-client --- 'ic' (<char 'v' or 'f'>) --> server
-client <-- 'ic' (errors <uint64>) --- server
-
 ## quit
 client --- 'q' --> server
