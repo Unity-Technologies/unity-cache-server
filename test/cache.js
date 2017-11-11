@@ -16,7 +16,7 @@ helpers.SetLogger(()=>{});
 let cache, server, client;
 
 let test_modules = [
-    { name: "CacheMembuf", path: "../lib/cache/cache_membuf" }
+    { name: "Cache: Membuf", path: "../lib/cache/cache_membuf" }
 ];
 
 test_modules.forEach(function(module) {
@@ -38,6 +38,53 @@ test_modules.forEach(function(module) {
 
         after(function() {
             server.Stop();
+        });
+
+        describe("Transactions", function () {
+
+            const self = this;
+
+            beforeEach(function (done) {
+                client = net.connect({port: server.port}, function (err) {
+                    assert(!err, err);
+                    self.data = generateCommandData();
+                    client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
+                    done(err);
+                });
+            });
+
+            it("should start a transaction with the (ts) command", function (done) {
+                expectLog(client, /Start transaction/, done);
+                client.end(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
+            });
+
+            it("should cancel a pending transaction if a new (ts) command is received", function (done) {
+                expectLog(client, /Cancel previous transaction/, done);
+                const d = encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash);
+                client.write(d); // first one ...
+                client.end(d); // ... canceled by this one
+            });
+
+            it("should require a start transaction (ts) cmd before an end transaction (te) cmd", function (done) {
+                expectLog(client, /Invalid transaction isolation/, done);
+                client.end(cmd.transactionEnd);
+            });
+
+            it("should end a transaction that was started with the (te) command", function (done) {
+                expectLog(client, /End transaction for/, done);
+                client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
+                client.end(cmd.transactionEnd);
+            });
+
+            it("should require a transaction start (te) command before a put command", function(done) {
+                expectLog(client, /Not in a transaction/, done);
+                client.write(encodeCommand(cmd.putAsset, null, null, self.data.bin));
+            });
+
+            it("should close the socket on an invalid transaction command", function(done) {
+                expectLog(client, /Unrecognized command/i, done);
+                client.write('tx', self.data.guid, self.data.hash);
+            });
         });
 
         describe("PUT requests", function () {
