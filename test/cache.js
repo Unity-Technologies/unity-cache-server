@@ -5,6 +5,7 @@ const helpers = require('../lib/helpers');
 const consts = require('../lib/constants').Constants;
 const CacheServer = require('../lib/server');
 const CmdResponseListener = require('./../lib/client/server_response_transform.js');
+const { Writable } = require('stream');
 
 const generateCommandData = require('./test_utils').generateCommandData;
 const encodeCommand = require('./test_utils').encodeCommand;
@@ -12,28 +13,34 @@ const sleep = require('./test_utils').sleep;
 const expectLog = require('./test_utils').expectLog;
 const cmd = require('./test_utils').cmd;
 
-helpers.SetLogger(()=>{});
 let cache, server, client;
 
-let test_modules = [
-    { name: "Cache: Membuf", path: "../lib/cache/cache_membuf" }
-];
+let test_modules = [{
+        name: "Cache: Membuf",
+        path: "../lib/cache/cache_membuf",
+        options: {
+            initialPageSize: 10000,
+            growPageSize: 10000,
+            minFreeBlockSize: 1024
+        }
+    }];
 
 test_modules.forEach(function(module) {
     describe(module.name, function() {
 
         beforeEach(function() {
-            helpers.SetLogger(function(lvl, msg) {});
+            helpers.SetLogger(function(lvl, msg) { console.log(msg); });
         });
 
         before(function (done) {
-            const Cache = require(module.path);
-            cache = new Cache();
-            server = new CacheServer(cache, 0);
+            cache = require(module.path);
+            cache.init(module.options, function() {
+                server = new CacheServer(cache, 0);
 
-            server.Start(function (err) {
-                assert(!err, "Cache Server reported error! " + err);
-            }, done);
+                server.Start(function (err) {
+                    assert(!err, "Cache Server reported error! " + err);
+                }, done);
+            });
         });
 
         after(function() {
@@ -44,10 +51,13 @@ test_modules.forEach(function(module) {
 
             const self = this;
 
+            before(function() {
+                self.data = generateCommandData();
+            });
+
             beforeEach(function (done) {
                 client = net.connect({port: server.port}, function (err) {
                     assert(!err, err);
-                    self.data = generateCommandData();
                     client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                     done(err);
                 });
@@ -195,7 +205,7 @@ test_modules.forEach(function(module) {
             this.slow(1000);
 
             const self = this;
-            self.data = generateCommandData();
+            self.data = generateCommandData(5000000, 6000000);
 
             before(function (done) {
                 client = net.connect({port: server.port}, function (err) {
@@ -206,8 +216,8 @@ test_modules.forEach(function(module) {
                     client.write(encodeCommand(cmd.putInfo, null, null, self.data.info));
                     client.write(encodeCommand(cmd.putResource, null, null, self.data.resource));
                     client.write(cmd.transactionEnd);
-
-                    return sleep(25).then(done);
+                    client.end(cmd.quit);
+                    client.on('close', done);
                 });
             });
 
@@ -233,13 +243,33 @@ test_modules.forEach(function(module) {
                 {cmd: cmd.getResource, blob: self.data.resource, type: 'resource'}
             ];
 
+            it("should respond with not found (-) for missing files", function (done) {
+                let count = 0;
+
+                client.pipe(new CmdResponseListener())
+                    .on('header', function (header) {
+                        assert(header.cmd === '-' + tests[count].cmd[1]);
+                        count++;
+                        if(count === 3) done();
+                    });
+
+                const badGuid = Buffer.allocUnsafe(consts.GUID_SIZE).fill(0);
+                const badHash = Buffer.allocUnsafe(consts.HASH_SIZE).fill(0);
+
+                tests.forEach(function(test) {
+                    client.write(encodeCommand(test.cmd, badGuid, badHash));
+                });
+            });
+
+
             tests.forEach(function (test) {
                 it("should retrieve stored " + test.type + " data with the (" + test.cmd + ") command", function (done) {
                     let dataBuf;
                     let pos = 0;
-                    client.pipe(new CmdResponseListener())
-                        .on('header', function (header) {
-                            assert(header.cmd[0] === '+');
+                    let resp = new CmdResponseListener();
+
+                    resp.on('header', function (header) {
+                            assert(header.cmd === '+' + test.cmd[1]);
                             assert(header.size === test.blob.length, "Expected size " + test.blob.length);
                             dataBuf = Buffer.allocUnsafe(header.size);
                         })
@@ -250,6 +280,13 @@ test_modules.forEach(function(module) {
                             assert(dataBuf.compare(test.blob) === 0);
                             done();
                         });
+
+                    client.pipe(resp);
+
+                    // client.on('data', function(data) {
+                    //     "use strict";
+                    //     console.log("Received data " + data.length);
+                    // });
 
                     const buf = Buffer.from(encodeCommand(test.cmd, self.data.guid, self.data.hash), 'ascii');
 
@@ -268,18 +305,6 @@ test_modules.forEach(function(module) {
 
                     sendBytesAsync();
 
-                });
-
-                it("should respond with not found (-) for missing " + test.type + " data with the (" + test.cmd + ") command", function (done) {
-                    client.pipe(new CmdResponseListener())
-                        .on('header', function (header) {
-                            assert(header.cmd[0] === '-');
-                            done();
-                        });
-
-                    const badGuid = Buffer.allocUnsafe(consts.GUID_SIZE).fill(0);
-                    const badHash = Buffer.allocUnsafe(consts.HASH_SIZE).fill(0);
-                    client.write(encodeCommand(test.cmd, badGuid, badHash));
                 });
             });
         });

@@ -10,7 +10,7 @@ exports.generateCommandData = function(minSize, maxSize) {
     minSize = minSize || MIN_BLOB_SIZE;
     maxSize = maxSize || MAX_BLOB_SIZE;
 
-    function getSize() { return Math.max(minSize, Math.floor(Math.random() * maxSize)); }
+    function getSize() { return minSize + Math.floor(Math.random() * (maxSize - minSize)); }
 
     return {
         guid: Buffer.from(crypto.randomBytes(consts.GUID_SIZE).toString('ascii'), 'ascii'),

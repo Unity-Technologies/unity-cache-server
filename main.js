@@ -5,6 +5,7 @@ const program = require('commander');
 const path = require('path');
 const CacheServer = require('./lib/server');
 const config = require('config');
+const prompt = require('prompt');
 
 function myParseInt(val, def) {
     val = parseInt(val);
@@ -26,36 +27,10 @@ program.description("Unity Cache Server")
     //.option('-P, --path [path]', 'Specify the path of the cache directory. Default is ./cache5.0', consts.DEFAULT_CACHE_DIR)
     .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug). Default is 4 (test)', myParseInt, consts.DEFAULT_LOG_LEVEL)
     .option('-w, --workers <n>', 'Number of worker threads to spawn. Default is 1 for every 2 CPUs reported by the OS', zeroOrMore, consts.DEFAULT_WORKERS)
-    .option('-v, --verify', 'Verify the Cache Server integrity, without fixing errors')
-    .option('-f, --fix', 'Fix errors found while verifying the Cache Server integrity')
     .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0)
     .parse(process.argv);
 
 helpers.SetLogLevel(program.logLevel);
-
-// Initialize cache
-let cache;
-
-try {
-    const moduleName = config.get("Cache.module");
-    const modulePath = path.resolve(config.get("Cache.path"), moduleName);
-    helpers.log(consts.LOG_INFO, "Loading Cache module at " + modulePath);
-    const Cache = require(modulePath);
-    cache = new Cache();
-}
-catch(e) {
-    console.log(e);
-    process.exit(1);
-}
-
-if (program.verify || program.fix) {
-    console.log("Verifying integrity of Cache Server directory " + program.path);
-    const numErrors = cache.VerifyCache(program.fix);
-    console.log("Cache Server directory contains " + numErrors + " integrity issue(s)");
-    if (program.fix)
-        console.log("Cache Server directory integrity fixed.");
-    process.exit(0);
-}
 
 if (program.monitorParentProcess > 0) {
     function monitor() {
@@ -83,24 +58,95 @@ const errHandler = function () {
     process.exit(1);
 };
 
-const server = new CacheServer(cache, program.port);
+const moduleName = config.get("Cache.module");
+const modulePath = path.resolve(config.get("Cache.path"), moduleName);
+helpers.log(consts.LOG_INFO, "Loading Cache module at " + modulePath);
+const Cache = require(modulePath);
+let server = null;
 
-if(cluster.isMaster) {
-    helpers.log(consts.LOG_INFO, "Cache Server version " + consts.VERSION);
+Cache.init({}, function() {
+    server = new CacheServer(Cache, program.port);
 
-    if(program.workers === 0) {
+    if(cluster.isMaster) {
+        helpers.log(consts.LOG_INFO, "Cache Server version " + consts.VERSION);
+
+        if(program.workers === 0) {
+            server.Start(errHandler, function () {
+                helpers.log(consts.LOG_INFO, `Cache Server ready on port ${server.port}`);
+                startPrompt();
+            });
+        }
+
+        for(let i = 0; i < program.workers; i++) {
+            const worker = cluster.fork();
+            Cache.registerClusterWorker(worker);
+        }
+    }
+    else {
         server.Start(errHandler, function () {
-            helpers.log(consts.LOG_INFO, `Cache Server ready on port ${server.port}`);
+            helpers.log(consts.LOG_INFO, `Cache Server worker ${cluster.worker.id} ready on port ${server.port}`);
         });
     }
+});
 
-    for(let i = 0; i < program.workers; i++) {
-        const worker = cluster.fork();
-        cache.registerClusterWorker(worker);
-    }
-}
-else {
-    server.Start(errHandler, function () {
-        helpers.log(consts.LOG_INFO, `Cache Server worker ${cluster.worker.id} ready on port ${server.port}`);
+function startPrompt() {
+    prompt.message = "";
+    prompt.delimiter = "> ";
+    prompt.start();
+
+    prompt.get(['command'], function(err, result) {
+        if(err) {
+            if(err.message === 'canceled') {
+                result = { command: 'q' };
+            }
+            else {
+                helpers.log(consts.LOG_ERR, err);
+                server.Stop();
+                process.exit(1);
+            }
+        }
+
+        if(result) {
+            switch(result.command) {
+                case 'q':
+                    helpers.log(consts.LOG_INFO, "Shutting down ...");
+                    Cache.shutdown(function () {
+                        server.Stop();
+                        process.exit(0);
+                    });
+                    break;
+
+                case 's':
+                    helpers.log(consts.LOG_INFO, "Saving cache data ...");
+                    Cache.save(function(err) {
+                        if(err) {
+                            helpers.log(consts.LOG_ERR, err);
+                            server.Stop();
+                            process.exit(1);
+                        }
+
+                        helpers.log(consts.LOG_INFO, "Save finished.");
+                    });
+
+                    break;
+                case 'r':
+                    helpers.log(consts.LOG_INFO, "Resetting cache data ...");
+                    Cache.reset(function(err) {
+                        "use strict";
+                        if(err) {
+                            helpers.log(consts.LOG_ERR, err);
+                            server.Stop();
+                            process.exit(1);
+                        }
+
+                        helpers.log(consts.LOG_INFO, "Reset finished.");
+                    });
+            }
+        }
+
+        process.nextTick(startPrompt);
     });
 }
+
+
+
