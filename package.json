@@ -36,6 +36,7 @@
     "async": "^2.5.0",
     "commander": "^2.11.0",
     "config": "^1.27.0",
+    "filesize": "^3.5.11",
     "js-yaml": "^3.10.0",
     "lodash": "^4.17.4",
     "prompt": "^1.0.0",
