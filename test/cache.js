@@ -5,7 +5,7 @@ const helpers = require('../lib/helpers');
 const consts = require('../lib/constants').Constants;
 const CacheServer = require('../lib/server');
 const CmdResponseListener = require('./../lib/client/server_response_transform.js');
-const { Writable } = require('stream');
+const loki = require('lokijs');
 
 const generateCommandData = require('./test_utils').generateCommandData;
 const encodeCommand = require('./test_utils').encodeCommand;
@@ -21,7 +21,10 @@ let test_modules = [{
         options: {
             initialPageSize: 10000,
             growPageSize: 10000,
-            minFreeBlockSize: 1024
+            minFreeBlockSize: 1024,
+            persistenceOptions: {
+                adapter: new loki.LokiMemoryAdapter()
+            }
         }
     }];
 
@@ -29,7 +32,7 @@ test_modules.forEach(function(module) {
     describe(module.name, function() {
 
         beforeEach(function() {
-            helpers.SetLogger(function(lvl, msg) { console.log(msg); });
+            helpers.SetLogger(function() {});
         });
 
         before(function (done) {
