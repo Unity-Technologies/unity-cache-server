@@ -15,7 +15,7 @@ const MAX_BLOB_SIZE = 2048;
 
 helpers.SetLogger(()=>{});
 var cache = new CacheFS(helpers.generateTempDir(), CACHE_SIZE);
-var server = new CacheServer(cache, 0);
+var server = new CacheServer(cache, {port: 0});
 var client;
 
 var cmd = {

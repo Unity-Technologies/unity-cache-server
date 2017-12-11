@@ -16,6 +16,15 @@ function atLeastOne(val) {
     return Math.max(1, val);
 }
 
+function parseKeyValues(val) {
+    let obj = {};
+    val.split(',').forEach(function (kv) {
+        let pair = kv.split(':');
+        obj[pair[0]] = pair[1];
+    });
+    return obj;
+}
+
 program.description("Unity Cache Server")
     .version(consts.VERSION)
     .option('-s, --size <n>', 'Specify the maximum allowed size of the LRU cache. Files that have not been used recently will automatically be discarded when the cache size is exceeded. Default is 50Gb', myParseInt, consts.DEFAULT_CACHE_SIZE)
@@ -25,6 +34,8 @@ program.description("Unity Cache Server")
     .option('-w, --workers <n>', 'Number of worker threads to spawn. Default is 1 for every 2 CPUs reported by the OS', atLeastOne, consts.DEFAULT_WORKERS)
     .option('-v, --verify', 'Verify the Cache Server integrity, without fixing errors')
     .option('-f, --fix', 'Fix errors found while verifying the Cache Server integrity')
+    .option('--statsd-server [host]', 'Send statsd metrics to this host')
+    .option('--statsd-tags [key:val,...]', 'Extra tags for statsd metrics', parseKeyValues)
     .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0)
     .parse(process.argv);
 
@@ -76,7 +87,11 @@ var errHandler = function () {
     process.exit(1);
 };
 
-var server = new CacheServer(cache, program.port);
+var server = new CacheServer(cache, {
+    port: program.port,
+    statsdTags: program.statsdTags,
+    statsdServer: program.statsdServer
+});
 
 if(cluster.isMaster) {
     helpers.log(consts.LOG_INFO, "Cache Server version " + consts.VERSION);
