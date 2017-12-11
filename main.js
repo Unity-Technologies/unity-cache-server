@@ -25,6 +25,7 @@ program.description("Unity Cache Server")
     .option('-w, --workers <n>', 'Number of worker threads to spawn. Default is 1 for every 2 CPUs reported by the OS', atLeastOne, consts.DEFAULT_WORKERS)
     .option('-v, --verify', 'Verify the Cache Server integrity, without fixing errors')
     .option('-f, --fix', 'Fix errors found while verifying the Cache Server integrity')
+    .option('--statsd-server [host]', 'Send statsd-metrics to this host')
     .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0)
     .parse(process.argv);
 
@@ -76,7 +77,10 @@ var errHandler = function () {
     process.exit(1);
 };
 
-var server = new CacheServer(cache, program.port);
+var server = new CacheServer(cache, {
+    port: program.port,
+    statsdServer: program.statsdServer
+});
 
 if(cluster.isMaster) {
     helpers.log(consts.LOG_INFO, "Cache Server version " + consts.VERSION);
