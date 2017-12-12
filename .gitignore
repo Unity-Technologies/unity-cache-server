@@ -4,3 +4,4 @@ coverage/
 node_modules/
 .coveralls.yml
 !lib/cache
+.cache_membuf/
