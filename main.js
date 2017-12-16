@@ -16,19 +16,19 @@ function zeroOrMore(val) {
     return Math.max(0, val);
 }
 
-function atLeastOne(val) {
-    return Math.max(1, val);
-}
+const moduleName = config.get("Cache.module");
+const CacheModule = require(path.resolve(config.get("Cache.path"), moduleName));
+const Cache = new CacheModule();
 
 program.description("Unity Cache Server")
     .version(consts.VERSION)
-    //.option('-s, --size <n>', 'Specify the maximum allowed size of the LRU cache. Files that have not been used recently will automatically be discarded when the cache size is exceeded. Default is 50Gb', myParseInt, consts.DEFAULT_CACHE_SIZE)
-    .option('-p, --port <n>', 'Specify the server port, only apply to new cache server, default is 8126', myParseInt, consts.DEFAULT_PORT)
-    //.option('-P, --path [path]', 'Specify the path of the cache directory. Default is ./cache5.0', consts.DEFAULT_CACHE_DIR)
-    .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug). Default is 4 (test)', myParseInt, consts.DEFAULT_LOG_LEVEL)
-    .option('-w, --workers <n>', 'Number of worker threads to spawn. Default is 1 for every 2 CPUs reported by the OS', zeroOrMore, consts.DEFAULT_WORKERS)
-    .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0)
-    .parse(process.argv);
+    .option('-p, --port <n>', `Specify the server port, only apply to new cache server, default is ${consts.DEFAULT_PORT}`, myParseInt, consts.DEFAULT_PORT)
+    .option('-P, --cachePath [path]', `Specify the path of the cache directory. Default is .${moduleName}`, `.${moduleName}`)
+    .option('-l, --log-level <n>', `Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug). Default is ${consts.DEFAULT_LOG_LEVEL}`, myParseInt, consts.DEFAULT_LOG_LEVEL)
+    .option('-w, --workers <n>', `Number of worker threads to spawn. Default is ${consts.DEFAULT_WORKERS}`, zeroOrMore, consts.DEFAULT_WORKERS)
+    .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0);
+
+program.parse(process.argv);
 
 helpers.SetLogLevel(program.logLevel);
 
@@ -58,13 +58,23 @@ const errHandler = function () {
     process.exit(1);
 };
 
-const moduleName = config.get("Cache.module");
-const modulePath = path.resolve(config.get("Cache.path"), moduleName);
-helpers.log(consts.LOG_INFO, "Loading Cache module at " + modulePath);
-const Cache = require(modulePath);
+if(!CacheModule.properties.clustering) {
+    program.workers = 0;
+    helpers.log(consts.LOG_INFO, `Clustering disabled, ${moduleName} module does not support it.`);
+}
+
 let server = null;
 
-Cache.init({}, function() {
+let cacheOpts = {
+    cachePath: program.cachePath
+};
+
+Cache.init(cacheOpts, function(error) {
+    if(error) {
+        helpers.log(consts.LOG_ERR, error);
+        process.exit(1);
+    }
+
     server = new CacheServer(Cache, program.port);
 
     if(cluster.isMaster) {

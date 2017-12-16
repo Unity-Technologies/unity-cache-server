@@ -37,6 +37,7 @@
     "commander": "^2.11.0",
     "config": "^1.27.0",
     "filesize": "^3.5.11",
+    "fs-extra": "^5.0.0",
     "js-yaml": "^3.10.0",
     "lodash": "^4.17.4",
     "lokijs": "^1.5.1",

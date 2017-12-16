@@ -5,8 +5,9 @@ Cache:
     cache_membuf:
       initialPageSize: 100000000
       growPageSize: 100000000
+      maxPageCount: 10
       minFreeBlockSize: 1024
-      serializePath: ".cache_membuf"
+      cachePath: ".cache_membuf"
       persistenceOptions:
         autosave: true
         autosaveInterval: 10000

@@ -36,7 +36,9 @@ test_modules.forEach(function(module) {
         });
 
         before(function (done) {
-            cache = require(module.path);
+            let CacheModule = require(module.path);
+            cache = new CacheModule();
+
             cache.init(module.options, function() {
                 server = new CacheServer(cache, 0);
 
