@@ -16,14 +16,13 @@ function zeroOrMore(val) {
     return Math.max(0, val);
 }
 
-const moduleName = config.get("Cache.module");
-const CacheModule = require(path.resolve(config.get("Cache.path"), moduleName));
-const Cache = new CacheModule();
+const defaultCacheModule = config.get("Cache.module");
 
 program.description("Unity Cache Server")
     .version(consts.VERSION)
     .option('-p, --port <n>', `Specify the server port, only apply to new cache server, default is ${consts.DEFAULT_PORT}`, myParseInt, consts.DEFAULT_PORT)
-    .option('-P, --cachePath [path]', `Specify the path of the cache directory. Default is .${moduleName}`, `.${moduleName}`)
+    .option('-c --cacheModule [path]', `Use cache module at specified path. Default is '${defaultCacheModule}'`, defaultCacheModule)
+    .option('-P, --cachePath [path]', `Specify the path of the cache directory.`)
     .option('-l, --log-level <n>', `Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug). Default is ${consts.DEFAULT_LOG_LEVEL}`, myParseInt, consts.DEFAULT_LOG_LEVEL)
     .option('-w, --workers <n>', `Number of worker threads to spawn. Default is ${consts.DEFAULT_WORKERS}`, zeroOrMore, consts.DEFAULT_WORKERS)
     .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0);
@@ -58,16 +57,19 @@ const errHandler = function () {
     process.exit(1);
 };
 
-if(!CacheModule.properties.clustering) {
+const CacheModule = require(path.resolve(program.cacheModule));
+const Cache = new CacheModule();
+
+if(program.workers > 0 && !CacheModule.properties.clustering) {
     program.workers = 0;
-    helpers.log(consts.LOG_INFO, `Clustering disabled, ${moduleName} module does not support it.`);
+    helpers.log(consts.LOG_INFO, `Clustering disabled, ${program.cacheModule} module does not support it.`);
 }
 
 let server = null;
 
-let cacheOpts = {
-    cachePath: program.cachePath
-};
+let cacheOpts = {};
+if(program.cachePath !== null)
+    cacheOpts.cachePath = program.cachePath;
 
 Cache.init(cacheOpts, function(error) {
     if(error) {
@@ -78,7 +80,7 @@ Cache.init(cacheOpts, function(error) {
     server = new CacheServer(Cache, program.port);
 
     if(cluster.isMaster) {
-        helpers.log(consts.LOG_INFO, "Cache Server version " + consts.VERSION);
+        helpers.log(consts.LOG_INFO, `Cache Server version ${consts.VERSION}; Cache module ${program.cacheModule}`);
 
         if(program.workers === 0) {
             server.Start(errHandler, function () {

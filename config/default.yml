@@ -1,6 +1,5 @@
 Cache:
-  module: "cache_membuf"
-  path: "lib/cache"
+  module: "lib/cache/cache_fs"
   options:
     cache_membuf:
       initialPageSize: 100000000
