@@ -30,7 +30,8 @@
     "coveralls": "^3.0.0",
     "istanbul": "^0.4.5",
     "mocha": "^3.5.3",
-    "mocha-lcov-reporter": "^1.3.0"
+    "mocha-lcov-reporter": "^1.3.0",
+    "tmp": "0.0.33"
   },
   "dependencies": {
     "async": "^2.5.0",

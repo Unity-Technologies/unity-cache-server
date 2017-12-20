@@ -6,6 +6,7 @@ const consts = require('../lib/constants').Constants;
 const CacheServer = require('../lib/server');
 const CmdResponseListener = require('./../lib/client/server_response_transform.js');
 const loki = require('lokijs');
+const tmp = require('tmp');
 
 const generateCommandData = require('./test_utils').generateCommandData;
 const encodeCommand = require('./test_utils').encodeCommand;
@@ -15,7 +16,9 @@ const cmd = require('./test_utils').cmd;
 
 let cache, server, client;
 
-let test_modules = [{
+let test_modules = [
+    {
+        tmpDir: tmp.dirSync({unsafeCleanup: true}),
         name: "Cache: Membuf",
         path: "../lib/cache/cache_membuf",
         options: {
@@ -26,7 +29,14 @@ let test_modules = [{
                 adapter: new loki.LokiMemoryAdapter()
             }
         }
-    }];
+    },
+    {
+        tmpDir: tmp.dirSync({unsafeCleanup: true}),
+        name: "Cache: FS",
+        path: "../lib/cache/cache_fs",
+        options: {}
+    }
+    ];
 
 test_modules.forEach(function(module) {
     describe(module.name, function() {
@@ -39,6 +49,8 @@ test_modules.forEach(function(module) {
             let CacheModule = require(module.path);
             cache = new CacheModule();
 
+            module.options.cachePath = module.tmpDir.name;
+
             cache.init(module.options, function() {
                 server = new CacheServer(cache, 0);
 
@@ -50,6 +62,7 @@ test_modules.forEach(function(module) {
 
         after(function() {
             server.Stop();
+            module.tmpDir.removeCallback();
         });
 
         describe("Transactions", function () {
@@ -138,17 +151,22 @@ test_modules.forEach(function(module) {
             tests.forEach(function (test) {
                 it("should store " + test.ext + " data with a (" + test.cmd + ") cmd", function (done) {
                     client.on('close', function () {
-                        cache.getFileStream(test.cmd[1], self.data.guid, self.data.hash, function (err, result) {
+                        cache.getFileInfo(test.cmd[1], self.data.guid, self.data.hash, function(err, info) {
                             assert(!err, err);
-                            assert(result.size === self.data[test.ext].length);
-                            assert(result.stream !== null);
+                            assert(info.size === self.data[test.ext].length);
+                            cache.getFileStream(test.cmd[1], self.data.guid, self.data.hash, function (err, stream) {
+                                assert(!err, err);
+                                assert(stream !== null);
 
-                            result.stream.on("readable", function () {
-                                const chunk = result.stream.read(); // should only be one in this test
-                                assert(self.data[test.ext].compare(chunk) === 0);
-                                done();
+                                stream.on("readable", function () {
+                                    const chunk = stream.read(); // should only be one in this test
+                                    assert(self.data[test.ext].compare(chunk) === 0);
+                                    done();
+                                });
                             });
                         });
+
+
                     });
 
                     const buf = Buffer.from(
@@ -182,15 +200,19 @@ test_modules.forEach(function(module) {
                 const asset = Buffer.from(crypto.randomBytes(self.data.bin.length).toString('ascii'), 'ascii');
 
                 client.on('close', function () {
-                    cache.getFileStream('a', self.data.guid, self.data.hash, function (err, result) {
+                    cache.getFileInfo('a', self.data.guid, self.data.hash, function(err, info) {
                         assert(!err, err);
-                        assert(result.size === asset.length);
-                        assert(result.stream !== null);
+                        assert(info.size === asset.length);
 
-                        result.stream.on("readable", function () {
-                            const chunk = result.stream.read(); // should only be one in this test
-                            assert(asset.compare(chunk) === 0);
-                            done();
+                        cache.getFileStream('a', self.data.guid, self.data.hash, function (err, stream) {
+                            assert(!err, err);
+                            assert(stream !== null);
+
+                            stream.on("readable", function () {
+                                const chunk = stream.read(); // should only be one in this test
+                                assert(asset.compare(chunk) === 0);
+                                done();
+                            });
                         });
                     });
                 });
@@ -275,11 +297,15 @@ test_modules.forEach(function(module) {
 
                     resp.on('header', function (header) {
                             assert(header.cmd === '+' + test.cmd[1]);
+                            assert(header.guid.compare(self.data.guid) === 0, "GUID does not match");
+                            assert(header.hash.compare(self.data.hash) === 0, "HASH does not match");
                             assert(header.size === test.blob.length, "Expected size " + test.blob.length);
                             dataBuf = Buffer.allocUnsafe(header.size);
                         })
                         .on('data', function (data) {
-                            pos += data.copy(dataBuf, pos, 0);
+                            let prev = pos;
+                            pos += data.copy(dataBuf, pos);
+                            assert(data.compare(test.blob.slice(prev, pos)) === 0, `Blobs don't match at pos ${pos}`);
                         })
                         .on('dataEnd', function () {
                             assert(dataBuf.compare(test.blob) === 0);
@@ -287,11 +313,6 @@ test_modules.forEach(function(module) {
                         });
 
                     client.pipe(resp);
-
-                    // client.on('data', function(data) {
-                    //     "use strict";
-                    //     console.log("Received data " + data.length);
-                    // });
 
                     const buf = Buffer.from(encodeCommand(test.cmd, self.data.guid, self.data.hash), 'ascii');
 

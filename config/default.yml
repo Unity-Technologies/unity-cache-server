@@ -12,3 +12,5 @@ Cache:
         autosave: true
         autosaveInterval: 10000
         throttledSaves: false
+    cache_fs:
+      cachePath: ".cache_fs"
