@@ -7,7 +7,7 @@ This is the officially maintained open-source implementation of the Unity Cache 
 At present time this open-source repository is maintained separately from the Cache Server available on the Unity website, as well as the version packaged with the Unity installer. It is possible that compatibility with specific versions of Unity will diverge between these separate implementations. Check the release notes for specific compatibility information prior to usage.
 
 ## Server Setup
-Download and install the latest LTS version of node from the [Node.JS website](https://nodejs.org/en/download/).
+Download and install the latest LTS version of node from the [Node.JS website](`https://nodejs.org/en/download/`).
 
 ```bash
 git clone git@github.com:Unity-Technologies/unity-cache-server.git

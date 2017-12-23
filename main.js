@@ -1,6 +1,6 @@
 const cluster = require('cluster');
 const helpers = require('./lib/helpers');
-const consts = require('./lib/constants').Constants;
+const consts = require('./lib/constants');
 const program = require('commander');
 const path = require('path');
 const CacheServer = require('./lib/server');
@@ -127,32 +127,6 @@ function startPrompt() {
                         process.exit(0);
                     });
                     break;
-
-                case 's':
-                    helpers.log(consts.LOG_INFO, "Saving cache data ...");
-                    Cache.save(function(err) {
-                        if(err) {
-                            helpers.log(consts.LOG_ERR, err);
-                            server.Stop();
-                            process.exit(1);
-                        }
-
-                        helpers.log(consts.LOG_INFO, "Save finished.");
-                    });
-
-                    break;
-                case 'r':
-                    helpers.log(consts.LOG_INFO, "Resetting cache data ...");
-                    Cache.reset(function(err) {
-                        "use strict";
-                        if(err) {
-                            helpers.log(consts.LOG_ERR, err);
-                            server.Stop();
-                            process.exit(1);
-                        }
-
-                        helpers.log(consts.LOG_INFO, "Reset finished.");
-                    });
             }
         }
 

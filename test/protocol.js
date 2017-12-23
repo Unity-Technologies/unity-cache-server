@@ -19,7 +19,7 @@ let cache, server, client;
 let test_modules = [
     {
         tmpDir: tmp.dirSync({unsafeCleanup: true}),
-        name: "Cache: Membuf",
+        name: "Transaction tests (cache_membuf)",
         path: "../lib/cache/cache_membuf",
         options: {
             initialPageSize: 10000,
@@ -32,7 +32,7 @@ let test_modules = [
     },
     {
         tmpDir: tmp.dirSync({unsafeCleanup: true}),
-        name: "Cache: FS",
+        name: "Transaction tests (cache_fs)",
         path: "../lib/cache/cache_fs",
         options: {}
     }
