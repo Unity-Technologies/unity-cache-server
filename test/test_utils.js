@@ -1,6 +1,6 @@
 const assert = require('assert');
 const crypto = require('crypto');
-const consts = require('../lib/constants').Constants;
+const consts = require('../lib/constants');
 const helpers = require('../lib/helpers');
 
 const MIN_BLOB_SIZE = 64;

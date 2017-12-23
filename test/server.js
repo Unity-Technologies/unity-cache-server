@@ -1,9 +1,10 @@
 const assert = require('assert');
 const net = require('net');
 const helpers = require('../lib/helpers');
-const consts = require('../lib/constants').Constants;
+const consts = require('../lib/constants');
 const CacheServer = require('../lib/server');
-const Cache = require("../lib/cache/cache").Cache;
+const Cache = require('../lib/cache/cache').CacheBase;
+const { before, beforeEach, after } = require('mocha');
 
 const sleep = require('./test_utils').sleep;
 const cmd = require('./test_utils').cmd;
@@ -16,7 +17,7 @@ let client;
 describe("Server common", function() {
 
     beforeEach(function() {
-        helpers.SetLogger(function(lvl, msg) {});
+        helpers.SetLogger(() => {});
     });
 
     before(function (done) {
