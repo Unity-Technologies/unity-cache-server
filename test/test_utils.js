@@ -6,6 +6,13 @@ const helpers = require('../lib/helpers');
 const MIN_BLOB_SIZE = 64;
 const MAX_BLOB_SIZE = 2048;
 
+function randomBuffer(size) {
+    return Buffer.from(crypto.randomBytes(size).toString('ascii'), 'ascii')
+}
+
+exports.randomBuffer = randomBuffer;
+
+
 exports.generateCommandData = function(minSize, maxSize) {
     minSize = minSize || MIN_BLOB_SIZE;
     maxSize = maxSize || MAX_BLOB_SIZE;
@@ -13,11 +20,11 @@ exports.generateCommandData = function(minSize, maxSize) {
     function getSize() { return minSize + Math.floor(Math.random() * (maxSize - minSize)); }
 
     return {
-        guid: Buffer.from(crypto.randomBytes(consts.GUID_SIZE).toString('ascii'), 'ascii'),
-        hash: Buffer.from(crypto.randomBytes(consts.HASH_SIZE).toString('ascii'), 'ascii'),
-        bin: Buffer.from(crypto.randomBytes(getSize()).toString('ascii'), 'ascii'),
-        info: Buffer.from(crypto.randomBytes(getSize()).toString('ascii'), 'ascii'),
-        resource: Buffer.from(crypto.randomBytes(getSize()).toString('ascii'), 'ascii')
+        guid: randomBuffer(consts.GUID_SIZE),
+        hash: randomBuffer(consts.HASH_SIZE),
+        bin: randomBuffer(getSize()),
+        info: randomBuffer(getSize()),
+        resource: randomBuffer(getSize())
     }
 };
 

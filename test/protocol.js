@@ -7,8 +7,6 @@ const CacheServer = require('../lib/server');
 const CacheServerResponseTransform = require('./../lib/client/server_response_transform.js');
 const loki = require('lokijs');
 const tmp = require('tmp');
-const { before, beforeEach, after } = require('mocha');
-
 const generateCommandData = require('./test_utils').generateCommandData;
 const encodeCommand = require('./test_utils').encodeCommand;
 const sleep = require('./test_utils').sleep;
@@ -48,8 +46,6 @@ describe("Protocol", function() {
             });
 
             before(function (done) {
-
-
                 /** @type {CacheBase} **/
                 let CacheModule = require(module.path);
                 cache = new CacheModule();
@@ -237,7 +233,7 @@ describe("Protocol", function() {
                 this.slow(1000);
 
                 const self = this;
-                self.data = generateCommandData(5000000, 6000000);
+                self.data = generateCommandData();
 
                 before(function (done) {
                     client = net.connect({port: server.port}, function (err) {

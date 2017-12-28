@@ -3,9 +3,7 @@ const net = require('net');
 const helpers = require('../lib/helpers');
 const consts = require('../lib/constants');
 const CacheServer = require('../lib/server');
-const Cache = require('../lib/cache/cache').CacheBase;
-const { before, beforeEach, after } = require('mocha');
-
+const Cache = require('../lib/cache/cache_base').CacheBase;
 const sleep = require('./test_utils').sleep;
 const cmd = require('./test_utils').cmd;
 
