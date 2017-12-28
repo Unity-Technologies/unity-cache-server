@@ -52,13 +52,13 @@ describe("Protocol", function() {
 
                 module.options.cachePath = module.tmpDir.name;
 
-                cache.init(module.options, function() {
-                    server = new CacheServer(cache, 0);
-
-                    server.Start(function (err) {
-                        assert(!err, "Cache Server reported error! " + err);
-                    }, done);
-                });
+                cache.init(module.options)
+                    .then(() => {
+                        server = new CacheServer(cache, 0);
+                        server.Start(err => {
+                            assert(!err, "Cache Server reported error! " + err);
+                        }, done);
+                    });
             });
 
             after(function() {
@@ -151,23 +151,22 @@ describe("Protocol", function() {
 
                 tests.forEach(function (test) {
                     it("should store " + test.ext + " data with a (" + test.cmd + ") cmd", function (done) {
-                        client.on('close', function () {
-                            cache.getFileInfo(test.cmd[1], self.data.guid, self.data.hash, function(err, info) {
-                                assert(!err, err);
-                                assert(info.size === self.data[test.ext].length);
-                                cache.getFileStream(test.cmd[1], self.data.guid, self.data.hash, function (err, stream) {
-                                    assert(!err, err);
-                                    assert(stream !== null);
-
+                        client.on('close', () => {
+                            cache.getFileInfo(test.cmd[1], self.data.guid, self.data.hash)
+                                .then(info => {
+                                    assert(info.size === self.data[test.ext].length);
+                                    return cache.getFileStream(test.cmd[1], self.data.guid, self.data.hash);
+                                })
+                                .then(stream => {
                                     stream.on("readable", function () {
                                         const chunk = stream.read(); // should only be one in this test
                                         assert(self.data[test.ext].compare(chunk) === 0);
                                         done();
                                     });
+                                })
+                                .catch(err => {
+                                    done(err);
                                 });
-                            });
-
-
                         });
 
                         const buf = Buffer.from(
@@ -200,22 +199,22 @@ describe("Protocol", function() {
                 it("should replace an existing file with the same guid and hash", function (done) {
                     const asset = Buffer.from(crypto.randomBytes(self.data.bin.length).toString('ascii'), 'ascii');
 
-                    client.on('close', function () {
-                        cache.getFileInfo('a', self.data.guid, self.data.hash, function(err, info) {
-                            assert(!err, err);
-                            assert(info.size === asset.length);
-
-                            cache.getFileStream('a', self.data.guid, self.data.hash, function (err, stream) {
-                                assert(!err, err);
-                                assert(stream !== null);
-
+                    client.on('close', () => {
+                        cache.getFileInfo('a', self.data.guid, self.data.hash)
+                            .then(info => {
+                                assert(info.size === asset.length);
+                                return cache.getFileStream('a', self.data.guid, self.data.hash);
+                            })
+                            .then(stream => {
                                 stream.on("readable", function () {
                                     const chunk = stream.read(); // should only be one in this test
                                     assert(asset.compare(chunk) === 0);
                                     done();
                                 });
+                            })
+                            .catch(err => {
+                                done(err);
                             });
-                        });
                     });
 
                     client.write(

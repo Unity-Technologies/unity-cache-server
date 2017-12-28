@@ -11,7 +11,7 @@ describe("Cache: Base Class", () => {
     let cache;
 
     let opts = {
-        cachePath: tmp.tmpNameSync({}).toString(),
+        cachePath: tmp.tmpNameSync({}),
     };
 
     beforeEach(() => {
@@ -163,7 +163,7 @@ describe("PutTransaction: Base Class", () => {
 
     describe("getWriteStream", () => {
         it("should require override implementation in subclasses by returning an error", () => {
-            return trx.getWriteStream()
+            return trx.getWriteStream('i', 0)
                 .then(() => { throw new Error("Expected error!"); }, () => {});
         });
     });

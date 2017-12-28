@@ -21,7 +21,7 @@ describe("Cache: Membuf", () => {
     }
 
     let opts = {
-        cachePath: tmp.tmpNameSync({}).toString(),
+        cachePath: tmp.tmpNameSync({}),
         initialPageSize: 1024 * 10,
         growPageSize: 1024 * 10,
         minFreeBlockSize: 1024,

@@ -71,35 +71,35 @@ let cacheOpts = {};
 if(program.cachePath !== null)
     cacheOpts.cachePath = program.cachePath;
 
-Cache.init(cacheOpts, function(error) {
-    if(error) {
-        helpers.log(consts.LOG_ERR, error);
-        process.exit(1);
-    }
+Cache.init(cacheOpts)
+    .then(() => {
+        server = new CacheServer(Cache, program.port);
 
-    server = new CacheServer(Cache, program.port);
+        if(cluster.isMaster) {
+            helpers.log(consts.LOG_INFO, `Cache Server version ${consts.VERSION}; Cache module ${program.cacheModule}`);
 
-    if(cluster.isMaster) {
-        helpers.log(consts.LOG_INFO, `Cache Server version ${consts.VERSION}; Cache module ${program.cacheModule}`);
+            if(program.workers === 0) {
+                server.Start(errHandler, function () {
+                    helpers.log(consts.LOG_INFO, `Cache Server ready on port ${server.port}`);
+                    startPrompt();
+                });
+            }
 
-        if(program.workers === 0) {
+            for(let i = 0; i < program.workers; i++) {
+                const worker = cluster.fork();
+                Cache.registerClusterWorker(worker);
+            }
+        }
+        else {
             server.Start(errHandler, function () {
-                helpers.log(consts.LOG_INFO, `Cache Server ready on port ${server.port}`);
-                startPrompt();
+                helpers.log(consts.LOG_INFO, `Cache Server worker ${cluster.worker.id} ready on port ${server.port}`);
             });
         }
-
-        for(let i = 0; i < program.workers; i++) {
-            const worker = cluster.fork();
-            Cache.registerClusterWorker(worker);
-        }
-    }
-    else {
-        server.Start(errHandler, function () {
-            helpers.log(consts.LOG_INFO, `Cache Server worker ${cluster.worker.id} ready on port ${server.port}`);
-        });
-    }
-});
+    })
+    .catch(err => {
+        helpers.log(consts.LOG_ERR, err);
+        process.exit(1);
+    });
 
 function startPrompt() {
     prompt.message = "";
@@ -122,7 +122,7 @@ function startPrompt() {
             switch(result.command) {
                 case 'q':
                     helpers.log(consts.LOG_INFO, "Shutting down ...");
-                    Cache.shutdown(function () {
+                    Cache.shutdown().then(() => {
                         server.Stop();
                         process.exit(0);
                     });
