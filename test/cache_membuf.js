@@ -6,6 +6,9 @@ const generateCommandData = require('./test_utils').generateCommandData;
 const path = require('path');
 const assert = require('assert');
 
+const MIN_FILE_SIZE = 1024 * 5;
+const MAX_FILE_SIZE = MIN_FILE_SIZE;
+
 describe("Cache: Membuf", () => {
 
     function dirtyPages() {
@@ -22,8 +25,8 @@ describe("Cache: Membuf", () => {
 
     let opts = {
         cachePath: tmp.tmpNameSync({}),
-        initialPageSize: 1024 * 10,
-        growPageSize: 1024 * 10,
+        initialPageSize: MIN_FILE_SIZE * 2,
+        growPageSize: MIN_FILE_SIZE * 2,
         minFreeBlockSize: 1024,
         persistenceOptions: {
             autosave: false
@@ -31,7 +34,7 @@ describe("Cache: Membuf", () => {
     };
 
     let cache;
-    let fileData = generateCommandData(1024 * 5);
+    let fileData = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
 
     describe("Public API", () => {
 

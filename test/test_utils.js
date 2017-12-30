@@ -2,9 +2,12 @@ const assert = require('assert');
 const crypto = require('crypto');
 const consts = require('../lib/constants');
 const helpers = require('../lib/helpers');
+const net = require('net');
 
 const MIN_BLOB_SIZE = 64;
 const MAX_BLOB_SIZE = 2048;
+const MIN_PACKET_SIZE = 1024 * 16;
+const WRITE_RESOLVE_DELAY = 100;
 
 function randomBuffer(size) {
     return Buffer.from(crypto.randomBytes(size).toString('ascii'), 'ascii')
@@ -64,6 +67,85 @@ exports.expectLog = function(client, regex, condition, callback) {
 
 exports.sleep = function(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+exports.clientWrite = function(client, data, minPacketSize, maxPacketSize) {
+    return new Promise((resolve, reject) => {
+        let sentBytes = 0;
+
+        client.once('close', () => {
+            if(sentBytes < data.length)
+                reject(new Error("Client closed before write finished"));
+        });
+
+        if(typeof(minPacketSize) !== 'number') {
+            minPacketSize = MIN_PACKET_SIZE;
+        }
+
+        if(typeof(maxPacketSize) !== 'number' || maxPacketSize < minPacketSize) {
+            maxPacketSize = minPacketSize;
+        }
+
+        function packetSize() {
+            return Math.ceil(minPacketSize + (Math.random() * maxPacketSize - minPacketSize));
+        }
+
+        function write() {
+            let ok = true;
+            while(ok && sentBytes < data.length) {
+                let len = Math.min(data.length - sentBytes, packetSize());
+                ok = client.write(data.slice(sentBytes, sentBytes + len));
+                sentBytes += len;
+            }
+
+            if (sentBytes === data.length) {
+                client.removeListener('drain', write);
+                setTimeout(resolve, WRITE_RESOLVE_DELAY);
+            }
+        }
+
+        client.on('drain', write);
+        write();
+    });
+};
+
+/**
+ *
+ * @param stream
+ * @param size
+ * @returns {Promise<Buffer>}
+ */
+exports.readStream = function(stream, size) {
+    return new Promise((resolve, reject) => {
+        let pos = 0;
+        let buffer = Buffer.alloc(size, 0, 'ascii');
+        stream.on('data', data => {
+            if(pos + data.length <= size) {
+                data.copy(buffer, pos);
+                pos += data.length;
+            }
+            else {
+                reject(new Error("Stream size exceeds buffer size allocation"));
+            }
+        });
+
+        stream.on('end', () => {
+            resolve(buffer);
+        });
+    });
+};
+
+exports.getClientPromise = function(port) {
+    return new Promise((resolve, reject) => {
+        let client = net.createConnection(port);
+        client.once('connect', () => {
+            resolve(client);
+        });
+
+        client.once('error', err => {
+            reject(err);
+        });
+    });
 };
 
 exports.cmd = {

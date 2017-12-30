@@ -93,9 +93,7 @@ describe("Cache API", () => {
                 beforeEach(() => {
                     fileData = generateCommandData(1024, 1024);
                     return cache.createPutTransaction(fileData.guid, fileData.hash)
-                        .then(result => {
-                            trx = result;
-                        });
+                        .then(result => { trx = result; });
                 });
 
                 it("should call finalize on the transaction", () => {

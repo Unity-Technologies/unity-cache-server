@@ -9,9 +9,16 @@ const loki = require('lokijs');
 const tmp = require('tmp');
 const generateCommandData = require('./test_utils').generateCommandData;
 const encodeCommand = require('./test_utils').encodeCommand;
-const sleep = require('./test_utils').sleep;
 const expectLog = require('./test_utils').expectLog;
 const cmd = require('./test_utils').cmd;
+const clientWrite = require('./test_utils').clientWrite;
+const readStream = require('./test_utils').readStream;
+const getClientPromise = require('./test_utils').getClientPromise;
+
+const MIN_FILE_SIZE = 1024;
+const MAX_FILE_SIZE = 1024 * 1024 * 10;
+const SMALL_PACKET_SIZE = 256;
+const LARGE_PACKET_SIZE = 1024 * 16;
 
 let cache, server, client;
 
@@ -21,8 +28,8 @@ let test_modules = [
         name: "cache_membuf",
         path: "../lib/cache/cache_membuf",
         options: {
-            initialPageSize: 10000,
-            growPageSize: 10000,
+            initialPageSize: MAX_FILE_SIZE * 2,
+            growPageSize: MAX_FILE_SIZE,
             minFreeBlockSize: 1024,
             persistenceOptions: {
                 adapter: new loki.LokiMemoryAdapter()
@@ -71,15 +78,15 @@ describe("Protocol", function() {
                 const self = this;
 
                 before(function() {
-                    self.data = generateCommandData();
+                    self.data = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
                 });
 
-                beforeEach(function (done) {
-                    client = net.connect({port: server.port}, function (err) {
-                        assert(!err, err);
-                        client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
-                        done(err);
-                    });
+                beforeEach(() => {
+                    return getClientPromise(server.port)
+                        .then(c => {
+                            client = c;
+                            return clientWrite(c, helpers.encodeInt32(consts.PROTOCOL_VERSION));
+                        });
                 });
 
                 it("should start a transaction with the (ts) command", function (done) {
@@ -107,7 +114,7 @@ describe("Protocol", function() {
 
                 it("should require a transaction start (te) command before a put command", function(done) {
                     expectLog(client, /Not in a transaction/, done);
-                    client.write(encodeCommand(cmd.putAsset, null, null, self.data.bin));
+                    client.write(encodeCommand(cmd.putAsset, null, null, 'abc'));
                 });
 
                 it("should close the socket on an invalid transaction command", function(done) {
@@ -122,109 +129,64 @@ describe("Protocol", function() {
                 const self = this;
 
                 before(function () {
-                    self.data = generateCommandData();
+                    self.data = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
                 });
 
-                beforeEach(function (done) {
-                    client = net.connect({port: server.port}, function (err) {
-                        assert(!err);
+                beforeEach(() => {
+                    return getClientPromise(server.port)
+                        .then(c => {
+                            client = c;
 
-                        // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
-                        // to other request data in the tests below.
-                        client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
-                        done();
-                    });
+                            // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
+                            // to other request data in the tests below.
+                            return clientWrite(c, helpers.encodeInt32(consts.PROTOCOL_VERSION));
+                        });
                 });
 
                 it("should close the socket on an invalid PUT type", function (done) {
                     expectLog(client, /Unrecognized command/i, done);
-                    client.write(
+                    let buf = Buffer.from(
                         encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
-                        encodeCommand("px", null, null, self.data.bin));
+                        encodeCommand("px", null, null, 'abc'), 'ascii');
+
+                    client.write(buf);
                 });
 
                 const tests = [
-                    {ext: 'bin', cmd: cmd.putAsset},
-                    {ext: 'info', cmd: cmd.putInfo},
-                    {ext: 'resource', cmd: cmd.putResource}
+                    {ext: 'bin', cmd: cmd.putAsset, packetSize: SMALL_PACKET_SIZE},
+                    {ext: 'info', cmd: cmd.putInfo, packetSize: SMALL_PACKET_SIZE},
+                    {ext: 'resource', cmd: cmd.putResource, packetSize: SMALL_PACKET_SIZE},
+                    {ext: 'bin', cmd: cmd.putAsset, packetSize: LARGE_PACKET_SIZE},
+                    {ext: 'info', cmd: cmd.putInfo, packetSize: LARGE_PACKET_SIZE},
+                    {ext: 'resource', cmd: cmd.putResource, packetSize: LARGE_PACKET_SIZE}
                 ];
 
                 tests.forEach(function (test) {
-                    it("should store " + test.ext + " data with a (" + test.cmd + ") cmd", function (done) {
-                        client.on('close', () => {
-                            cache.getFileInfo(test.cmd[1], self.data.guid, self.data.hash)
-                                .then(info => {
-                                    assert(info.size === self.data[test.ext].length);
-                                    return cache.getFileStream(test.cmd[1], self.data.guid, self.data.hash);
-                                })
-                                .then(stream => {
-                                    stream.on("readable", function () {
-                                        const chunk = stream.read(); // should only be one in this test
-                                        assert(self.data[test.ext].compare(chunk) === 0);
-                                        done();
-                                    });
-                                })
-                                .catch(err => {
-                                    done(err);
-                                });
-                        });
-
+                    it(`should store ${test.ext} data with a (${test.cmd}) command (client write packet size = ${test.packetSize})`, () => {
                         const buf = Buffer.from(
                             encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
                             encodeCommand(test.cmd, null, null, self.data[test.ext]) +
                             encodeCommand(cmd.transactionEnd), 'ascii');
 
-                        let sentBytes = 0;
-
-                        function sendBytesAsync() {
-                            setTimeout(() => {
-                                const packetSize = Math.min(buf.length - sentBytes, Math.ceil(Math.random() * 10));
-                                client.write(buf.slice(sentBytes, sentBytes + packetSize), function () {
-                                    sentBytes += packetSize;
-                                    if (sentBytes < buf.length)
-                                        return sendBytesAsync();
-                                    else
-                                        sleep(50).then(() => {
-                                            client.end();
-                                        });
-                                });
-                            }, 1);
-                        }
-
-                        sendBytesAsync();
-
+                        return clientWrite(client, buf, test.packetSize)
+                            .then(() => cache.getFileStream(test.cmd[1], self.data.guid, self.data.hash))
+                            .then(stream => readStream(stream, self.data[test.ext].length))
+                            .then(data => assert(self.data[test.ext].compare(data) === 0));
                     });
                 });
 
-                it("should replace an existing file with the same guid and hash", function (done) {
+                it("should replace an existing file with the same guid and hash ", () => {
                     const asset = Buffer.from(crypto.randomBytes(self.data.bin.length).toString('ascii'), 'ascii');
 
-                    client.on('close', () => {
-                        cache.getFileInfo('a', self.data.guid, self.data.hash)
-                            .then(info => {
-                                assert(info.size === asset.length);
-                                return cache.getFileStream('a', self.data.guid, self.data.hash);
-                            })
-                            .then(stream => {
-                                stream.on("readable", function () {
-                                    const chunk = stream.read(); // should only be one in this test
-                                    assert(asset.compare(chunk) === 0);
-                                    done();
-                                });
-                            })
-                            .catch(err => {
-                                done(err);
-                            });
-                    });
-
-                    client.write(
+                    const buf = Buffer.from(
                         encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
                         encodeCommand(cmd.putAsset, null, null, asset) +
-                        encodeCommand(cmd.transactionEnd));
+                        encodeCommand(cmd.transactionEnd), 'ascii');
 
-                    sleep(50).then(() => {
-                        client.end();
-                    });
+                    return clientWrite(client, buf)
+                        .then(() => cache.getFileStream('a', self.data.guid, self.data.hash))
+                        .then(stream => readStream(stream, asset.length))
+                        .then(buffer => assert(asset.compare(buffer) === 0));
                 });
             });
 
@@ -232,72 +194,73 @@ describe("Protocol", function() {
                 this.slow(1000);
 
                 const self = this;
-                self.data = generateCommandData();
+                self.data = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
 
-                before(function (done) {
-                    client = net.connect({port: server.port}, function (err) {
-                        assert(!err);
-                        client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
-                        client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
-                        client.write(encodeCommand(cmd.putAsset, null, null, self.data.bin));
-                        client.write(encodeCommand(cmd.putInfo, null, null, self.data.info));
-                        client.write(encodeCommand(cmd.putResource, null, null, self.data.resource));
-                        client.write(cmd.transactionEnd);
-                        client.end(cmd.quit);
-                        client.on('close', done);
-                    });
+                before(() => {
+                    const buf = Buffer.from(
+                        helpers.encodeInt32(consts.PROTOCOL_VERSION) +
+                        encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
+                        encodeCommand(cmd.putAsset, null, null, self.data.bin) +
+                        encodeCommand(cmd.putInfo, null, null, self.data.info) +
+                        encodeCommand(cmd.putResource, null, null, self.data.resource) +
+                        encodeCommand(cmd.transactionEnd) +
+                        encodeCommand(cmd.quit), 'ascii');
+
+                    return getClientPromise(server.port)
+                        .then(c => {
+                            client = c;
+                            return clientWrite(c, buf);
+                        });
                 });
 
-                beforeEach(function (done) {
-                    client = net.connect({port: server.port}, function (err) {
-                        assert(!err);
+                beforeEach(() => {
+                    return getClientPromise(server.port)
+                        .then(c => {
+                            client = c;
 
-                        // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
-                        // to other request data in the tests below.
-                        client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
-                        done();
-                    });
+                            // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
+                            // to other request data in the tests below.
+                            return clientWrite(c, helpers.encodeInt32(consts.PROTOCOL_VERSION));
+                        });
                 });
 
                 it("should close the socket on an invalid GET type", function (done) {
                     expectLog(client, /Unrecognized command/i, done);
-                    client.write(encodeCommand('gx', self.data.guid, self.data.hash));
+                    clientWrite(client, encodeCommand('gx', self.data.guid, self.data.hash)).catch(err => done(err));
                 });
 
                 const tests = [
-                    {cmd: cmd.getAsset, blob: self.data.bin, type: 'bin'},
-                    {cmd: cmd.getInfo, blob: self.data.info, type: 'info'},
-                    {cmd: cmd.getResource, blob: self.data.resource, type: 'resource'}
+                    {cmd: cmd.getAsset, blob: self.data.bin, type: 'bin', packetSize: 1},
+                    {cmd: cmd.getInfo, blob: self.data.info, type: 'info', packetSize: 1},
+                    {cmd: cmd.getResource, blob: self.data.resource, type: 'resource', packetSize: 1},
+                    {cmd: cmd.getAsset, blob: self.data.bin, type: 'bin', packetSize: LARGE_PACKET_SIZE},
+                    {cmd: cmd.getInfo, blob: self.data.info, type: 'info', packetSize: LARGE_PACKET_SIZE},
+                    {cmd: cmd.getResource, blob: self.data.resource, type: 'resource', packetSize: LARGE_PACKET_SIZE}
                 ];
 
-                it("should respond with not found (-) for missing files", function (done) {
-                    let count = 0;
-
-                    client.pipe(new CacheServerResponseTransform())
-                        .on('header', function (header) {
-                            assert(header.cmd === '-' + tests[count].cmd[1]);
-                            count++;
-                            if(count === 3) done();
-                        });
-
-                    const badGuid = Buffer.allocUnsafe(consts.GUID_SIZE).fill(0);
-                    const badHash = Buffer.allocUnsafe(consts.HASH_SIZE).fill(0);
-
-                    tests.forEach(function(test) {
-                        client.write(encodeCommand(test.cmd, badGuid, badHash));
-                    });
-                });
-
-
                 tests.forEach(function (test) {
-                    it("should retrieve stored " + test.type + " data with the (" + test.cmd + ") command", function (done) {
+
+                    it(`should respond with not found (-) for missing ${test.type} files (client write packet size = ${test.packetSize})`, function (done) {
+                        client.pipe(new CacheServerResponseTransform())
+                            .on('header', function (header) {
+                                assert(header.cmd === '-' + test.cmd[1]);
+                                done();
+                            });
+
+                        const badGuid = Buffer.allocUnsafe(consts.GUID_SIZE).fill(0);
+                        const badHash = Buffer.allocUnsafe(consts.HASH_SIZE).fill(0);
+
+                        clientWrite(client, encodeCommand(test.cmd, badGuid, badHash), test.packetSize)
+                            .catch(err => done(err));
+                    });
+
+                    it(`should retrieve stored ${test.type} data with the (${test.cmd}) command (write packet size = ${test.packetSize})`, function (done) {
                         let dataBuf;
                         let pos = 0;
 
                         let resp = new CacheServerResponseTransform();
 
-                        resp
-                            .on('header', function (header) {
+                        resp.on('header', function (header) {
                                 assert(header.cmd === '+' + test.cmd[1]);
                                 assert(header.guid.compare(self.data.guid) === 0, "GUID does not match");
                                 assert(header.hash.compare(self.data.hash) === 0, "HASH does not match");
@@ -318,21 +281,7 @@ describe("Protocol", function() {
 
                         const buf = Buffer.from(encodeCommand(test.cmd, self.data.guid, self.data.hash), 'ascii');
 
-                        let sentBytes = 0;
-
-                        function sendBytesAsync() {
-                            setTimeout(() => {
-                                const packetSize = Math.min(buf.length - sentBytes, Math.ceil(Math.random() * 10));
-                                client.write(buf.slice(sentBytes, sentBytes + packetSize), function () {
-                                    sentBytes += packetSize;
-                                    if (sentBytes < buf.length)
-                                        return sendBytesAsync();
-                                });
-                            }, 1);
-                        }
-
-                        sendBytesAsync();
-
+                        clientWrite(client, buf, test.packetSize).catch(err => done(err));
                     });
                 });
             });
