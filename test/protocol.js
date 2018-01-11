@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const helpers = require('../lib/helpers');
 const consts = require('../lib/constants');
 const CacheServer = require('../lib/server');
-const CacheServerResponseTransform = require('./../lib/client/server_response_transform.js');
+const CacheServerResponseTransform = require('../lib/client/server_stream_processor.js');
 const loki = require('lokijs');
 const tmp = require('tmp');
 const generateCommandData = require('./test_utils').generateCommandData;
@@ -16,8 +16,8 @@ const readStream = require('./test_utils').readStream;
 const getClientPromise = require('./test_utils').getClientPromise;
 
 const MIN_FILE_SIZE = 1024;
-const MAX_FILE_SIZE = 1024 * 1024 * 10;
-const SMALL_PACKET_SIZE = 256;
+const MAX_FILE_SIZE = 1024 * 1024;
+const SMALL_PACKET_SIZE = 16;
 const LARGE_PACKET_SIZE = 1024 * 16;
 
 let cache, server, client;
@@ -124,7 +124,7 @@ describe("Protocol", function() {
             });
 
             describe("PUT requests", function () {
-                this.slow(1500);
+                this.slow(5000);
 
                 const self = this;
 
