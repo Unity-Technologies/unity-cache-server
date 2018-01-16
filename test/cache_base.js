@@ -155,9 +155,10 @@ describe("PutTransaction: Base Class", () => {
     });
 
     describe("finalize", () => {
-        it("should require override implementation in subclasses by returning an error", () => {
-            return trx.finalize()
-                .then(() => { throw new Error("Expected error!"); }, () => {});
+        it("should return a promise and emit a 'finalize' event", (done) => {
+            trx.once('finalize', () => done());
+            let p = trx.finalize();
+            assert(typeof(p.then) === 'function');
         });
     });
 

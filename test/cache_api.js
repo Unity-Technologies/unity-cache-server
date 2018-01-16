@@ -219,6 +219,11 @@ describe("PutTransaction API", function() {
                         .then(stream => stream.end(fileData.info))
                         .then(() => trx.finalize())
                 });
+
+                it("should emit a 'finalize' event", (done) => {
+                    trx.once('finalize', () => done());
+                    trx.finalize();
+                });
             });
 
             describe("getWriteStream", function() {
