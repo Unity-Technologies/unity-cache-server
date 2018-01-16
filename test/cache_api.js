@@ -193,6 +193,22 @@ describe("PutTransaction API", function() {
                 });
             });
 
+            describe("get manifest", function() {
+                it("should return an array of file types that were successfully written to the transaction", () => {
+                    return trx.getWriteStream('i', fileData.info.length)
+                        .then(stream => stream.end(fileData.info))
+                        .then(() => trx.getWriteStream('r', fileData.resource.length))
+                        .then(stream => stream.end(fileData.resource))
+                        .then(() => trx.getWriteStream('a', fileData.bin.length))
+                        .then(stream => stream.end(fileData.bin))
+                        .then(() => trx.finalize())
+                        .then(() => {
+                            let m = trx.manifest;
+                            ['i', 'a', 'r'].forEach((t) => assert(m.indexOf(t) >= 0));
+                        });
+                });
+            });
+
             describe("get files", function() {
                 it("should return an empty array before finalize() is called", () => {
                     assert(trx.files.length === 0);
