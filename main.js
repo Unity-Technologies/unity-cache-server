@@ -16,6 +16,11 @@ function zeroOrMore(val) {
     return Math.max(0, val);
 }
 
+function collect(val, memo) {
+    memo.push(val);
+    return memo;
+}
+
 const defaultCacheModule = config.get("Cache.module");
 
 program.description("Unity Cache Server")
@@ -25,6 +30,7 @@ program.description("Unity Cache Server")
     .option('-P, --cachePath [path]', `Specify the path of the cache directory.`)
     .option('-l, --log-level <n>', `Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug). Default is ${consts.DEFAULT_LOG_LEVEL}`, myParseInt, consts.DEFAULT_LOG_LEVEL)
     .option('-w, --workers <n>', `Number of worker threads to spawn. Default is ${consts.DEFAULT_WORKERS}`, zeroOrMore, consts.DEFAULT_WORKERS)
+    .option('-m --mirror [host:port]', `Mirror transactions to another cache server. Can be repeated for multiple mirrors.`, collect, [])
     .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0);
 
 program.parse(process.argv);
@@ -68,12 +74,26 @@ if(program.workers > 0 && !CacheModule.properties.clustering) {
 let server = null;
 
 let cacheOpts = {};
-if(program.cachePath !== null)
+if(program.cachePath !== null) {
     cacheOpts.cachePath = program.cachePath;
+}
+
+let mirrors = program.mirror.map(m => {
+    let [host, port] = m.split(':');
+    if(!port) port = consts.DEFAULT_PORT;
+
+    helpers.log(consts.LOG_INFO, `Cache Server mirroring to ${host}:${port}`);
+    return { host: host, port: port };
+});
 
 Cache.init(cacheOpts)
     .then(() => {
-        server = new CacheServer(Cache, program.port);
+        let opts = {
+            port: program.port,
+            mirror: mirrors
+        };
+
+        server = new CacheServer(Cache, opts);
 
         if(cluster.isMaster) {
             helpers.log(consts.LOG_INFO, `Cache Server version ${consts.VERSION}; Cache module ${program.cacheModule}`);

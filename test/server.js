@@ -9,7 +9,7 @@ const cmd = require('./test_utils').cmd;
 
 helpers.SetLogger(()=>{});
 const cache = new Cache();
-const server = new CacheServer(cache, 0);
+const server = new CacheServer(cache, {port: 0});
 let client;
 
 describe("Server common", function() {

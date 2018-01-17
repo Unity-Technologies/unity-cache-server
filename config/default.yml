@@ -13,3 +13,7 @@ Cache:
         throttledSaves: false
     cache_fs:
       cachePath: ".cache_fs"
+Mirror:
+  options:
+    queueProcessDelay: 2000
+    connectionIdleTimeout: 10000

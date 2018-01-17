@@ -61,7 +61,7 @@ describe("Protocol", function() {
 
                 cache.init(module.options)
                     .then(() => {
-                        server = new CacheServer(cache, 0);
+                        server = new CacheServer(cache, {port: 0});
                         server.Start(err => {
                             assert(!err, "Cache Server reported error! " + err);
                         }, done);
