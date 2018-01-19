@@ -6,6 +6,8 @@ const path = require('path');
 const CacheServer = require('./lib/server/server');
 const config = require('config');
 const prompt = require('prompt');
+const dns = require('dns');
+const ip = require('ip');
 
 function myParseInt(val, def) {
     val = parseInt(val);
@@ -78,16 +80,36 @@ if(program.cachePath !== null) {
     cacheOpts.cachePath = program.cachePath;
 }
 
-let mirrors = program.mirror.map(m => {
-    let [host, port] = m.split(':');
-    if(!port) port = consts.DEFAULT_PORT;
+let getMirrors = () => new Promise((resolve, reject) => {
+    let mirrors = program.mirror.map(m => {
+        let [host, port] = m.split(':');
+        port = parseInt(port);
 
-    helpers.log(consts.LOG_INFO, `Cache Server mirroring to ${host}:${port}`);
-    return { host: host, port: port };
+        if(!port) port = consts.DEFAULT_PORT;
+        const myIp = ip.address();
+
+        return new Promise((resolve, reject) => {
+            dns.lookup(host, {family: 4, hints: dns.ADDRCONFIG}, (err, address) => {
+                if(err) return reject(err);
+
+                if((ip.isEqual(myIp, address) || ip.isEqual("127.0.0.1", address)) && program.port === port) {
+                    return reject(new Error(`Cannot mirror to self!`));
+                }
+
+                helpers.log(consts.LOG_INFO, `Cache Server mirroring to ${address}:${port}`);
+                resolve({ host: address, port: port });
+            });
+        })
+    });
+
+    Promise.all(mirrors)
+        .then(m => resolve(m))
+        .catch(err => reject(err));
 });
 
 Cache.init(cacheOpts)
-    .then(() => {
+    .then(() => getMirrors())
+    .then(mirrors => {
         let opts = {
             port: program.port,
             mirror: mirrors
