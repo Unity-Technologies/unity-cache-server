@@ -3,7 +3,7 @@ const helpers = require('./lib/helpers');
 const consts = require('./lib/constants');
 const program = require('commander');
 const path = require('path');
-const CacheServer = require('./lib/server');
+const CacheServer = require('./lib/server/server');
 const config = require('config');
 const prompt = require('prompt');
 
