@@ -111,7 +111,7 @@ describe("Cache: RAM", () => {
 
         beforeEach(() => {
             cache = new Cache();
-            return cache.init(opts).then(() => writeFileDataToCache(fileData));
+            return cache.init(opts).then(() => writeFileDataToCache(cache, fileData));
         });
 
         afterEach(() => {
@@ -151,7 +151,7 @@ describe("Cache: RAM", () => {
         beforeEach(() => {
             cache = new Cache();
             return cache.init(opts)
-                .then(() => writeFileDataToCache(fileData))
+                .then(() => writeFileDataToCache(cache, fileData))
                 .then(() => cache._serialize());
         });
 
