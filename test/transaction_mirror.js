@@ -1,7 +1,7 @@
 const { Server, CacheRAM } = require('../lib');
 const TransactionMirror = require('../lib/server/transaction_mirror');
 const tmp = require('tmp');
-const { generateCommandData, sleep } = require('./test_utils');
+const { generateCommandData, sleep, writeFileDataToCache } = require('./test_utils');
 const assert = require('assert');
 
 let cacheOpts = {
@@ -17,8 +17,6 @@ let cacheOpts = {
 describe("TransactionMirror", () => {
 
     before(async () => {
-        this.fileData = generateCommandData(1024, 1024);
-
         this.sourceCache = new CacheRAM();
         this.targetCache = new CacheRAM();
         await this.sourceCache.init(cacheOpts);
@@ -31,34 +29,36 @@ describe("TransactionMirror", () => {
             self.targetServer.Start(err => reject(err), () => {
                 let opts = { host: 'localhost', port: self.targetServer.port };
                 self.mirror = new TransactionMirror(opts, self.sourceCache);
-                self.mirror._queueProcessDelay = 0;
+                self.mirror._queueProcessDelay = 1;
                 resolve();
             });
         });
     });
 
     it("should mirror all queued transactions to the target Cache Server", async () => {
-        this.sourceCache._addFileToCache('i', this.fileData.guid, this.fileData.hash, this.fileData.info);
-        this.sourceCache._addFileToCache('a', this.fileData.guid, this.fileData.hash, this.fileData.bin);
-        this.sourceCache._addFileToCache('r', this.fileData.guid, this.fileData.hash, this.fileData.resource);
+        let fileData = [
+                generateCommandData(1024, 1024),
+                generateCommandData(1024, 1024)
+            ];
 
-        const trxMock = {
-            guid: this.fileData.guid,
-            hash: this.fileData.hash,
-            manifest: ['i', 'a', 'r']
-        };
+        fileData.forEach(d => {
+            writeFileDataToCache(this.sourceCache, d);
+            const trxMock = { guid: d.guid, hash: d.hash, manifest: ['i', 'a', 'r'] };
+            this.mirror.queueTransaction(trxMock);
+        });
 
-        this.mirror.queueTransaction(trxMock);
         await sleep(50);
 
-        let info = await this.targetCache.getFileInfo('i', this.fileData.guid, this.fileData.hash);
-        assert(info && info.size === this.fileData.info.length);
+        fileData.forEach(async d => {
+            let info = await this.targetCache.getFileInfo('i', d.guid, d.hash);
+            assert(info && info.size === d.info.length);
 
-        info = await this.targetCache.getFileInfo('r', this.fileData.guid, this.fileData.hash);
-        assert(info && info.size === this.fileData.resource.length);
+            info = await this.targetCache.getFileInfo('r', d.guid, d.hash);
+            assert(info && info.size === d.resource.length);
 
-        info = await this.targetCache.getFileInfo('a', this.fileData.guid, this.fileData.hash);
-        assert(info && info.size === this.fileData.bin.length);
+            info = await this.targetCache.getFileInfo('a', d.guid, d.hash);
+            assert(info && info.size === d.bin.length);
+        });
     });
 
     describe("queueTransaction", () => {

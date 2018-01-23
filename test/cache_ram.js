@@ -3,6 +3,7 @@ const fs = require('fs-extra');
 const Cache = require('../lib/cache/cache_ram');
 const randomBuffer = require('./test_utils').randomBuffer;
 const generateCommandData = require('./test_utils').generateCommandData;
+const writeFileDataToCache = require('./test_utils').writeFileDataToCache;
 const path = require('path');
 const assert = require('assert');
 
@@ -15,12 +16,6 @@ describe("Cache: RAM", () => {
         return cache._pageMeta.chain()
             .find({'dirty' : true}).data()
             .map(page => page.index);
-    }
-
-    function writeFileDataToCache(fileData) {
-        cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
-        cache._addFileToCache('a', fileData.guid, fileData.hash, fileData.bin);
-        cache._addFileToCache('r', fileData.guid, fileData.hash, fileData.resource);
     }
 
     let opts = {
