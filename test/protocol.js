@@ -172,7 +172,7 @@ describe("Protocol", function() {
                     });
                 });
 
-                it("should replace an existing file with the same guid and hash ", () => {
+                it("should replace an existing file with the same guid and hash", () => {
                     const asset = Buffer.from(crypto.randomBytes(self.data.bin.length).toString('ascii'), 'ascii');
 
                     const buf = Buffer.from(
