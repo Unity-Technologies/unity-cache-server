@@ -18,14 +18,12 @@ describe("Server common", function() {
         helpers.SetLogger(() => {});
     });
 
-    before(function (done) {
-        server.Start(function (err) {
-            assert(!err, "Cache Server reported error! " + err);
-        }, done);
+    before(function () {
+        return server.start(err => assert(!err, `Cache Server reported error! ${err}`));
     });
 
     after(function() {
-        server.Stop();
+        server.stop();
     });
 
     describe("Version check", function () {

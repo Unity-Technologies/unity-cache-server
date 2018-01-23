@@ -23,16 +23,10 @@ describe("TransactionMirror", () => {
         await this.targetCache.init(cacheOpts);
 
         this.targetServer = new Server(this.targetCache, {port: 0});
-
-        let self = this;
-        return new Promise((resolve, reject) => {
-            self.targetServer.Start(err => reject(err), () => {
-                let opts = { host: 'localhost', port: self.targetServer.port };
-                self.mirror = new TransactionMirror(opts, self.sourceCache);
-                self.mirror._queueProcessDelay = 1;
-                resolve();
-            });
-        });
+        await this.targetServer.start(err => assert(!err, `Server reported error! ${err}`));
+        let opts = { host: 'localhost', port: this.targetServer.port };
+        this.mirror = new TransactionMirror(opts, this.sourceCache);
+        this.mirror._queueProcessDelay = 1;
     });
 
     it("should mirror all queued transactions to the target Cache Server", async () => {

@@ -52,24 +52,22 @@ describe("Protocol", function() {
                 helpers.SetLogger(function() {});
             });
 
-            before(function (done) {
+            before(function () {
                 /** @type {CacheBase} **/
                 let CacheModule = require(module.path);
                 cache = new CacheModule();
 
                 module.options.cachePath = module.tmpDir.name;
 
-                cache.init(module.options)
-                    .then(() => {
+                return cache.init(module.options)
+                    .then(() =>  {
                         server = new CacheServer(cache, {port: 0});
-                        server.Start(err => {
-                            assert(!err, "Cache Server reported error! " + err);
-                        }, done);
-                    });
+                    })
+                    .then(() => server.start(err => assert(!err, `Cache Server reported error!  ${err}`)));
             });
 
             after(function() {
-                server.Stop();
+                server.stop();
                 module.tmpDir.removeCallback();
             });
 

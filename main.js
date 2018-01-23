@@ -122,7 +122,7 @@ Cache.init(cacheOpts)
             helpers.log(consts.LOG_INFO, `Cache Server version ${VERSION}; Cache module ${program.cacheModule}`);
 
             if(program.workers === 0) {
-                server.Start(errHandler, function () {
+                server.start(errHandler).then(() => {
                     helpers.log(consts.LOG_INFO, `Cache Server ready on port ${server.port}`);
                     startPrompt();
                 });
@@ -134,7 +134,7 @@ Cache.init(cacheOpts)
             }
         }
         else {
-            server.Start(errHandler, function () {
+            server.start(errHandler).then(() => {
                 helpers.log(consts.LOG_INFO, `Cache Server worker ${cluster.worker.id} ready on port ${server.port}`);
             });
         }
@@ -156,7 +156,7 @@ function startPrompt() {
             }
             else {
                 helpers.log(consts.LOG_ERR, err);
-                server.Stop();
+                server.stop();
                 process.exit(1);
             }
         }
@@ -166,7 +166,7 @@ function startPrompt() {
                 case 'q':
                     helpers.log(consts.LOG_INFO, "Shutting down ...");
                     Cache.shutdown().then(() => {
-                        server.Stop();
+                        server.stop();
                         process.exit(0);
                     });
                     break;
