@@ -125,6 +125,7 @@ describe("Protocol", function() {
 
             describe("PUT requests", function () {
                 this.slow(5000);
+                this.timeout(5000);
 
                 const self = this;
 
