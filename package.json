@@ -2,7 +2,7 @@
   "name": "unity-cache-server",
   "version": "6.0.0",
   "description": "Unity Cache Server",
-  "main": "main.js",
+  "main": "lib/index.js",
   "engines": {
     "node": "^8.9.1"
   },
