@@ -1,5 +1,5 @@
 {
-  "name": "Fast-CacheServer",
+  "name": "unity-cache-server",
   "version": "6.0.0",
   "description": "Unity Cache Server",
   "main": "main.js",
@@ -39,6 +39,7 @@
     "config": "^1.27.0",
     "filesize": "^3.5.11",
     "fs-extra": "^5.0.0",
+    "ip": "^1.1.5",
     "js-yaml": "^3.10.0",
     "lodash": "^4.17.4",
     "lokijs": "^1.5.1",

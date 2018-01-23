@@ -91,20 +91,19 @@ exports.clientWrite = function(client, data, minPacketSize, maxPacketSize) {
         }
 
         function write() {
-            let ok = true;
-            while(ok && sentBytes < data.length) {
-                let len = Math.min(data.length - sentBytes, packetSize());
-                ok = client.write(data.slice(sentBytes, sentBytes + len));
+            let len = Math.min(data.length - sentBytes, packetSize());
+            client.write(data.slice(sentBytes, sentBytes + len), () => {
                 sentBytes += len;
-            }
 
-            if (sentBytes === data.length) {
-                client.removeListener('drain', write);
-                setTimeout(resolve, WRITE_RESOLVE_DELAY);
-            }
+                if (sentBytes === data.length) {
+                    setTimeout(resolve, WRITE_RESOLVE_DELAY);
+                }
+                else {
+                    setImmediate(write);
+                }
+            });
         }
 
-        client.on('drain', write);
         write();
     });
 };

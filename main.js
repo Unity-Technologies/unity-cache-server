@@ -3,11 +3,12 @@ const helpers = require('./lib/helpers');
 const consts = require('./lib/constants');
 const program = require('commander');
 const path = require('path');
-const CacheServer = require('./lib/server/server');
+const CacheServer = require('./lib').Server;
 const config = require('config');
 const prompt = require('prompt');
 const dns = require('dns');
 const ip = require('ip');
+const VERSION = require('./package.json').version;
 
 function myParseInt(val, def) {
     val = parseInt(val);
@@ -23,10 +24,10 @@ function collect(val, memo) {
     return memo;
 }
 
-const defaultCacheModule = config.get("Cache.module");
+const defaultCacheModule = config.get("Cache.defaultModule");
 
 program.description("Unity Cache Server")
-    .version(consts.VERSION)
+    .version(VERSION)
     .option('-p, --port <n>', `Specify the server port, only apply to new cache server, default is ${consts.DEFAULT_PORT}`, myParseInt, consts.DEFAULT_PORT)
     .option('-c --cacheModule [path]', `Use cache module at specified path. Default is '${defaultCacheModule}'`, defaultCacheModule)
     .option('-P, --cachePath [path]', `Specify the path of the cache directory.`)
@@ -85,7 +86,7 @@ let getMirrors = () => new Promise((resolve, reject) => {
         let [host, port] = m.split(':');
         port = parseInt(port);
 
-        if(!port) port = consts.DEFAULT_PORT;
+        if(!port) port = config.get("Defaults.serverPort");
         const myIp = ip.address();
 
         return new Promise((resolve, reject) => {
@@ -118,7 +119,7 @@ Cache.init(cacheOpts)
         server = new CacheServer(Cache, opts);
 
         if(cluster.isMaster) {
-            helpers.log(consts.LOG_INFO, `Cache Server version ${consts.VERSION}; Cache module ${program.cacheModule}`);
+            helpers.log(consts.LOG_INFO, `Cache Server version ${VERSION}; Cache module ${program.cacheModule}`);
 
             if(program.workers === 0) {
                 server.Start(errHandler, function () {

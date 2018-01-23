@@ -22,10 +22,19 @@ describe("Helper functions", () => {
             assert(guid.compare(helpers.GUIDStringToBuffer(guidStr)) === 0);
 
         });
+
         it("should throw an error if the input value is not a string or is the wrong length", () => {
             assert.throws(helpers.GUIDStringToBuffer.bind(null, null));
             assert.throws(helpers.GUIDStringToBuffer.bind(null, ''));
             assert.throws(helpers.GUIDStringToBuffer.bind(null, guidStr + 'x'));
         });
+    });
+
+    describe("isBuffer", () => {
+        it("should correctly identify whether or not passed value is a type of Buffer", () => {
+            assert(helpers.isBuffer(Buffer.from([])));
+            assert(!helpers.isBuffer({}));
+            assert(!helpers.isBuffer(null));
+        })
     });
 });

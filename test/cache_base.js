@@ -35,7 +35,7 @@ describe("Cache: Base Class", () => {
             let cacheOptions = cache._options;
             assert(typeof(cacheOptions) === 'object');
             assert(cacheOptions.hasOwnProperty('cache_fs'));
-            assert(cacheOptions.hasOwnProperty('cache_membuf'));
+            assert(cacheOptions.hasOwnProperty('cache_ram'));
         });
 
         it("should apply option overrides", () => {

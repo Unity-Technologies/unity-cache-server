@@ -1,6 +1,6 @@
 const tmp = require('tmp');
 const fs = require('fs-extra');
-const Cache = require('../lib/cache/cache_membuf');
+const Cache = require('../lib/cache/cache_ram');
 const randomBuffer = require('./test_utils').randomBuffer;
 const generateCommandData = require('./test_utils').generateCommandData;
 const path = require('path');
@@ -9,7 +9,7 @@ const assert = require('assert');
 const MIN_FILE_SIZE = 1024 * 5;
 const MAX_FILE_SIZE = MIN_FILE_SIZE;
 
-describe("Cache: Membuf", () => {
+describe("Cache: RAM", () => {
 
     function dirtyPages() {
         return cache._pageMeta.chain()
@@ -24,7 +24,7 @@ describe("Cache: Membuf", () => {
     }
 
     let opts = {
-        cachePath: tmp.tmpNameSync({}),
+        cachePath: tmp.tmpNameSync({}).toString(),
         initialPageSize: MIN_FILE_SIZE * 2,
         growPageSize: MIN_FILE_SIZE * 2,
         minFreeBlockSize: 1024,

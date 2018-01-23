@@ -1,12 +1,12 @@
 Cache:
-  module: "lib/cache/cache_fs"
+  defaultModule: "lib/cache/cache_fs"
   options:
-    cache_membuf:
+    cache_ram:
       initialPageSize: 100000000
       growPageSize: 100000000
       maxPageCount: 10
       minFreeBlockSize: 1024
-      cachePath: ".cache_membuf"
+      cachePath: ".cache_ram"
       persistenceOptions:
         autosave: true
         autosaveInterval: 10000

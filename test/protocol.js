@@ -1,5 +1,4 @@
 const assert = require('assert');
-const net = require('net');
 const crypto = require('crypto');
 const helpers = require('../lib/helpers');
 const consts = require('../lib/constants');
@@ -17,7 +16,8 @@ const getClientPromise = require('./test_utils').getClientPromise;
 
 const MIN_FILE_SIZE = 1024;
 const MAX_FILE_SIZE = 1024 * 1024;
-const SMALL_PACKET_SIZE = 16;
+const SMALL_PACKET_SIZE = 64;
+const MED_PACKET_SIZE = 1024;
 const LARGE_PACKET_SIZE = 1024 * 16;
 
 let cache, server, client;
@@ -25,8 +25,8 @@ let cache, server, client;
 let test_modules = [
     {
         tmpDir: tmp.dirSync({unsafeCleanup: true}),
-        name: "cache_membuf",
-        path: "../lib/cache/cache_membuf",
+        name: "cache_ram",
+        path: "../lib/cache/cache_ram",
         options: {
             initialPageSize: MAX_FILE_SIZE * 2,
             growPageSize: MAX_FILE_SIZE,
@@ -154,10 +154,7 @@ describe("Protocol", function() {
 
                 const tests = [
                     {ext: 'bin', cmd: cmd.putAsset, packetSize: SMALL_PACKET_SIZE},
-                    {ext: 'info', cmd: cmd.putInfo, packetSize: SMALL_PACKET_SIZE},
-                    {ext: 'resource', cmd: cmd.putResource, packetSize: SMALL_PACKET_SIZE},
-                    {ext: 'bin', cmd: cmd.putAsset, packetSize: LARGE_PACKET_SIZE},
-                    {ext: 'info', cmd: cmd.putInfo, packetSize: LARGE_PACKET_SIZE},
+                    {ext: 'info', cmd: cmd.putInfo, packetSize: MED_PACKET_SIZE},
                     {ext: 'resource', cmd: cmd.putResource, packetSize: LARGE_PACKET_SIZE}
                 ];
 
@@ -230,11 +227,8 @@ describe("Protocol", function() {
                 });
 
                 const tests = [
-                    {cmd: cmd.getAsset, blob: self.data.bin, type: 'bin', packetSize: 1},
-                    {cmd: cmd.getInfo, blob: self.data.info, type: 'info', packetSize: 1},
-                    {cmd: cmd.getResource, blob: self.data.resource, type: 'resource', packetSize: 1},
-                    {cmd: cmd.getAsset, blob: self.data.bin, type: 'bin', packetSize: LARGE_PACKET_SIZE},
-                    {cmd: cmd.getInfo, blob: self.data.info, type: 'info', packetSize: LARGE_PACKET_SIZE},
+                    {cmd: cmd.getAsset, blob: self.data.bin, type: 'bin', packetSize: SMALL_PACKET_SIZE},
+                    {cmd: cmd.getInfo, blob: self.data.info, type: 'info', packetSize: MED_PACKET_SIZE},
                     {cmd: cmd.getResource, blob: self.data.resource, type: 'resource', packetSize: LARGE_PACKET_SIZE}
                 ];
 

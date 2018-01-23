@@ -8,8 +8,8 @@ const EventEmitter = require('events');
 
 let test_modules = [
     {
-        name: "cache_membuf",
-        path: "../lib/cache/cache_membuf",
+        name: "cache_ram",
+        path: "../lib/cache/cache_ram",
         options: {
             cachePath: tmp.tmpNameSync({}),
             initialPageSize: 10000,
