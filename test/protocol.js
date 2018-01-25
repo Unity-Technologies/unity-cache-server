@@ -28,8 +28,7 @@ let test_modules = [
         name: "cache_ram",
         path: "../lib/cache/cache_ram",
         options: {
-            initialPageSize: MAX_FILE_SIZE * 2,
-            growPageSize: MAX_FILE_SIZE,
+            pageSize: MAX_FILE_SIZE,
             minFreeBlockSize: 1024,
             persistenceOptions: {
                 adapter: new loki.LokiMemoryAdapter()

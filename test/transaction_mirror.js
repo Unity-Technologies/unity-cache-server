@@ -1,17 +1,22 @@
 const { Server, CacheRAM } = require('../lib');
 const TransactionMirror = require('../lib/server/transaction_mirror');
 const tmp = require('tmp');
-const { generateCommandData, sleep, writeFileDataToCache } = require('./test_utils');
+const { generateCommandData, sleep } = require('./test_utils');
 const assert = require('assert');
 
 let cacheOpts = {
     cachePath: tmp.tmpNameSync({}).toString(),
-    initialPageSize: 10 * 1024,
-    growPageSize: 10 * 1024,
+    pageSize: 10 * 1024,
     minFreeBlockSize: 1024,
     persistenceOptions: {
         autosave: false
     }
+};
+
+let writeFileDataToCache = (cache, fileData) => {
+    cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
+    cache._addFileToCache('a', fileData.guid, fileData.hash, fileData.bin);
+    cache._addFileToCache('r', fileData.guid, fileData.hash, fileData.resource);
 };
 
 describe("TransactionMirror", () => {

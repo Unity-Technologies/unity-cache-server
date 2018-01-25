@@ -12,8 +12,7 @@ let test_modules = [
         path: "../lib/cache/cache_ram",
         options: {
             cachePath: tmp.tmpNameSync({}),
-            initialPageSize: 10000,
-            growPageSize: 10000,
+            pageSize: 10000,
             minFreeBlockSize: 1024,
             persistenceOptions: {
                 adapter: new loki.LokiMemoryAdapter()

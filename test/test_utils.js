@@ -31,12 +31,6 @@ exports.generateCommandData = function(minSize, maxSize) {
     }
 };
 
-exports.writeFileDataToCache = function(cache, fileData) {
-    cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
-    cache._addFileToCache('a', fileData.guid, fileData.hash, fileData.bin);
-    cache._addFileToCache('r', fileData.guid, fileData.hash, fileData.resource);
-};
-
 exports.encodeCommand = function(command, guid, hash, blob) {
 
     if(blob)

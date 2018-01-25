@@ -2,8 +2,7 @@ Cache:
   defaultModule: "lib/cache/cache_fs"
   options:
     cache_ram:
-      initialPageSize: 100000000
-      growPageSize: 100000000
+      pageSize: 100000000
       maxPageCount: 10
       minFreeBlockSize: 1024
       cachePath: ".cache_ram"

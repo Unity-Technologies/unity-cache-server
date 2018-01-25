@@ -3,7 +3,7 @@ const fs = require('fs-extra');
 const Cache = require('../lib/cache/cache_ram');
 const randomBuffer = require('./test_utils').randomBuffer;
 const generateCommandData = require('./test_utils').generateCommandData;
-const writeFileDataToCache = require('./test_utils').writeFileDataToCache;
+const sleep = require('./test_utils').sleep;
 const path = require('path');
 const assert = require('assert');
 
@@ -12,16 +12,14 @@ const MAX_FILE_SIZE = MIN_FILE_SIZE;
 
 describe("Cache: RAM", () => {
 
-    function dirtyPages() {
-        return cache._pageMeta.chain()
-            .find({'dirty' : true}).data()
-            .map(page => page.index);
-    }
+    let dirtyPages = () => cache._pageMeta.chain()
+        .find({'dirty' : true}).data()
+        .map(page => page.index);
 
     let opts = {
         cachePath: tmp.tmpNameSync({}).toString(),
-        initialPageSize: MIN_FILE_SIZE * 2,
-        growPageSize: MIN_FILE_SIZE * 2,
+        pageSize: MIN_FILE_SIZE * 2,
+        maxPageCount: 2,
         minFreeBlockSize: 1024,
         persistenceOptions: {
             autosave: false
@@ -31,48 +29,62 @@ describe("Cache: RAM", () => {
     let cache;
     let fileData = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
 
-    describe("Public API", () => {
+    let writeFileDataToCache = (fileData) => {
+        cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
+        cache._addFileToCache('a', fileData.guid, fileData.hash, fileData.bin);
+        cache._addFileToCache('r', fileData.guid, fileData.hash, fileData.resource);
+    };
 
+    describe("Public API", () => {
         beforeEach(() => {
             cache = new Cache();
         });
 
-        afterEach(() => {
-            return fs.remove(opts.cachePath);
-        });
+        afterEach(() => fs.remove(opts.cachePath));
 
         describe("init", () => {
-            it("should initialize the _db object", () => {
-                return cache.init(opts).then(() => assert(cache._db !== null));
+            it("should initialize the _db object", async () => {
+                await cache.init(opts);
+                assert(cache._db !== null);
             });
 
-            it("should initialize an empty cache if no database was loaded from disk", () => {
-                return cache.init(opts)
-                    .then(() => {
-                        assert(cache._pageMeta.count() === 1);
-                        let index = cache._index.findOne({});
-                        assert(index !== null);
-                        assert(index.size === opts.initialPageSize);
-                        assert(index.pageOffset === 0);
-                    });
+            it("should initialize an empty cache if no database was loaded from disk", async () => {
+                await cache.init(opts);
+                assert(cache._pageMeta.count() === 1);
+                let index = cache._index.findOne({});
+
+                assert(index !== null);
+                assert(index.size === opts.pageSize);
+                assert(index.pageOffset === 0);
             });
 
-            it("should populate the _index and _pageMeta when a saved database is loaded from disk", () => {
-                return cache.init(opts)
-                    .then(() => { cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);} )
-                    .then(() => cache.shutdown())
-                    .then(() => cache.init(opts))
-                    .then(() => {
-                        assert(cache._pageMeta.count() === 1);
-                        assert(cache._index.count() === 2);
-                    });
+            it("should populate the _index and _pageMeta when a saved database is loaded from disk", async () => {
+                await cache.init(opts);
+                await cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
+                await cache.shutdown();
+                await cache.init(opts);
+
+                assert(cache._pageMeta.count() === 1);
+                assert(cache._index.count() === 2);
+            });
+        });
+
+        describe("getFileStream", () => {
+            it("should update the lastAccessTime of the requested file entry", async () => {
+                let prevTime;
+                await cache.init(opts);
+                await cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
+                let info = await cache.getFileInfo('i', fileData.guid, fileData.hash);
+                prevTime = info.lastAccessTime;
+                await sleep(100);
+                await cache.getFileStream('i', fileData.guid, fileData.hash);
+                info = await cache.getFileInfo('i', fileData.guid, fileData.hash);
+                assert(info.lastAccessTime > prevTime);
             });
         });
 
         describe("endPutTransaction", () => {
-            it("it should wait for a database save in-progress to complete before ending the transaction", () => {
-                let trx;
-
+            it("it should wait for a database save in-progress to complete before ending the transaction", async () => {
                 let ok = false;
                 cache.on('waitForSerialize', () => {
                     ok = true;
@@ -80,135 +92,187 @@ describe("Cache: RAM", () => {
                 });
 
                 cache._serializeInProgress = true;
-                return cache.init(opts)
-                    .then(() => cache.createPutTransaction(fileData.guid, fileData.hash))
-                    .then(result => { trx = result; })
-                    .then(() => trx.getWriteStream('i', fileData.info.length))
-                    .then(stream => stream.end(fileData.info))
-                    .then(() => cache.endPutTransaction(trx))
-                    .then(() => assert(ok));
+                await cache.init(opts);
+                let trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
+                let stream = await trx.getWriteStream('i', fileData.info.length);
+                stream.end(fileData.info);
+                await cache.endPutTransaction(trx);
+                assert(ok);
             });
         });
 
         describe("shutdown", () => {
-            it("should serialize the database and page files to disk before returning", () => {
+            it("should serialize the database and page files to disk before returning", async () => {
                 let pages;
-                return cache.init(opts)
-                    .then(() => { cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info); })
-                    .then(() => {
-                        pages = dirtyPages();
-                        assert(pages.length === 1);
-                    })
-                    .then(() => cache.shutdown())
-                    .then(() => fs.access(cache._dbPath))
-                    .then(() => fs.readdir(opts.cachePath))
-                    .then(dir => assert(dir.includes(pages[0])));
+                await cache.init(opts);
+                await cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
+
+                pages = dirtyPages();
+                assert(pages.length === 1);
+
+                await cache.shutdown();
+                await fs.access(cache._dbPath);
+                let dir = await fs.readdir(opts.cachePath);
+                assert(dir.includes(pages[0]));
             });
         });
     });
 
-    describe("_serialize", () => {
+    describe("Internal", () => {
 
-        beforeEach(() => {
+        beforeEach(async () => {
             cache = new Cache();
-            return cache.init(opts).then(() => writeFileDataToCache(cache, fileData));
+            await cache.init(opts);
+
         });
 
-        afterEach(() => {
+        afterEach(async () => {
             cache._clearCache();
-            return fs.remove(opts.cachePath);
+            await fs.remove(opts.cachePath);
         });
 
-        it("should write only dirty page files to disk", () => {
-            let testDir = (dir, dirty) => {
-                assert(dirty.every(entry => dir.includes(entry)));
-                assert(dir.every(entry => dirty.includes(entry)));
-            };
+        describe("_serialize", () => {
 
-            let dirty = dirtyPages();
-            return Promise.resolve()
+            beforeEach(() => writeFileDataToCache(fileData));
+
+            it("should write only dirty page files to disk", async () => {
+                let testDir = (dir, dirty) => {
+                    assert(dirty.every(entry => dir.includes(entry)));
+                    assert(dir.every(entry => dirty.includes(entry)));
+                };
+
+                let dirty = dirtyPages();
+
                 // Serialize the cache
-                .then(() => cache._serialize())
+                await cache._serialize();
                 // Read the cache dir and compare file list to expected dirty pages
-                .then(() => fs.readdir(opts.cachePath))
-                .then(dir => testDir(dir, dirty))
+                let dir = await fs.readdir(opts.cachePath);
+                testDir(dir, dirty);
                 // Remove all files from the cache dir
-                .then(() => fs.emptyDir(opts.cachePath))
+                await fs.emptyDir(opts.cachePath);
                 // Replace a single file
-                .then(() => cache._addFileToCache('i', fileData.guid, fileData.hash, randomBuffer(fileData.info.length)))
+                cache._addFileToCache('i', fileData.guid, fileData.hash, randomBuffer(fileData.info.length));
                 // Store the dirty page list again
-                .then(() => { dirty = dirtyPages(); })
+                dirty = dirtyPages();
                 // Serialize the cache again
-                .then(() => cache._serialize())
+                await cache._serialize();
                 // Re-compare cache dir contents to expected dirty pages
-                .then(() => fs.readdir(opts.cachePath))
-                .then(dir => testDir(dir, dirty));
-        });
-    });
-
-    describe("_deserialize", () => {
-
-        beforeEach(() => {
-            cache = new Cache();
-            return cache.init(opts)
-                .then(() => writeFileDataToCache(cache, fileData))
-                .then(() => cache._serialize());
+                dir = await fs.readdir(opts.cachePath);
+                testDir(dir, dirty);
+            });
         });
 
-        afterEach(() => {
-            cache._clearCache();
-            return fs.remove(opts.cachePath);
-        });
+        describe("_deserialize", () => {
 
-        it("should load all page files from the cachePath", () => {
-            let pageMeta =  cache._pageMeta.chain().find({}).data();
-            let pageData = cache._pages;
+            beforeEach(async () => {
+                writeFileDataToCache(fileData);
+                await cache._serialize();
+            });
 
-            // artificially clear out the page array before de-serializing
-            cache._pages = [];
+            it("should load all page files from the cachePath", async () => {
+                let pageMeta = cache._pageMeta.chain().find({}).data();
+                let pageData = cache._pages;
 
-            return cache._deserialize()
-                .then(() => {
-                    let ok = pageMeta.every(page => {
-                        return Buffer.compare(cache._pages[page.index], pageData[page.index]) === 0;
-                    });
-
-                    assert(ok);
+                // artificially clear out the page array before de-serializing
+                cache._pages = [];
+                await cache._deserialize();
+                pageMeta.forEach(page => {
+                    assert.equal(Buffer.compare(cache._pages[page.index], pageData[page.index]), 0);
                 });
+            });
+
+            it("should throw an error if the page file size doesn't match the expected size", async () => {
+                let dir = await fs.readdir(opts.cachePath);
+
+                assert(dir.length > 0);
+                await fs.truncate(path.join(opts.cachePath, dir[0]));
+
+                let didThrow = false;
+                try {
+                    await cache._deserialize();
+                }
+                catch(err) {
+                    didThrow = true;
+                }
+                finally {
+                    assert(didThrow);
+                }
+            });
         });
 
-        it("should throw an error if the page file size doesn't match the expected size", () => {
-            return fs.readdir(opts.cachePath)
-                .then(dir => {
-                    assert(dir.length > 0);
-                    return fs.truncate(path.join(opts.cachePath, dir[0]))
-                })
-                .then(() => cache._deserialize())
-                .then(() => { throw new Error("Expected error!"); }, err =>  assert(err));
+        describe("_allocPage", () => {
+            it("should allocate a new page with size equal to the configured page size", () => {
+                assert.equal(cache._pageMeta.count(), 1);
+                const page = cache._allocPage(0);
+                assert.equal(cache._pageMeta.count(), 2);
+                assert.equal(cache._pages[page.index].length, opts.pageSize);
+            });
+
+            it("should allocate a new page with size equal to the given minSize when greater than the configured page size", () => {
+                assert.equal(cache._pageMeta.count(), 1);
+                const page = cache._allocPage(opts.pageSize * 2);
+                assert.equal(cache._pageMeta.count(), 2);
+                assert.equal(cache._pages[page.index].length, opts.pageSize * 2);
+            });
+
+            it("should throw an error if page count would exceed maxPageCount", () => {
+                for(let x = 0; x < opts.maxPageCount - 1; x++)
+                    cache._allocPage(0);
+
+                assert.throws(() => cache._allocPage(0));
+            });
         });
-    });
 
-    describe("_allocPage", () => {
+        describe("_reserveBlock", () => {
+            it("should allocate an existing free block in an existing page when available", () => {
+                const key = Cache._calcIndexKey('a', randomBuffer(16), randomBuffer(16));
+                const block = cache._reserveBlock(key, MIN_FILE_SIZE);
+                assert.equal(cache._pageMeta.count(), 1);
+                assert.equal(block.size, MIN_FILE_SIZE);
+            });
 
-    });
+            it("should allocate a new free block to a new page when no free blocks are found in existing pages", () => {
+                const key1 = Cache._calcIndexKey('a', randomBuffer(16), randomBuffer(16));
+                const key2 = Cache._calcIndexKey('a', randomBuffer(16), randomBuffer(16));
+                cache._reserveBlock(key1, opts.pageSize); // Fill up the first free block
+                const block = cache._reserveBlock(key2, MIN_FILE_SIZE); // Should now allocate another
+                assert.equal(cache._pageMeta.count(), 2);
+                assert.equal(block.size, MIN_FILE_SIZE);
+            });
 
-    describe("_findFreeBlock", () => {
+            it("should re-allocate a LRU block when no free blocks are available and maxPageCount has been reached", async () => {
+                let firstBlock;
+                for(let x = 0; x < opts.maxPageCount; x++) {
+                    let key = Cache._calcIndexKey('a', randomBuffer(16), randomBuffer(16));
+                    let block = cache._reserveBlock(key, opts.pageSize);
+                    if(!firstBlock)
+                        firstBlock = block;
+                    await sleep(50);
+                }
 
-    });
+                let key = Cache._calcIndexKey('a', randomBuffer(16), randomBuffer(16));
+                let block = cache._reserveBlock(key, MIN_FILE_SIZE);
+                assert.equal(firstBlock.pageIndex, block.pageIndex);
+            });
 
-    describe("_reserveBlock", () => {
+            it("should throw an exception if no free block or no LRU block of a suitable size can be found when maxPageCount has been reached", () => {
+                for(let x = 0; x < opts.maxPageCount; x++) {
+                    let key = Cache._calcIndexKey('a', randomBuffer(16), randomBuffer(16));
+                    cache._reserveBlock(key, opts.pageSize);
+                }
 
-    });
+                assert.throws(() => cache._reserveBlock(key, opts.pageSize * 2));
+            });
+        });
 
-    describe("_waitForSerialize", () => {
+        describe("_addFileToCache", () => {
+            it("should throw an error if the cache cannot grow to accommodate the new file", () => {
+                for(let x = 0; x < opts.maxPageCount; x++) {
+                    cache._addFileToCache('a', randomBuffer(16), randomBuffer(16), randomBuffer(opts.pageSize));
+                }
 
-    });
-
-    describe("_addFileToCache", () => {
-
-    });
-
-    describe("_clearCache", () => {
-
+                assert.throws(() => cache._addFileToCache('a', randomBuffer(16), randomBuffer(16), randomBuffer(opts.pageSize * 2)));
+            });
+        });
     });
 });
