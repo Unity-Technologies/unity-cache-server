@@ -9,15 +9,18 @@ At present time this open-source repository is maintained separately from the Ca
 ## Server Setup
 Download and install the latest LTS version of node from the [Node.JS website](`https://nodejs.org/en/download/`).
 
+#### Install from npm registry
 ```bash
-git clone git@github.com:Unity-Technologies/unity-cache-server.git
-cd unity-cache-server
-npm install
+npm install unity-cache-server -g
+```
+#### Install from GitHub source
+```bash
+npm install github:Unity-Technologies/unity-cache-server -g
 ```
 ## Usage
 >Default options are suitable for quickly starting a cache server, with a default cache location of `./cache5.0`
 ```bash
-node main.js
+unity-cache-server [arguments]
 ```
 
 ## Options

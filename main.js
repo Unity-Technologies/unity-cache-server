@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const cluster = require('cluster');
 const helpers = require('./lib/helpers');
 const consts = require('./lib/constants');

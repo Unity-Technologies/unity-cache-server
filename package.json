@@ -9,6 +9,9 @@
   "directories": {
     "test": "test"
   },
+  "bin": {
+    "unity-cache-server": "./main.js"
+  },
   "scripts": {
     "test": "nyc mocha",
     "coverage": "nyc npm test && nyc report --reporter=lcov; open coverage/lcov-report/index.html",
