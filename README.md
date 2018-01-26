@@ -6,6 +6,22 @@ This is the officially maintained open-source implementation of the Unity Cache 
 
 At present time this open-source repository is maintained separately from the Cache Server available on the Unity website, as well as the version packaged with the Unity installer. It is possible that compatibility with specific versions of Unity will diverge between these separate implementations. Check the release notes for specific compatibility information prior to usage.
 
+#### Table of Contents
+* [Server Setup](#server-setup)
+    * [Install from npm registry](#install-from-npm-registry)
+    * [Install from GitHub source](#install-from-github-source)
+* [Usage](#usage)
+* [Options](#options)
+* [Configuration file](#configuration-file)
+* [Client Configuration](#client-configuration)
+* [Cache Modules](#cache-modules)
+  * [cache\_fs (default)](#cache_fs-default)
+  * [cache\_ram](#cache_ram)
+* [Mirroring](#mirroring)
+* [Unity project Library Importer](#unity-project-library-importer)
+* [Contributors](#contributors)
+* [License](#license)
+
 ## Server Setup
 Download and install the latest LTS version of node from the [Node.JS website](`https://nodejs.org/en/download/`).
 
