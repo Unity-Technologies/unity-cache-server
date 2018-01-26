@@ -82,25 +82,16 @@ if(program.cachePath !== null) {
 }
 
 let getMirrors = () => new Promise((resolve, reject) => {
-    let mirrors = program.mirror.map(m => {
-        let [host, port] = m.split(':');
-        port = parseInt(port);
+    const defaultPort = consts.DEFAULT_PORT;
+    const myIp = ip.address();
 
-        if(!port) port = config.get("Defaults.serverPort");
-        const myIp = ip.address();
+    let mirrors = program.mirror.map(async m => {
+        let result = await helpers.parseAndValidateAddressString(m, defaultPort);
+        if((ip.isEqual(myIp, result.host) || ip.isEqual("127.0.0.1", result.host)) && program.port === port) {
+            throw new Error(`Cannot mirror to self!`);
+        }
 
-        return new Promise((resolve, reject) => {
-            dns.lookup(host, {family: 4, hints: dns.ADDRCONFIG}, (err, address) => {
-                if(err) return reject(err);
-
-                if((ip.isEqual(myIp, address) || ip.isEqual("127.0.0.1", address)) && program.port === port) {
-                    return reject(new Error(`Cannot mirror to self!`));
-                }
-
-                helpers.log(consts.LOG_INFO, `Cache Server mirroring to ${address}:${port}`);
-                resolve({ host: address, port: port });
-            });
-        })
+        return result;
     });
 
     Promise.all(mirrors)
