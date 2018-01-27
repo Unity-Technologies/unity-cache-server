@@ -2,10 +2,11 @@ Cache:
   defaultModule: "lib/cache/cache_fs"
   options:
     cache_ram:
+      cachePath: ".cache_ram"
       pageSize: 100000000
       maxPageCount: 10
       minFreeBlockSize: 1024
-      cachePath: ".cache_ram"
+      persistence: true
       persistenceOptions:
         autosave: true
         autosaveInterval: 10000

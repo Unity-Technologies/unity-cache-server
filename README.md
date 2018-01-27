@@ -84,7 +84,8 @@ pageSize | 100000000 | Smallest memory allocation to make, in bytes. i.e. the ca
 maxPageCount | 10 | Maximum number of pages allowed in the cache. This combined with `pageSize` effectively limits the overall memory footprint of the cache. When this threshold is reached, an LRU mechanism will kick in to find room for new files.
 minFreeBlockSize | 1024 | Smallest allocation unit within a page. Can be lowered for smaller projects.
 cachePath | `.cache_ram` | Path to cache directory. Dirty memory pages are saved to disk periodically in this directory, and loaded at startup.
-persistenceOptions.autosave | true | `true` to enable saving memory pages; `false` to disable.
+persistence | true | Enable saving and loading of page files to disk. If `false`, the cache will be empty at every restart.
+persistenceOptions.autosave | true | `true` to periodically save dirty memory pages automatically; `false` to disable. If `false`, pages will only be saved when the cache server is stopped with the `q` console command or with SIGTERM.
 persistenceOptions.autosaveInterval | 10000 | Minimum interval in milliseconds to save dirty pages.
 #### Notes
 * Does not support worker threads

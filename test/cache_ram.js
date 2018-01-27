@@ -45,17 +45,17 @@ describe("Cache: RAM", () => {
         describe("init", () => {
             it("should initialize the _db object", async () => {
                 await cache.init(opts);
-                assert(cache._db !== null);
+                assert.notEqual(cache._db, null);
             });
 
             it("should initialize an empty cache if no database was loaded from disk", async () => {
                 await cache.init(opts);
-                assert(cache._pageMeta.count() === 1);
+                assert.equal(cache._pageMeta.count(), 1);
                 let index = cache._index.findOne({});
 
-                assert(index !== null);
-                assert(index.size === opts.pageSize);
-                assert(index.pageOffset === 0);
+                assert.notStrictEqual(index, null);
+                assert.equal(index.size, opts.pageSize);
+                assert.equal(index.pageOffset, 0);
             });
 
             it("should populate the _index and _pageMeta when a saved database is loaded from disk", async () => {
@@ -64,8 +64,21 @@ describe("Cache: RAM", () => {
                 await cache.shutdown();
                 await cache.init(opts);
 
-                assert(cache._pageMeta.count() === 1);
-                assert(cache._index.count() === 2);
+                assert.equal(cache._pageMeta.count(), 1);
+                assert.equal(cache._index.count(), 2);
+            });
+
+            it("should not save or load any database when opts.persistence is false", async () => {
+                let myOpts = Object.assign({}, opts);
+                myOpts.persistence = false;
+
+                await cache.init(myOpts);
+                await cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
+                await cache.shutdown();
+                await cache.init(myOpts);
+
+                assert.equal(cache._pageMeta.count(), 1);
+                assert.equal(cache._index.count(), 1);
             });
         });
 
@@ -108,7 +121,7 @@ describe("Cache: RAM", () => {
                 await cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
 
                 pages = dirtyPages();
-                assert(pages.length === 1);
+                assert.equal(pages.length, 1);
 
                 await cache.shutdown();
                 await fs.access(cache._dbPath);
