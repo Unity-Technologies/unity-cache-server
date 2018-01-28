@@ -50,26 +50,26 @@ describe("TransactionMirror", () => {
 
         fileData.forEach(async d => {
             let info = await this.targetCache.getFileInfo('i', d.guid, d.hash);
-            assert(info && info.size === d.info.length);
+            assert.strictEqual(info.size, d.info.length);
 
             info = await this.targetCache.getFileInfo('r', d.guid, d.hash);
-            assert(info && info.size === d.resource.length);
+            assert.strictEqual(info.size, d.resource.length);
 
             info = await this.targetCache.getFileInfo('a', d.guid, d.hash);
-            assert(info && info.size === d.bin.length);
+            assert.strictEqual(info.size, d.bin.length);
         });
     });
 
     describe("queueTransaction", () => {
         it("should not queue an empty transaction for mirroring", () => {
             this.mirror.queueTransaction({manifest: []});
-            assert(this.mirror._queue.length === 0);
+            assert.strictEqual(this.mirror._queue.length, 0);
         });
     });
 
     describe("get address", () => {
         it("should return the address of the mirror host", () => {
-            assert(this.mirror.address === "localhost");
+            assert.strictEqual(this.mirror.address, "localhost");
         });
     });
 });

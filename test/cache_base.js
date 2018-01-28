@@ -45,7 +45,7 @@ describe("Cache: Base Class", () => {
 
             let cacheOptions = cache._options;
             assert(cacheOptions.hasOwnProperty('$testVal'));
-            assert(cacheOptions.$testVal.nested.option === true);
+            assert.strictEqual(cacheOptions.$testVal.nested.option, true);
         });
     });
 
@@ -164,7 +164,7 @@ describe("PutTransaction: Base Class", () => {
         it("should return a promise and emit a 'finalize' event", (done) => {
             trx.once('finalize', () => done());
             let p = trx.finalize();
-            assert(typeof(p.then) === 'function');
+            assert.equal(typeof(p.then), 'function');
         });
     });
 

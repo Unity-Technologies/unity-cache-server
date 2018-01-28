@@ -35,7 +35,7 @@ describe("Server common", function() {
         it("should echo the version if supported", function (done) {
             client.on('data', function (data) {
                 const ver = helpers.readUInt32(data);
-                assert(ver === consts.PROTOCOL_VERSION, "Expected " + consts.PROTOCOL_VERSION + " Received " + ver);
+                assert.strictEqual(ver, consts.PROTOCOL_VERSION, "Expected " + consts.PROTOCOL_VERSION + " Received " + ver);
                 done();
             });
 
@@ -45,7 +45,7 @@ describe("Server common", function() {
         it("should respond with 0 if unsupported", function (done) {
             client.on('data', function (data) {
                 const ver = helpers.readUInt32(data);
-                assert(ver === 0, "Expected 0, Received " + ver);
+                assert.strictEqual(ver, 0, "Expected 0, Received " + ver);
                 done();
             });
 
@@ -57,7 +57,7 @@ describe("Server common", function() {
 
             client.on('data', function(data) {
                 const ver = helpers.readUInt32(data);
-                assert(ver === consts.PROTOCOL_VERSION, "Expected " + consts.PROTOCOL_VERSION + " Received " + ver);
+                assert.strictEqual(ver, consts.PROTOCOL_VERSION, "Expected " + consts.PROTOCOL_VERSION + " Received " + ver);
                 done();
             });
 

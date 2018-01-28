@@ -80,8 +80,8 @@ describe("Cache API", () => {
                 it("should return a PutTransaction object for the given file hash & guid", () => {
                     return cache.createPutTransaction(fileData.guid, fileData.hash)
                         .then(trx => {
-                                assert(trx.guid.compare(fileData.guid) === 0);
-                                assert(trx.hash.compare(fileData.hash) === 0);
+                                assert.strictEqual(trx.guid.compare(fileData.guid), 0);
+                                assert.strictEqual(trx.hash.compare(fileData.hash), 0);
                         });
                 });
             });
@@ -110,7 +110,7 @@ describe("Cache API", () => {
                         .then(stream => stream.end(fileData.info))
                         .then(() => cache.endPutTransaction(trx))
                         .then(() => cache.getFileInfo('i', fileData.guid, fileData.hash))
-                        .then(info => assert(info.size === fileData.info.length));
+                        .then(info => assert.equal(info.size, fileData.info.length));
                 });
 
                 it("should return an error if any files were partially written to the transaction", () => {
@@ -182,13 +182,13 @@ describe("PutTransaction API", function() {
 
             describe("get guid", function() {
                 it("should return the file guid for the transaction", () => {
-                    assert(trx.guid === fileData.guid);
+                    assert.strictEqual(trx.guid, fileData.guid);
                 });
             });
 
             describe("get hash", function() {
                 it("should return the file hash for the transaction", () => {
-                    assert(trx.hash === fileData.hash);
+                    assert.strictEqual(trx.hash, fileData.hash);
                 });
             });
 
@@ -210,14 +210,14 @@ describe("PutTransaction API", function() {
 
             describe("get files", function() {
                 it("should return an empty array before finalize() is called", () => {
-                    assert(trx.files.length === 0);
+                    assert.strictEqual(trx.files.length, 0);
                 });
 
                 it("should return a list of objects that represent completed files for the transaction", () => {
                     return trx.getWriteStream('i', fileData.info.length)
                         .then(stream => stream.end(fileData.info))
                         .then(() => trx.finalize())
-                        .then(() => assert(trx.files.length === 1));
+                        .then(() => assert.equal(trx.files.length, 1));
                 });
             });
 

@@ -43,78 +43,73 @@ let test_modules = [
     }
     ];
 
-describe("Protocol", function() {
-    test_modules.forEach(function(module) {
+describe("Protocol", () => {
+    test_modules.forEach(module => {
         describe(module.name, function() {
 
-            beforeEach(function() {
-                helpers.setLogger(function() {});
+            beforeEach(() => {
+                helpers.setLogger(() => {});
             });
 
-            before(function () {
+            before(async () => {
                 /** @type {CacheBase} **/
                 let CacheModule = require(module.path);
                 cache = new CacheModule();
 
                 module.options.cachePath = module.tmpDir.name;
 
-                return cache.init(module.options)
-                    .then(() =>  {
-                        server = new CacheServer(cache, {port: 0});
-                    })
-                    .then(() => server.start(err => assert(!err, `Cache Server reported error!  ${err}`)));
+                await cache.init(module.options);
+                server = new CacheServer(cache, {port: 0});
+                await server.start(err => assert(!err, `Cache Server reported error!  ${err}`));
             });
 
-            after(function() {
+            after(() => {
                 server.stop();
                 module.tmpDir.removeCallback();
             });
 
-            describe("Transactions", function () {
+            describe("Transactions", () => {
 
                 const self = this;
 
-                before(function() {
+                before(() => {
                     self.data = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
                 });
 
-                beforeEach(() => {
-                    return getClientPromise(server.port)
-                        .then(c => {
-                            client = c;
-                            return clientWrite(c, helpers.encodeInt32(consts.PROTOCOL_VERSION));
-                        });
+                beforeEach(async () => {
+                    client = await getClientPromise(server.port);
+                    await clientWrite(client, helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 });
 
-                it("should start a transaction with the (ts) command", function (done) {
+                it("should start a transaction with the (ts) command", (done) => {
                     expectLog(client, /Start transaction/, done);
                     client.end(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
                 });
 
-                it("should cancel a pending transaction if a new (ts) command is received", function (done) {
+                it("should cancel a pending transaction if a new (ts) command is received", (done) => {
                     expectLog(client, /Cancel previous transaction/, done);
                     const d = encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash);
                     client.write(d); // first one ...
                     client.end(d); // ... canceled by this one
                 });
 
-                it("should require a start transaction (ts) cmd before an end transaction (te) cmd", function (done) {
+                it("should require a start transaction (ts) cmd before an end transaction (te) cmd", (done) => {
                     expectLog(client, /Invalid transaction isolation/, done);
                     client.end(cmd.transactionEnd);
                 });
 
-                it("should end a transaction that was started with the (te) command", function (done) {
+                it("should end a transaction that was started with the (te) command", (done) => {
                     expectLog(client, /End transaction for/, done);
                     client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
                     client.end(cmd.transactionEnd);
                 });
 
-                it("should require a transaction start (te) command before a put command", function(done) {
+                it("should require a transaction start (te) command before a put command", (done) => {
                     expectLog(client, /Not in a transaction/, done);
                     client.write(encodeCommand(cmd.putAsset, null, null, 'abc'));
                 });
 
-                it("should close the socket on an invalid transaction command", function(done) {
+                it("should close the socket on an invalid transaction command", (done) => {
                     expectLog(client, /Unrecognized command/i, done);
                     client.write('tx', self.data.guid, self.data.hash);
                 });
@@ -126,22 +121,19 @@ describe("Protocol", function() {
 
                 const self = this;
 
-                before(function () {
+                before(() => {
                     self.data = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
                 });
 
-                beforeEach(() => {
-                    return getClientPromise(server.port)
-                        .then(c => {
-                            client = c;
+                beforeEach(async () => {
+                    client = await getClientPromise(server.port);
 
-                            // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
-                            // to other request data in the tests below.
-                            return clientWrite(c, helpers.encodeInt32(consts.PROTOCOL_VERSION));
-                        });
+                    // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
+                    // to other request data in the tests below.
+                    await clientWrite(client, helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 });
 
-                it("should close the socket on an invalid PUT type", function (done) {
+                it("should close the socket on an invalid PUT type", (done) => {
                     expectLog(client, /Unrecognized command/i, done);
                     let buf = Buffer.from(
                         encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
@@ -166,7 +158,7 @@ describe("Protocol", function() {
                         return clientWrite(client, buf, test.packetSize)
                             .then(() => cache.getFileStream(test.cmd[1], self.data.guid, self.data.hash))
                             .then(stream => readStream(stream, self.data[test.ext].length))
-                            .then(data => assert(self.data[test.ext].compare(data) === 0));
+                            .then(data => assert.strictEqual(self.data[test.ext].compare(data), 0));
                     });
                 });
 
@@ -181,7 +173,7 @@ describe("Protocol", function() {
                     return clientWrite(client, buf)
                         .then(() => cache.getFileStream('a', self.data.guid, self.data.hash))
                         .then(stream => readStream(stream, asset.length))
-                        .then(buffer => assert(asset.compare(buffer) === 0));
+                        .then(buffer => assert.strictEqual(asset.compare(buffer), 0));
                 });
             });
 
@@ -191,7 +183,7 @@ describe("Protocol", function() {
                 const self = this;
                 self.data = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
 
-                before(() => {
+                before(async () => {
                     const buf = Buffer.from(
                         helpers.encodeInt32(consts.PROTOCOL_VERSION) +
                         encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
@@ -201,25 +193,19 @@ describe("Protocol", function() {
                         encodeCommand(cmd.transactionEnd) +
                         encodeCommand(cmd.quit), 'ascii');
 
-                    return getClientPromise(server.port)
-                        .then(c => {
-                            client = c;
-                            return clientWrite(c, buf);
-                        });
+                    client = await getClientPromise(server.port);
+                    await clientWrite(client, buf);
                 });
 
-                beforeEach(() => {
-                    return getClientPromise(server.port)
-                        .then(c => {
-                            client = c;
+                beforeEach(async () => {
+                    client = await getClientPromise(server.port);
 
-                            // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
-                            // to other request data in the tests below.
-                            return clientWrite(c, helpers.encodeInt32(consts.PROTOCOL_VERSION));
-                        });
+                    // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
+                    // to other request data in the tests below.
+                    await clientWrite(client, helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 });
 
-                it("should close the socket on an invalid GET type", function (done) {
+                it("should close the socket on an invalid GET type", (done) => {
                     expectLog(client, /Unrecognized command/i, done);
                     clientWrite(client, encodeCommand('gx', self.data.guid, self.data.hash)).catch(err => done(err));
                 });
@@ -232,10 +218,10 @@ describe("Protocol", function() {
 
                 tests.forEach(function (test) {
 
-                    it(`should respond with not found (-) for missing ${test.type} files (client write packet size = ${test.packetSize})`, function (done) {
+                    it(`should respond with not found (-) for missing ${test.type} files (client write packet size = ${test.packetSize})`, (done) => {
                         client.pipe(new CacheServerResponseTransform())
                             .on('header', function (header) {
-                                assert(header.cmd === '-' + test.cmd[1]);
+                                assert.strictEqual(header.cmd, '-' + test.cmd[1]);
                                 done();
                             });
 
@@ -246,33 +232,32 @@ describe("Protocol", function() {
                             .catch(err => done(err));
                     });
 
-                    it(`should retrieve stored ${test.type} data with the (${test.cmd}) command (write packet size = ${test.packetSize})`, function (done) {
+                    it(`should retrieve stored ${test.type} data with the (${test.cmd}) command (write packet size = ${test.packetSize})`, (done) => {
                         let dataBuf;
                         let pos = 0;
 
                         let resp = new CacheServerResponseTransform();
 
                         resp.on('header', function (header) {
-                                assert(header.cmd === '+' + test.cmd[1]);
-                                assert(header.guid.compare(self.data.guid) === 0, "GUID does not match");
-                                assert(header.hash.compare(self.data.hash) === 0, "HASH does not match");
-                                assert(header.size === test.blob.length, "Expected size " + test.blob.length);
+                                assert.strictEqual(header.cmd, '+' + test.cmd[1]);
+                                assert.strictEqual(header.guid.compare(self.data.guid), 0, "GUID does not match");
+                                assert.strictEqual(header.hash.compare(self.data.hash), 0, "HASH does not match");
+                                assert.strictEqual(header.size, test.blob.length, "Expected size " + test.blob.length);
                                 dataBuf = Buffer.allocUnsafe(header.size);
                             })
                             .on('data', function (data) {
                                 let prev = pos;
                                 pos += data.copy(dataBuf, pos);
-                                assert(data.compare(test.blob.slice(prev, pos)) === 0, `Blobs don't match at pos ${pos}`);
+                                assert.strictEqual(data.compare(test.blob.slice(prev, pos)), 0, `Blobs don't match at pos ${pos}`);
                             })
                             .on('dataEnd', function () {
-                                assert(dataBuf.compare(test.blob) === 0);
+                                assert.strictEqual(dataBuf.compare(test.blob), 0);
                                 done();
                             });
 
                         client.pipe(resp);
 
                         const buf = Buffer.from(encodeCommand(test.cmd, self.data.guid, self.data.hash), 'ascii');
-
                         clientWrite(client, buf, test.packetSize).catch(err => done(err));
                     });
                 });

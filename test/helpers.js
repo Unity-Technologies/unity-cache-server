@@ -9,7 +9,7 @@ describe("Helper functions", () => {
 
     describe("GUIDBufferToString", () => {
         it("should convert a 16 byte buffer to a hex representation that matches Unity's string formatter for GUIDs", () => {
-            assert(helpers.GUIDBufferToString(guid) === guidStr);
+            assert.strictEqual(helpers.GUIDBufferToString(guid), guidStr);
         });
 
         it("should throw an error if the input is not a buffer or the wrong length", () => {
@@ -21,7 +21,7 @@ describe("Helper functions", () => {
 
     describe("GUIDStringToBuffer", () => {
         it("should convert a 32 character hex string that represents a Unity GUID to an equivalent byte buffer", () => {
-            assert(guid.compare(helpers.GUIDStringToBuffer(guidStr)) === 0);
+            assert.strictEqual(guid.compare(helpers.GUIDStringToBuffer(guidStr)), 0);
 
         });
 
