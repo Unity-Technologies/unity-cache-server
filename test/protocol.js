@@ -48,7 +48,7 @@ describe("Protocol", function() {
         describe(module.name, function() {
 
             beforeEach(function() {
-                helpers.SetLogger(function() {});
+                helpers.setLogger(function() {});
             });
 
             before(function () {

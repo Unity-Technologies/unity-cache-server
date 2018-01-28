@@ -55,12 +55,12 @@ exports.expectLog = function(client, regex, condition, callback) {
     }
 
     let match;
-    helpers.SetLogger(function (lvl, msg) {
+    helpers.setLogger(function (lvl, msg) {
         match = match || regex.test(msg);
     });
 
     client.on('close', function() {
-        assert(match === condition);
+        assert.strictEqual(match, condition);
         callback();
     });
 };

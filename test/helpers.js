@@ -1,5 +1,7 @@
 const assert = require('assert');
 const helpers = require('../lib/helpers');
+const consts = require('../lib/constants');
+const sinon = require('sinon');
 
 describe("Helper functions", () => {
     const guid = Buffer.from([80,127,95,145,103,153,135,123,185,19,13,54,122,207,246,26]);
@@ -36,5 +38,110 @@ describe("Helper functions", () => {
             assert(!helpers.isBuffer({}));
             assert(!helpers.isBuffer(null));
         })
+    });
+
+    describe("parseAndValidateAddressString", () => {
+        it("should resolve a valid address to an IP and return an object with host and port properties", async () => {
+            const result = await helpers.parseAndValidateAddressString("localhost", 0);
+            assert.equal(result.host, "127.0.0.1");
+            assert.strictEqual(result.port, 0);
+        });
+
+        it("should parse an address:port string", async () => {
+            const result = await helpers.parseAndValidateAddressString("localhost:1234", 0);
+            assert.equal(result.host, "127.0.0.1");
+            assert.strictEqual(result.port, 1234);
+        });
+
+        it("should throw an error if the address can't be resolved", () => {
+            return helpers.parseAndValidateAddressString("blah", 0)
+                .then(() => { throw new Error("Expected error"); }, err => {});
+        });
+    });
+
+    describe("Logging functions", () => {
+        before(() => {
+            this.oldLevel = helpers.getLogLevel();
+
+        });
+
+        after(() => {
+            helpers.setLogLevel(this.oldLevel);
+        });
+
+        describe("defaultLogger", () => {
+            it("should log a console message if the desired log level is >= the minimum level", () => {
+                const spy = sinon.spy(console, 'log');
+                const str = "Hello World";
+                helpers.setLogLevel(consts.LOG_TEST);
+
+                helpers.defaultLogger(consts.LOG_WARN, str);
+                assert(spy.calledOnce);
+                spy.resetHistory();
+
+                helpers.defaultLogger(consts.LOG_TEST, str);
+                assert(spy.calledOnce);
+                spy.resetHistory();
+
+                helpers.defaultLogger(consts.LOG_DBG, str);
+                assert(spy.notCalled);
+                spy.restore();
+            });
+        });
+
+        describe("defaultClusterLogger", () => {
+            it("should log a console message if the desired log level is >= the minimum level", () => {
+                const spy = sinon.spy(console, 'log');
+                const str = "Hello World";
+                helpers.setLogLevel(consts.LOG_TEST);
+
+                helpers.defaultClusterLogger(consts.LOG_WARN, str);
+                assert(spy.calledOnce);
+                spy.resetHistory();
+
+                helpers.defaultClusterLogger(consts.LOG_TEST, str);
+                assert(spy.calledOnce);
+                spy.resetHistory();
+
+                helpers.defaultClusterLogger(consts.LOG_DBG, str);
+                assert(spy.notCalled);
+                spy.restore();
+            });
+        });
+
+        describe("setLogger", () => {
+            it("should do nothing if the passeed in logger is null", () => {
+                let prev = helpers.log;
+                helpers.setLogger(null);
+                assert.strictEqual(prev, helpers.log);
+            });
+
+            it("should change the logging function to the passed in function", () => {
+                let myLogger = (lvl, msg) => {};
+                helpers.setLogger(myLogger);
+                assert.strictEqual(myLogger, helpers.log);
+            });
+        });
+
+        describe("setLogLevel", () => {
+            it("should change the logging level to the specified level", () => {
+                helpers.setLogLevel(consts.LOG_INFO);
+                assert.equal(helpers.getLogLevel(), consts.LOG_INFO);
+                helpers.setLogLevel(consts.LOG_DBG);
+                assert.equal(helpers.getLogLevel(), consts.LOG_DBG);
+            });
+
+            it("should not allow a value out of range", () => {
+                helpers.setLogLevel(consts.LOG_DBG);
+                assert.equal(helpers.getLogLevel(), consts.LOG_DBG);
+                helpers.setLogLevel(consts.LOG_DBG + 1);
+                assert.equal(helpers.getLogLevel(), consts.LOG_DBG);
+
+                helpers.setLogLevel(consts.LOG_NONE);
+                assert.equal(helpers.getLogLevel(), consts.LOG_NONE);
+                helpers.setLogLevel(consts.LOG_NONE - 1);
+                assert.equal(helpers.getLogLevel(), consts.LOG_NONE);
+            });
+        });
     });
 });

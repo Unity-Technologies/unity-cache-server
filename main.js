@@ -39,7 +39,8 @@ program.description("Unity Cache Server")
 
 program.parse(process.argv);
 
-helpers.SetLogLevel(program.logLevel);
+helpers.setLogLevel(program.logLevel);
+helpers.setLogger(program.workers > 0 ? helpers.defaultClusterLogger : helpers.defaultLogger);
 
 if (program.monitorParentProcess > 0) {
     function monitor() {
