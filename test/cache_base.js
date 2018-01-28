@@ -2,7 +2,6 @@ const tmp = require('tmp');
 const fs = require('fs-extra');
 const { CacheBase, PutTransaction } = require('../lib/cache/cache_base');
 const assert = require('assert');
-const _ = require('lodash');
 const path = require('path');
 const randomBuffer = require('./test_utils').randomBuffer;
 const consts = require('../lib/constants');
@@ -20,7 +19,9 @@ describe("Cache: Base Class", () => {
 
     describe("static get properties", () => {
         it("should return an empty object", () => {
-            assert(_.isEmpty(CacheBase.properties));
+            const p = CacheBase.properties;
+            assert.strictEqual(typeof(p), 'object');
+            assert.strictEqual(Object.keys(p).length, 0);
         });
     });
 

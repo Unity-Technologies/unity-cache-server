@@ -38,7 +38,6 @@
     "tmp": "0.0.33"
   },
   "dependencies": {
-    "async": "^2.5.0",
     "commander": "^2.11.0",
     "config": "^1.27.0",
     "filesize": "^3.5.11",
