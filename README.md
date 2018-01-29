@@ -47,6 +47,8 @@ unity-cache-server [arguments]
     -P, --cache-path [path]           Specify the path of the cache directory.
     -l, --log-level <n>               Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug). Default is 3
     -w, --workers <n>                 Number of worker threads to spawn. Default is 0
+    --statsd-server [host]            Send statsd metrics to this host
+    --statsd-tags [key:val,...]       Extra tags for statsd metrics
     -m --mirror [host:port]           Mirror transactions to another cache server. Can be repeated for multiple mirrors.
     -m, --monitor-parent-process <n>  Monitor a parent process and exit if it dies
     -h, --help                        output usage information
