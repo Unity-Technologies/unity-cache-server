@@ -10,6 +10,7 @@ const prompt = require('prompt');
 const dns = require('dns');
 const ip = require('ip');
 const VERSION = require('./package.json').version;
+const StatsDClient = require('statsd-client');
 
 function myParseInt(val, def) {
     val = parseInt(val);
@@ -25,6 +26,16 @@ function collect(val, memo) {
     return memo;
 }
 
+
+function parseKeyValues(val) {
+    let obj = {};
+    val.split(',').forEach(function (kv) {
+        let pair = kv.split(':');
+        obj[pair[0]] = pair[1];
+    });
+    return obj;
+}
+
 const defaultCacheModule = config.get("Cache.defaultModule");
 
 program.description("Unity Cache Server")
@@ -34,6 +45,8 @@ program.description("Unity Cache Server")
     .option('-P, --cache-path [path]', `Specify the path of the cache directory`)
     .option('-l, --log-level <n>', `Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug). Default is ${consts.DEFAULT_LOG_LEVEL}`, myParseInt, consts.DEFAULT_LOG_LEVEL)
     .option('-w, --workers <n>', `Number of worker threads to spawn. Default is ${consts.DEFAULT_WORKERS}`, zeroOrMore, consts.DEFAULT_WORKERS)
+    .option('--statsd-server [host]', 'Send statsd metrics to this host', '127.0.0.1')
+    .option('--statsd-tags [key:val,...]', 'Extra tags for statsd metrics', parseKeyValues)
     .option('-m --mirror [host:port]', `Mirror transactions to another cache server. Can be repeated for multiple mirrors`, collect, [])
     .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0);
 
@@ -41,6 +54,12 @@ program.parse(process.argv);
 
 helpers.setLogLevel(program.logLevel);
 helpers.setLogger(program.workers > 0 ? helpers.defaultClusterLogger : helpers.defaultLogger);
+
+const statsd = new StatsDClient({
+    prefix: 'cache-server',
+    host: program.statsdHost,
+    tags: program.statsdTags
+});
 
 if (program.monitorParentProcess > 0) {
     function monitor() {
@@ -78,7 +97,9 @@ if(program.workers > 0 && !CacheModule.properties.clustering) {
 
 let server = null;
 
-let cacheOpts = {};
+let cacheOpts = {
+    statsd: statsd
+};
 if(program.cachePath !== null) {
     cacheOpts.cachePath = program.cachePath;
 }
@@ -158,6 +179,7 @@ function startPrompt() {
             switch(result.command) {
                 case 'q':
                     helpers.log(consts.LOG_INFO, "Shutting down ...");
+                    this.statsd.close();
                     Cache.shutdown().then(() => {
                         server.stop();
                         process.exit(0);
