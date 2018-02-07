@@ -10,12 +10,18 @@ function myParseInt(val, def) {
     return (!val && val !== 0) ? def : val;
 }
 
+const DEFAULT_SERVER_ADDRESS = 'localhost:8126';
+
 program.description("Unity Cache Server - Project Import")
     .version(require('./package').version)
     .description('Imports Unity project Library data into a local or remote Cache Server.')
     .arguments('<TransactionFilePath> [ServerAddress]')
-    .option('-l, --log-level <n>', `Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug). Default is ${consts.DEFAULT_LOG_LEVEL}`, myParseInt, consts.DEFAULT_LOG_LEVEL)
+    .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug).', myParseInt, consts.DEFAULT_LOG_LEVEL)
+    .option('--no-timestamp-check', 'Do not use timestamp check to protect against importing files from a project that has changed since last exported.', true)
+    .option('--skip <n>', 'Skip to transaction # in the import file at startup.', myParseInt, 0)
     .action((projectRoot, serverAddress) => {
+        helpers.setLogLevel(program.logLevel);
+        serverAddress = serverAddress || DEFAULT_SERVER_ADDRESS;
         importTransactionFile(projectRoot, serverAddress, consts.DEFAULT_PORT)
             .catch(err => {
                 console.log(err);
@@ -37,12 +43,13 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
     await client.connect();
 
     const trxCount = data.transactions.length;
+    const trxStart = Math.min(trxCount - 1, Math.max(0, program.skip - 1));
     const startTime = Date.now();
     let sentBytes = 0;
     let sentAssetCount = 0;
     let sentFileCount = 0;
 
-    for(let i = 0; i < trxCount; i++) {
+    for(let i = trxStart; i < trxCount; i++) {
         const trx = data.transactions[i];
         const guid = helpers.GUIDStringToBuffer(trx.guid);
         const hash = Buffer.from(trx.hash, 'hex');
@@ -62,7 +69,7 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
                 continue;
             }
 
-            if(stats.mtimeMs !== file.ts * 1000) {
+            if(program.timestampCheck && stats.mtimeMs !== file.ts * 1000) {
                 helpers.log(consts.LOG_WARN, `${file.path} has been modified, skipping`);
                 continue;
             }
