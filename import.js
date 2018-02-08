@@ -56,10 +56,18 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
 
         helpers.log(consts.LOG_INFO, `(${i + 1}/${trxCount}) ${trx.assetPath}`);
 
-        await client.beginTransaction(guid, hash);
+        try {
+            helpers.log(consts.LOG_DBG, `Begin transaction for ${helpers.GUIDBufferToString(guid)}-${hash.toString('hex')}`);
+            await client.beginTransaction(guid, hash);
+        }
+        catch (err) {
+            helpers.log(consts.LOG_ERR, err);
+            process.exit(1);
+        }
 
-        for(let file of trx.files) {
-            let stats;
+        let stats;
+
+        for (let file of trx.files) {
 
             try {
                 stats = await fs.stat(file.path);
@@ -69,19 +77,34 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
                 continue;
             }
 
-            if(program.timestampCheck && stats.mtimeMs !== file.ts * 1000) {
+            if (program.timestampCheck && stats.mtimeMs !== file.ts * 1000) {
                 helpers.log(consts.LOG_WARN, `${file.path} has been modified, skipping`);
                 continue;
             }
 
+            try {
+                const stream = fs.createReadStream(file.path);
+                helpers.log(consts.LOG_DBG, `Putting file of type: ${file.type} size: ${stats.size}`);
+                await client.putFile(file.type, guid, hash, stream, stats.size);
+            }
+            catch(err) {
+                helpers.log(consts.LOG_ERR, err);
+                process.exit(1);
+            }
+
             sentBytes += stats.size;
-            const stream = fs.createReadStream(file.path);
-            await client.putFile(file.type, guid, hash, stream, stats.size);
-            sentFileCount ++;
+            sentFileCount++;
         }
 
-        await client.endTransaction();
-        sentAssetCount++;
+        try {
+            helpers.log(consts.LOG_DBG, `End transaction for ${helpers.GUIDBufferToString(guid)}-${hash.toString('hex')}`);
+            await client.endTransaction();
+            sentAssetCount++;
+        }
+        catch (err) {
+            helpers.log(consts.LOG_ERR, err);
+            process.exit(1);
+        }
     }
 
     let totalTime = (Date.now() - startTime) / 1000;
