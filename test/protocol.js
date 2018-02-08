@@ -14,6 +14,8 @@ const clientWrite = require('./test_utils').clientWrite;
 const readStream = require('./test_utils').readStream;
 const getClientPromise = require('./test_utils').getClientPromise;
 
+const SMALL_MIN_FILE_SIZE = 64;
+const SMALL_MAX_FILE_SIZE = 128;
 const MIN_FILE_SIZE = 1024;
 const MAX_FILE_SIZE = 1024 * 1024;
 const SMALL_PACKET_SIZE = 64;
@@ -120,10 +122,8 @@ describe("Protocol", () => {
                 this.timeout(5000);
 
                 const self = this;
-
-                before(() => {
-                    self.data = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
-                });
+                self.data = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
+                self.smallData = generateCommandData(SMALL_MIN_FILE_SIZE, SMALL_MAX_FILE_SIZE);
 
                 beforeEach(async () => {
                     client = await getClientPromise(server.port);
@@ -143,22 +143,25 @@ describe("Protocol", () => {
                 });
 
                 const tests = [
-                    {ext: 'bin', cmd: cmd.putAsset, packetSize: SMALL_PACKET_SIZE},
-                    {ext: 'info', cmd: cmd.putInfo, packetSize: MED_PACKET_SIZE},
-                    {ext: 'resource', cmd: cmd.putResource, packetSize: LARGE_PACKET_SIZE}
+                    {ext: 'bin', data: self.smallData, cmd: cmd.putAsset, packetSize: 1},
+                    {ext: 'info', data: self.smallData, cmd: cmd.putInfo, packetSize: 1},
+                    {ext: 'resource', data: self.smallData, cmd: cmd.putResource, packetSize: 1},
+                    {ext: 'bin', data: self.data, cmd: cmd.putAsset, packetSize: SMALL_PACKET_SIZE},
+                    {ext: 'info', data: self.data, cmd: cmd.putInfo, packetSize: MED_PACKET_SIZE},
+                    {ext: 'resource', data: self.data, cmd: cmd.putResource, packetSize: LARGE_PACKET_SIZE}
                 ];
 
                 tests.forEach(function (test) {
                     it(`should store ${test.ext} data with a (${test.cmd}) command (client write packet size = ${test.packetSize})`, () => {
                         const buf = Buffer.from(
-                            encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
-                            encodeCommand(test.cmd, null, null, self.data[test.ext]) +
+                            encodeCommand(cmd.transactionStart, test.data.guid, test.data.hash) +
+                            encodeCommand(test.cmd, null, null, test.data[test.ext]) +
                             encodeCommand(cmd.transactionEnd), 'ascii');
 
                         return clientWrite(client, buf, test.packetSize)
-                            .then(() => cache.getFileStream(test.cmd[1], self.data.guid, self.data.hash))
-                            .then(stream => readStream(stream, self.data[test.ext].length))
-                            .then(data => assert.strictEqual(self.data[test.ext].compare(data), 0));
+                            .then(() => cache.getFileStream(test.cmd[1], test.data.guid, test.data.hash))
+                            .then(stream => readStream(stream, test.data[test.ext].length))
+                            .then(data => assert.strictEqual(test.data[test.ext].compare(data), 0));
                     });
                 });
 
