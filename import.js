@@ -13,9 +13,8 @@ function myParseInt(val, def) {
 
 const DEFAULT_SERVER_ADDRESS = 'localhost:8126';
 
-program.description("Unity Cache Server - Project Import")
+program.description("Unity Cache Server - Project Import\n\n  Imports Unity project Library data into a local or remote Cache Server.")
     .version(require('./package').version)
-    .description('Imports Unity project Library data into a local or remote Cache Server.')
     .arguments('<TransactionFilePath> [ServerAddress]')
     .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug).', myParseInt, consts.DEFAULT_LOG_LEVEL)
     .option('--no-timestamp-check', 'Do not use timestamp check to protect against importing files from a project that has changed since last exported.', true)
