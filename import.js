@@ -4,6 +4,7 @@ const consts = require('./lib/constants');
 const fs = require('fs-extra');
 const filesize = require('filesize');
 const Client = require('./lib/client/client');
+const ProgressBar = require('progress');
 
 function myParseInt(val, def) {
     val = parseInt(val);
@@ -49,12 +50,26 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
     let sentAssetCount = 0;
     let sentFileCount = 0;
 
+    const pbar = new ProgressBar('Uploading :current/:total :bar :percent :etas ETA', {
+        complete: String.fromCharCode(9619),
+        incomplete: String.fromCharCode(9617),
+        width: 20,
+        total: (trxCount - trxStart)
+    });
+
+    const warns = [];
+    const logLevel = helpers.getLogLevel();
+
     for(let i = trxStart; i < trxCount; i++) {
         const trx = data.transactions[i];
         const guid = helpers.GUIDStringToBuffer(trx.guid);
         const hash = Buffer.from(trx.hash, 'hex');
 
-        helpers.log(consts.LOG_INFO, `(${i + 1}/${trxCount}) ${trx.assetPath}`);
+        if(logLevel === consts.LOG_DBG) {
+            helpers.log(consts.LOG_INFO, `(${i + 1}/${trxCount}) ${trx.assetPath}`);
+        } else {
+            pbar.tick();
+        }
 
         try {
             helpers.log(consts.LOG_DBG, `Begin transaction for ${helpers.GUIDBufferToString(guid)}-${hash.toString('hex')}`);
@@ -73,12 +88,12 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
                 stats = await fs.stat(file.path);
             }
             catch(err) {
-                helpers.log(consts.LOG_ERR, err);
+                warns.push(err.toString());
                 continue;
             }
 
             if (program.timestampCheck && stats.mtimeMs !== file.ts * 1000) {
-                helpers.log(consts.LOG_WARN, `${file.path} has been modified, skipping`);
+                warns.push(`${file.path} has been modified, skipping`);
                 continue;
             }
 
@@ -105,6 +120,11 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
             helpers.log(consts.LOG_ERR, err);
             process.exit(1);
         }
+    }
+
+    if(warns.length > 0) {
+        helpers.log(consts.LOG_WARN, `Generated ${warns.length} warnings:`);
+        helpers.log(consts.LOG_WARN, warns.join('\n'));
     }
 
     let totalTime = (Date.now() - startTime) / 1000;
