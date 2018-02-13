@@ -6,3 +6,4 @@ node_modules/
 .cache_fs*/
 .nyc_output/
 coverage/
+local-production.yml
