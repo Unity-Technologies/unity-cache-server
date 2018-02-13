@@ -13,6 +13,9 @@ Cache:
         throttledSaves: false
     cache_fs:
       cachePath: ".cache_fs"
+      cleanupOptions:
+        expireTimeSpan: "P30D"
+        maxCacheSize: 0
 Mirror:
   options:
     queueProcessDelay: 2000

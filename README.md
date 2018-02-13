@@ -17,6 +17,7 @@ At present time this open-source repository is maintained separately from the Ca
 * [Cache Modules](#cache-modules)
   * [cache\_fs (default)](#cache_fs-default)
   * [cache\_ram](#cache_ram)
+* [Cache Cleanup](#cache-cleanup)
 * [Mirroring](#mirroring)
 * [Unity project Library Importer](#unity-project-library-importer)
 * [Contributors](#contributors)
@@ -34,7 +35,7 @@ npm install unity-cache-server -g
 npm install github:Unity-Technologies/unity-cache-server -g
 ```
 ## Usage
->Default options are suitable for quickly starting a cache server, with a default cache location of `./cache5.0`
+>Default options are suitable for quickly starting a cache server, with a default cache location of `.cache_fs`
 ```bash
 unity-cache-server [arguments]
 ```
@@ -69,15 +70,15 @@ A simple, efficient file system backed cache.
 option    | default     | description
 --------- | ----------- | -----------
 cachePath | `.cache_fs` | Path to cache directory
+cleanupOptions.expireTimeSpan | `P30D` | [ASP.NET](https://msdn.microsoft.com/en-us/library/se73z7b9(v=vs.110).aspx) or [ISO 8601](https://en.wikipedia.org/wiki/ISO_8601#Time_intervals) style timespan. Cache files that have not been accessed within this timespan will be eligible for cleanup/removal. The [moment](https://momentjs.com/docs/#/durations/) library is used to parse durations - more information on duration syntax can be found in the library documentation.
+cleanupOptions.maxCacheSize | 0 | Size in bytes to limit overall cache disk utilization. The cleanup script will consider files for removal in least-recently-used order to bring the total disk utilization under this threshold. 0 disables this cleanup feature. 
 #### Notes
 * This module is backwards compatible with v5.x Cache Server directories
-* For performance and simplicity reasons, unlike prior versions, it does NOT operate as an LRU cache and does not enforce overall cache size restrictions. If disk space is a concern, external shell scripts can be executed periodically to clean up files that have not been accessed recently.
 * Supports worker threads (`--workers` option)
 ### cache_ram
 A high performance, fully in-memory LRU cache.
 #### Usage
 `--cache-module lib/cache/cache_ram`
-#### Options
 option    | default     | description
 --------- | ----------- | -----------
 pageSize | 100000000 | Smallest memory allocation to make, in bytes. i.e. the cache will grow in increments of pageSize.
@@ -89,7 +90,25 @@ persistenceOptions.autosave | true | `true` to periodically save dirty memory pa
 persistenceOptions.autosaveInterval | 10000 | Minimum interval in milliseconds to save dirty pages.
 #### Notes
 * Does not support worker threads
-
+## Cache Cleanup
+For performance and simplicity reasons, unlike prior versions, the cache_fs module does NOT operate as an LRU cache and does not enforce overall cache size restrictions. To manage disk usage, a separate cleanup script is provided that can either be run periodically or in "daemon" mode to automatically run at a given time interval.
+### Usage
+`unity-cache-server-cleanup [option]`
+or
+`node cleanup.js [options]`
+#### Options
+```    -V, --version                      output the version number
+       -c --cache-module [path]           Use cache module at specified path
+       -P, --cache-path [path]            Specify the path of the cache directory
+       -l, --log-level <n>                Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug)
+       -e, --expire-time-span <timeSpan>  Override the configured file expiration timespan. Both ASP.NET style time spans (days.minutes:hours:seconds, e.g. '15.23:59:59') and ISO 8601 time spans (e.g. 'P15DT23H59M59S') are supported.
+       -s, --max-cache-size <bytes>       Override the configured maximum cache size. Files will be removed from the cache until the max cache size is satisfied, using a Least Recently Used search. A value of 0 disables this check.
+       -d, --delete                       Delete cached files that match the configured criteria. Without this, the default behavior is to dry-run which will print diagnostic information only.
+       -D, --daemon <interval>            Daemon mode: execute the cleanup script at the given interval in seconds as a foreground process.
+       -h, --help                         output usage information
+```
+#### Notes
+* Only the cache_fs module supports cache cleanup (cache_ram does not)
 ## Mirroring
 #### Usage
 Use the `--mirror [host:port]` option to relay all upload transactions to one or more Cache Server hosts (repeat the option for each host). There are checks in place to prevent self-mirroring, but beyond that it would be easy to create infinite transaction loops so use with care.

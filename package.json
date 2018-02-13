@@ -10,7 +10,8 @@
     "test": "test"
   },
   "bin": {
-    "unity-cache-server": "./main.js"
+    "unity-cache-server": "./main.js",
+    "unity-cache-server-cleanup": "./cleanup.js"
   },
   "scripts": {
     "test": "nyc mocha",

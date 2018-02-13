@@ -129,6 +129,12 @@ describe("Cache: RAM", () => {
                 assert(dir.includes(pages[0]));
             });
         });
+
+        describe("cleanup", () => {
+            it("should return a resolved promise", () => {
+                return cache.cleanup();
+            });
+        })
     });
 
     describe("Internal", () => {

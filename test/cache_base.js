@@ -130,6 +130,13 @@ describe("Cache: Base Class", () => {
             }
         });
     });
+
+    describe("cleanup", () => {
+        it("should require override implementation in subclasses by returning an error", () => {
+            return cache.endPutTransaction()
+                .then(() => { throw new Error("Expected error!"); }, () => {});
+        });
+    });
 });
 
 describe("PutTransaction: Base Class", () => {
