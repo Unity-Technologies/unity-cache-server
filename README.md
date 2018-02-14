@@ -65,7 +65,7 @@ Configuration options for all modules are set in the `config/default.yml` file.
 ### cache_fs (default)
 A simple, efficient file system backed cache.
 #### Usage
-`--cache-module lib/cache/cache_fs`.
+`--cache-module lib/cache/cache_fs`
 #### Options
 option    | default     | description
 --------- | ----------- | -----------
@@ -79,6 +79,7 @@ cleanupOptions.maxCacheSize | 0 | Size in bytes to limit overall cache disk util
 A high performance, fully in-memory LRU cache.
 #### Usage
 `--cache-module lib/cache/cache_ram`
+#### Options
 option    | default     | description
 --------- | ----------- | -----------
 pageSize | 100000000 | Smallest memory allocation to make, in bytes. i.e. the cache will grow in increments of pageSize.
