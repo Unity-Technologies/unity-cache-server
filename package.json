@@ -11,7 +11,8 @@
   },
   "bin": {
     "unity-cache-server": "./main.js",
-    "unity-cache-server-cleanup": "./cleanup.js"
+    "unity-cache-server-cleanup": "./cleanup.js",
+    "unity-cache-server-import": "./import.js"
   },
   "scripts": {
     "test": "nyc mocha",
