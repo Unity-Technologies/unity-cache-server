@@ -7,7 +7,6 @@ const path = require('path');
 const CacheServer = require('./lib').Server;
 const config = require('config');
 const prompt = require('prompt');
-const dns = require('dns');
 const ip = require('ip');
 const VERSION = require('./package.json').version;
 
