@@ -2,7 +2,6 @@
 const helpers = require('./lib/helpers');
 const consts = require('./lib/constants');
 const program = require('commander');
-const path = require('path');
 const moment = require('moment');
 const filesize =require('filesize');
 const ora = require('ora');
@@ -27,7 +26,7 @@ function parseTimeSpan(val) {
 
 const defaultCacheModule = config.get("Cache.defaultModule");
 
-program.description("Unity Cache Server - Cache Cleanup\n\n  Removes old files from supported cache modules.\n\n ")
+program.description("Unity Cache Server - Cache Cleanup\n\n  Removes old files from supported cache modules.")
     .version(VERSION)
     .option('-c --cache-module [path]', 'Use cache module at specified path', defaultCacheModule)
     .option('-P, --cache-path [path]', 'Specify the path of the cache directory')
@@ -45,7 +44,7 @@ program.parse(process.argv);
 
 helpers.setLogLevel(program.logLevel);
 
-const CacheModule = require(path.resolve(program.cacheModule));
+const CacheModule = helpers.resolveCacheModule(program.cacheModule, __dirname);
 
 if(!CacheModule.properties.cleanup) {
     helpers.log(consts.LOG_ERR, "Configured cache module does not support cleanup script.");

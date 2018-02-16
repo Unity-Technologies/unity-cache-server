@@ -1,5 +1,5 @@
 Cache:
-  defaultModule: "lib/cache/cache_fs"
+  defaultModule: "cache_fs"
   options:
     cache_ram:
       cachePath: ".cache_ram"

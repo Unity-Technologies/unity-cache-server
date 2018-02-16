@@ -3,12 +3,13 @@ const cluster = require('cluster');
 const helpers = require('./lib/helpers');
 const consts = require('./lib/constants');
 const program = require('commander');
-const path = require('path');
 const CacheServer = require('./lib').Server;
-const config = require('config');
 const prompt = require('prompt');
 const ip = require('ip');
 const VERSION = require('./package.json').version;
+const config = require('config');
+const fs = require('fs-extra');
+const path = require('path');
 
 function myParseInt(val, def) {
     val = parseInt(val);
@@ -34,9 +35,37 @@ program.description("Unity Cache Server")
     .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug)', myParseInt, consts.DEFAULT_LOG_LEVEL)
     .option('-w, --workers <n>', 'Number of worker threads to spawn', zeroOrMore, consts.DEFAULT_WORKERS)
     .option('-m --mirror [host:port]', 'Mirror transactions to another cache server. Can be repeated for multiple mirrors', collect, [])
-    .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0);
+    .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0)
+    .option('--dump-config', 'Write the active configuration to the console')
+    .option('--save-config [path]', 'Write the active configuration to the specified file and exit. Defaults to ./default.yml')
+    .option('--NODE_CONFIG_DIR [path]', 'Specify the directory to search for config files. This is equivalent to setting the NODE_CONFIG_DIR environment variable. Without this option, the built-in configuration is used. With this option the default is to look in the current directory for config files.');
 
 program.parse(process.argv);
+
+if(program.saveConfig || program.dumpConfig) {
+    const configs = config.util.getConfigSources();
+    const configData = configs.length > 0 ? configs[configs.length - 1].original : '';
+
+    if(program.dumpConfig) {
+        console.log(configData);
+    }
+
+    if(program.saveConfig) {
+        let configFile = (typeof(program.saveConfig) === 'boolean') ? 'default.yml' : program.saveConfig;
+        configFile = path.resolve(configFile);
+
+        if (fs.pathExistsSync(configFile)) {
+            helpers.log(consts.LOG_ERR, `${configFile} already exists - will not overwrite.`);
+            process.exit(1);
+        }
+
+        fs.ensureDirSync(path.dirname(configFile));
+        fs.writeFileSync(configFile, configData);
+        helpers.log(consts.LOG_INFO, `config saved to ${configFile}`);
+    }
+
+    process.exit(0);
+}
 
 helpers.setLogLevel(program.logLevel);
 helpers.setLogger(program.workers > 0 ? helpers.defaultClusterLogger : helpers.defaultLogger);
@@ -67,7 +96,7 @@ const errHandler = function () {
     process.exit(1);
 };
 
-const CacheModule = require(path.resolve(program.cacheModule));
+const CacheModule = helpers.resolveCacheModule(program.cacheModule, __dirname);
 const Cache = new CacheModule();
 
 if(program.workers > 0 && !CacheModule.properties.clustering) {
@@ -111,7 +140,7 @@ Cache.init(cacheOpts)
         server = new CacheServer(Cache, opts);
 
         if(cluster.isMaster) {
-            helpers.log(consts.LOG_INFO, `Cache Server version ${VERSION}; Cache module ${program.cacheModule}`);
+            helpers.log(consts.LOG_INFO, `Cache Server version ${VERSION}; Cache module is ${program.cacheModule}`);
 
             if(program.workers === 0) {
                 server.start(errHandler).then(() => {

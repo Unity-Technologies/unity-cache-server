@@ -44,16 +44,31 @@ unity-cache-server [arguments]
 ```
     -V, --version                     output the version number
     -p, --port <n>                    Specify the server port, only apply to new cache server, default is 8126
-    -c --cache-module [path]          Use cache module at specified path. Default is 'lib/cache/cache_fs'
+    -c --cache-module [path]          Use cache module at specified path. Default is 'cache_fs'
     -P, --cache-path [path]           Specify the path of the cache directory.
     -l, --log-level <n>               Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug). Default is 3
     -w, --workers <n>                 Number of worker threads to spawn. Default is 0
     -m --mirror [host:port]           Mirror transactions to another cache server. Can be repeated for multiple mirrors.
     -m, --monitor-parent-process <n>  Monitor a parent process and exit if it dies
+    --dump-config                     Write the active configuration to the console
+    --save-config [path]              Write the active configuration to the specified file and exit. Defaults to ./default.yml
+    --NODE_CONFIG_DIR=[path]          Specify the directory to search for config files. This is equivalent to setting the NODE_CONFIG_DIR environment variable. Without this option, the built-in configuration is used. With this option the default is to look in the current directory for config files.
     -h, --help                        output usage information
 ```
-## Configuration file
+## Configuration files
 `config/default.yml` contains various configuration values for the cache modules (see below) and other features. The config system is based on the [node-config](`https://github.com/lorenwest/node-config/wiki/Configuration-Files`) module. Refer to the documentation in that package for tips on how to manage environment specific config files.
+By default, running `unity-cache-server` will use the built-in configuration file. To start using a custom config file, save the current config to a new file and then use the `--NODE_CONFIG_DIR` option to override the location where the cache server will look for your config file(s).
+#### Examples (Mac/Linux)
+1) `mkdir config`
+2) `unity-cache-server --save-config config/default.yml`
+3) `unity-cache-server --NODE_CONFIG_DIR=config`
+
+You can also have multiple configuration files based on environment:
+1) `export NODE_ENV=development`
+2) `unity-cache-server --save-config config/local-development.yml`
+
+To dump the current config to the console
+`unity-cache-server --dump-config`
 
 ## Client Configuration
 The [Cache Server](https://docs.unity3d.com/Manual/CacheServer.html) section of the Unity Manual contains detailed information on connecting clients to remote Cache Servers.
@@ -65,7 +80,7 @@ Configuration options for all modules are set in the `config/default.yml` file.
 ### cache_fs (default)
 A simple, efficient file system backed cache.
 #### Usage
-`--cache-module lib/cache/cache_fs`
+`--cache-module cache_fs`
 #### Options
 option    | default     | description
 --------- | ----------- | -----------
@@ -78,7 +93,7 @@ cleanupOptions.maxCacheSize | 0 | Size in bytes to limit overall cache disk util
 ### cache_ram
 A high performance, fully in-memory LRU cache.
 #### Usage
-`--cache-module lib/cache/cache_ram`
+`--cache-module cache_ram`
 #### Options
 option    | default     | description
 --------- | ----------- | -----------
@@ -124,7 +139,7 @@ Tools are provided to quickly seed a Cache Server from a fully imported Unity pr
 #### Steps to Import
 1) Add the [CacheServerTransactionImporter.cs](./Unity/CacheServerTransactionExporter.cs) script to the Unity project you wish to export.
 2) Select the Menu item _Cache Server Utilities -> Export Transactions_ to save an export data file in .json format. Alternatively, with the script added to your project, you can run Unity in batchmode and [execute the static method](https://docs.unity3d.com/Manual/CommandLineArguments.html) `CacheServerTransactionExporter.ExportTransactions([path])` where `path` is the full path and filename to export.
-3) Run the import utility to begin the import process: `node import.js <path to json file> [server:port]`
+3) Run the import utility to begin the import process: `unity-cache-server-import <path to json file> [server:port]`
 #### Notes
 * On very large projects, Unity may appear to freeze while generating the exported JSON data.
 * The default `server:port` is `localhost:8126`
