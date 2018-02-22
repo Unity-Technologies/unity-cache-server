@@ -4,6 +4,7 @@ const loki = require('lokijs');
 const fs = require('fs-extra');
 const sleep = require('./test_utils').sleep;
 const generateCommandData = require('./test_utils').generateCommandData;
+const readStream = require('./test_utils').readStream;
 const EventEmitter = require('events');
 
 let test_modules = [
@@ -12,7 +13,7 @@ let test_modules = [
         path: "../lib/cache/cache_ram",
         options: {
             cachePath: tmp.tmpNameSync({}),
-            pageSize: 10000,
+            pageSize: 1024 * 1024,
             minFreeBlockSize: 1024,
             persistenceOptions: {
                 adapter: new loki.LokiMemoryAdapter()
@@ -109,6 +110,7 @@ describe("Cache API", () => {
                     return trx.getWriteStream('i', fileData.info.length)
                         .then(stream => stream.end(fileData.info))
                         .then(() => cache.endPutTransaction(trx))
+                        .then(() => sleep(50))
                         .then(() => cache.getFileInfo('i', fileData.guid, fileData.hash))
                         .then(info => assert.equal(info.size, fileData.info.length));
                 });
@@ -153,6 +155,48 @@ describe("Cache API", () => {
                 it("should return an error for a file that does not exist in the cache", () => {
                     return cache.getFileStream('a', fileData.guid, fileData.hash)
                         .then(() => { throw new Error("Expected error!"); }, err =>  assert(err));
+                });
+
+
+                it("should handle files being replaced while read streams to the same file are already open", async () => {
+                    const TEST_FILE_SIZE = 1024 * 64 * 2;
+                    const FILE_TYPE = 'i';
+
+                    let fData = generateCommandData(TEST_FILE_SIZE, TEST_FILE_SIZE);
+
+                    // Add a file to the cache (use the info data)
+                    let trx = await cache.createPutTransaction(fData.guid, fData.hash);
+                    let wStream = await trx.getWriteStream('i', fData.info.length);
+                    await new Promise(resolve => wStream.end(fData.info, resolve));
+                    await cache.endPutTransaction(trx);
+                    await sleep(50);
+
+                    // Get a read stream
+                    let rStream = await cache.getFileStream(FILE_TYPE, fData.guid, fData.hash);
+
+                    // Read a block
+                    let buf = Buffer.allocUnsafe(fData.info.length);
+                    let bytes = await new Promise(resolve => rStream.once('readable', () => resolve(rStream.read(1024 * 64))));
+                    bytes.copy(buf, 0, 0);
+
+                    // Replace the file (use the resource data)
+                    trx = await cache.createPutTransaction(fData.guid, fData.hash);
+                    wStream = await trx.getWriteStream(FILE_TYPE, fData.resource.length);
+                    await new Promise(resolve => wStream.end(fData.resource, resolve));
+                    await cache.endPutTransaction(trx);
+                    await sleep(50);
+
+                    // Read the rest of the file - compare it to the info data
+                    bytes = await readStream(rStream, fData.info.length - bytes.length);
+                    bytes.copy(buf, fData.info.length - bytes.length, 0);
+                    assert.equal(buf.compare(fData.info), 0);
+
+                    // Get another new read stream to the same guid
+                    rStream = await cache.getFileStream(FILE_TYPE, fData.guid, fData.hash);
+
+                    // Read the file and compare it to the resource data
+                    buf = await readStream(rStream, fData.resource.length);
+                    assert.equal(buf.compare(fData.resource), 0);
                 });
             });
         });

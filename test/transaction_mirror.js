@@ -13,10 +13,10 @@ let cacheOpts = {
     }
 };
 
-let writeFileDataToCache = (cache, fileData) => {
-    cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
-    cache._addFileToCache('a', fileData.guid, fileData.hash, fileData.bin);
-    cache._addFileToCache('r', fileData.guid, fileData.hash, fileData.resource);
+let writeFileDataToCache = async (cache, fileData) => {
+    await cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
+    await cache._addFileToCache('a', fileData.guid, fileData.hash, fileData.bin);
+    await cache._addFileToCache('r', fileData.guid, fileData.hash, fileData.resource);
 };
 
 describe("TransactionMirror", () => {
@@ -40,11 +40,11 @@ describe("TransactionMirror", () => {
                 generateCommandData(1024, 1024)
             ];
 
-        fileData.forEach(d => {
-            writeFileDataToCache(this.sourceCache, d);
+        for(let d of fileData) {
+            await writeFileDataToCache(this.sourceCache, d);
             const trxMock = { guid: d.guid, hash: d.hash, manifest: ['i', 'a', 'r'] };
             this.mirror.queueTransaction(trxMock);
-        });
+        }
 
         await sleep(50);
 

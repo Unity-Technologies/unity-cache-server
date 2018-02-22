@@ -1,10 +1,7 @@
 const tmp = require('tmp');
 const fs = require('fs-extra');
 const Cache = require('../lib/cache/cache_fs');
-const randomBuffer = require('./test_utils').randomBuffer;
 const generateCommandData = require('./test_utils').generateCommandData;
-const sleep = require('./test_utils').sleep;
-const path = require('path');
 const assert = require('assert');
 const moment = require('moment');
 

@@ -29,10 +29,10 @@ describe("Cache: RAM", () => {
     let cache;
     let fileData = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
 
-    let writeFileDataToCache = (fileData) => {
-        cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
-        cache._addFileToCache('a', fileData.guid, fileData.hash, fileData.bin);
-        cache._addFileToCache('r', fileData.guid, fileData.hash, fileData.resource);
+    let writeFileDataToCache = async (fileData) => {
+        await cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
+        await cache._addFileToCache('a', fileData.guid, fileData.hash, fileData.bin);
+        await cache._addFileToCache('r', fileData.guid, fileData.hash, fileData.resource);
     };
 
     describe("Public API", () => {
@@ -170,7 +170,7 @@ describe("Cache: RAM", () => {
                 // Remove all files from the cache dir
                 await fs.emptyDir(opts.cachePath);
                 // Replace a single file
-                cache._addFileToCache('i', fileData.guid, fileData.hash, randomBuffer(fileData.info.length));
+                await cache._addFileToCache('i', fileData.guid, fileData.hash, randomBuffer(fileData.info.length));
                 // Store the dirty page list again
                 dirty = dirtyPages();
                 // Serialize the cache again
@@ -184,7 +184,7 @@ describe("Cache: RAM", () => {
         describe("_deserialize", () => {
 
             beforeEach(async () => {
-                writeFileDataToCache(fileData);
+                await writeFileDataToCache(fileData);
                 await cache._serialize();
             });
 
@@ -285,12 +285,13 @@ describe("Cache: RAM", () => {
         });
 
         describe("_addFileToCache", () => {
-            it("should throw an error if the cache cannot grow to accommodate the new file", () => {
+            it("should throw an error if the cache cannot grow to accommodate the new file", async () => {
                 for(let x = 0; x < opts.maxPageCount; x++) {
-                    cache._addFileToCache('a', randomBuffer(16), randomBuffer(16), randomBuffer(opts.pageSize));
+                    await cache._addFileToCache('a', randomBuffer(16), randomBuffer(16), randomBuffer(opts.pageSize));
                 }
 
-                assert.throws(() => cache._addFileToCache('a', randomBuffer(16), randomBuffer(16), randomBuffer(opts.pageSize * 2)));
+                cache._addFileToCache('a', randomBuffer(16), randomBuffer(16), randomBuffer(opts.pageSize * 2))
+                    .then(() => { throw new Error("Expected exception!") }, () => {});
             });
         });
     });
