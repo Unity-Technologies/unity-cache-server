@@ -52,7 +52,7 @@ unity-cache-server [arguments]
     -m, --monitor-parent-process <n>  Monitor a parent process and exit if it dies
     --dump-config                     Write the active configuration to the console
     --save-config [path]              Write the active configuration to the specified file and exit. Defaults to ./default.yml
-    --NODE_CONFIG_DIR=[path]          Specify the directory to search for config files. This is equivalent to setting the NODE_CONFIG_DIR environment variable. Without this option, the built-in configuration is used. With this option the default is to look in the current directory for config files.
+    --NODE_CONFIG_DIR=<path>          Specify the directory to search for config files. This is equivalent to setting the NODE_CONFIG_DIR environment variable. Without this option, the built-in configuration is used.
     -h, --help                        output usage information
 ```
 ## Configuration files

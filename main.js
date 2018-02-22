@@ -1,13 +1,15 @@
 #!/usr/bin/env node
-const cluster = require('cluster');
 const helpers = require('./lib/helpers');
+helpers.initConfigDir(__dirname);
+const config = require('config');
+
+const { Server } = require('./lib');
+const cluster = require('cluster');
 const consts = require('./lib/constants');
 const program = require('commander');
-const CacheServer = require('./lib').Server;
 const prompt = require('prompt');
 const ip = require('ip');
 const VERSION = require('./package.json').version;
-const config = require('config');
 const fs = require('fs-extra');
 const path = require('path');
 
@@ -29,6 +31,7 @@ const defaultCacheModule = config.get("Cache.defaultModule");
 
 program.description("Unity Cache Server")
     .version(VERSION)
+    .allowUnknownOption(true)
     .option('-p, --port <n>', 'Specify the server port, only apply to new cache server', myParseInt, consts.DEFAULT_PORT)
     .option('-c --cache-module [path]', 'Use cache module at specified path', defaultCacheModule)
     .option('-P, --cache-path [path]', 'Specify the path of the cache directory')
@@ -38,7 +41,7 @@ program.description("Unity Cache Server")
     .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0)
     .option('--dump-config', 'Write the active configuration to the console')
     .option('--save-config [path]', 'Write the active configuration to the specified file and exit. Defaults to ./default.yml')
-    .option('--NODE_CONFIG_DIR [path]', 'Specify the directory to search for config files. This is equivalent to setting the NODE_CONFIG_DIR environment variable. Without this option, the built-in configuration is used. With this option the default is to look in the current directory for config files.');
+    .option('--NODE_CONFIG_DIR=<path>', 'Specify the directory to search for config files. This is equivalent to setting the NODE_CONFIG_DIR environment variable. Without this option, the built-in configuration is used.');
 
 program.parse(process.argv);
 
@@ -137,7 +140,7 @@ Cache.init(cacheOpts)
             mirror: mirrors
         };
 
-        server = new CacheServer(Cache, opts);
+        server = new Server(Cache, opts);
 
         if(cluster.isMaster) {
             helpers.log(consts.LOG_INFO, `Cache Server version ${VERSION}; Cache module is ${program.cacheModule}`);

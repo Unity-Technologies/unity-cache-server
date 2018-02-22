@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 const helpers = require('./lib/helpers');
+helpers.initConfigDir(__dirname);
+const config = require('config');
+
 const consts = require('./lib/constants');
 const program = require('commander');
 const moment = require('moment');
 const filesize =require('filesize');
 const ora = require('ora');
-
-const config = require('config');
 const VERSION = require('./package.json').version;
 
 function myParseInt(val, def) {
@@ -28,13 +29,15 @@ const defaultCacheModule = config.get("Cache.defaultModule");
 
 program.description("Unity Cache Server - Cache Cleanup\n\n  Removes old files from supported cache modules.")
     .version(VERSION)
+    .allowUnknownOption(true)
     .option('-c --cache-module [path]', 'Use cache module at specified path', defaultCacheModule)
     .option('-P, --cache-path [path]', 'Specify the path of the cache directory')
     .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug)', myParseInt, consts.DEFAULT_LOG_LEVEL)
     .option('-e, --expire-time-span <timeSpan>', 'Override the configured file expiration timespan. Both ASP.NET style time spans (days.minutes:hours:seconds, e.g. \'15.23:59:59\') and ISO 8601 time spans (e.g. \'P15DT23H59M59S\') are supported.', parseTimeSpan)
     .option('-s, --max-cache-size <bytes>', 'Override the configured maximum cache size. Files will be removed from the cache until the max cache size is satisfied, using a Least Recently Used search. A value of 0 disables this check.', myParseInt)
     .option('-d, --delete', 'Delete cached files that match the configured criteria. Without this, the default behavior is to dry-run which will print diagnostic information only.')
-    .option('-D, --daemon <interval>', 'Daemon mode: execute the cleanup script at the given interval in seconds as a foreground process.', myParseInt);
+    .option('-D, --daemon <interval>', 'Daemon mode: execute the cleanup script at the given interval in seconds as a foreground process.', myParseInt)
+    .option('--NODE_CONFIG_DIR=<path>', 'Specify the directory to search for config files. This is equivalent to setting the NODE_CONFIG_DIR environment variable. Without this option, the built-in configuration is used.');
 
 if (!process.argv.slice(2).length) {
     return program.outputHelp();
