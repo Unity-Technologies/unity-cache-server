@@ -1,4 +1,7 @@
+#!/usr/bin/env node
 const helpers = require('./lib/helpers');
+helpers.initConfigDir(__dirname);
+
 const program = require('commander');
 const consts = require('./lib/constants');
 const fs = require('fs-extra');

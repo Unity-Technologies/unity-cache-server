@@ -2,7 +2,7 @@
 > The Unity Cache Server, optimized for networked team environments.
 
 ## Overview
-This is the officially maintained open-source implementation of the Unity Cache Server, specifically optimized for LAN connected teams. The Unity Cache Server speeds up initial import of project data, as well as platform switching within a project.
+This is the officially maintained open-source implementation of the Cache Server, specifically optimized for LAN connected teams. The Cache Server speeds up initial import of project data, as well as platform switching within a project.
 
 At present time this open-source repository is maintained separately from the Cache Server available on the Unity website, as well as the version packaged with the Unity installer. It is possible that compatibility with specific versions of Unity will diverge between these separate implementations. Check the release notes for specific compatibility information prior to usage.
 
