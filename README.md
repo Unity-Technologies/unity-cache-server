@@ -26,7 +26,7 @@ This open-source repository is maintained separately from the Cache Server avail
 
 ## Server Setup
 
-Download and install the latest LTS version of Node.js from the [Node.JS website](https://nodejs.org/en/download/).
+Download and install LTS version 8.10.0 of Node.js from the [Node.JS website](https://nodejs.org/en/download/).
 
 #### Install from npm registry
 
@@ -119,7 +119,7 @@ cleanupOptions.maxCacheSize     | 0           | The maximum size, in bytes, of t
 
 * cache_fs is backwards compatible with v5.x Cache Server directories.
 * Supports worker threads using the `--workers` option.
-* When you run the cleanup script, the value of the `expireTimeSpan` option is used to determine which file to delete files. If `maxCacheSize` is specified the script checks whether the cache exceeds the value of `maxCacheSize`. If it does, the script deletes files in least-recently-used order until the cache no longer exceed maxCacheSize.
+* When you run the cleanup script, the value of the `expireTimeSpan` option is used to determine which files to delete. If `maxCacheSize` is specified the script checks whether the cache exceeds the value of `maxCacheSize`. If it does, the script deletes files in least-recently-used order until the cache no longer exceed maxCacheSize.
 
 ## cache_ram
 
@@ -134,12 +134,12 @@ A high performance, fully in-memory LRU cache.
 Option                              | Default      | Description
 ----------------------------------- | ------------ | -----------
 pageSize                            | 100000000    | The page size, in bytes, used to grow the cache.
-maxPageCount                        | 10           | The maximum number of pages to allocate in the cache. The combination of `pageSize` and `maxPageCount` limits the overall memory footprint of the cache. When this threshold is reached, memory recovered using a Least Recently Used (LRU) algorithm.
+maxPageCount                        | 10           | The maximum number of pages to allocate in the cache. The combination of `pageSize` and `maxPageCount` limits the overall memory footprint of the cache. When this threshold is reached, memory is recovered using a Least Recently Used (LRU) algorithm.
 minFreeBlockSize                    | 1024         | The size of the minimum allocation unit, in bytes, within a page. You can specify a lower value for smaller projects.
 cachePath                           | `.cache_ram` | The path to the cache directory. Dirty memory pages are saved to disk periodically in this directory, and loaded at startup.
 persistence                         | true         | Enable saving and loading of page files to disk. If `false`, the cache is emptied during restart.
 persistenceOptions.autosave         | true         | When set to `true`, automatically save changed memory pages; set to `false` to disable. If `false`, pages are only saved when the cache server is stopped with the `q` console command or with upon a SIGTERM.
-persistenceOptions.autosaveInterval | 10000        | The frequency, in milliseconds, to save page that have changed.
+persistenceOptions.autosaveInterval | 10000        | The frequency, in milliseconds, to save pages that have changed.
 
 ### Notes
 
