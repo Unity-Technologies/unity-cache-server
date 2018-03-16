@@ -1,5 +1,9 @@
 cache/
-cache5.0/
-coverage/
 node_modules/
 .coveralls.yml
+!lib/cache
+.cache_ram*/
+.cache_fs*/
+.nyc_output/
+coverage/
+local-production.yml

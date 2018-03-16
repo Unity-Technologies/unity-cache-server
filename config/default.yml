@@ -1,0 +1,22 @@
+Cache:
+  defaultModule: "cache_fs"
+  options:
+    cache_ram:
+      cachePath: ".cache_ram"
+      pageSize: 100000000
+      maxPageCount: 10
+      minFreeBlockSize: 1024
+      persistence: true
+      persistenceOptions:
+        autosave: true
+        autosaveInterval: 10000
+        throttledSaves: false
+    cache_fs:
+      cachePath: ".cache_fs"
+      cleanupOptions:
+        expireTimeSpan: "P30D"
+        maxCacheSize: 0
+Mirror:
+  options:
+    queueProcessDelay: 2000
+    connectionIdleTimeout: 10000
