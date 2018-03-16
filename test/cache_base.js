@@ -60,12 +60,26 @@ describe("Cache: Base Class", () => {
             assert.strictEqual(cache._cachePath, opts.cachePath);
         });
 
-        it("should return a subdirectory path relative to the app root if cachePath is not an abosolute path", () => {
+        it("should return a subdirectory path relative to the app root if cachePath is not an absolute path", () => {
             cache._optionOverrides = {
                 cachePath: "abc123"
             };
 
             assert.strictEqual(cache._cachePath, path.join(path.dirname(require.main.filename), "abc123"));
+        });
+
+        it("should handle a trailing slash in the cache path", () => {
+            let noTrailingSlash = "/dir/without/trailing/slash";
+            let withTrailingSlash = "/dir/without/trailing/slash/";
+
+            cache._optionOverrides = {
+                cachePath: noTrailingSlash
+            };
+
+            assert.strictEqual(cache._cachePath, noTrailingSlash);
+
+            cache._optionOverrides.cachePath = withTrailingSlash;
+            assert.strictEqual(cache._cachePath, withTrailingSlash);
         });
     });
 

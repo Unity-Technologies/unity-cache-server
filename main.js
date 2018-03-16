@@ -38,7 +38,6 @@ program.description("Unity Cache Server")
     .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug)', myParseInt, consts.DEFAULT_LOG_LEVEL)
     .option('-w, --workers <n>', 'Number of worker threads to spawn', zeroOrMore, consts.DEFAULT_WORKERS)
     .option('-m --mirror [host:port]', 'Mirror transactions to another cache server. Can be repeated for multiple mirrors', collect, [])
-    .option('-m, --monitor-parent-process <n>', 'Monitor a parent process and exit if it dies', myParseInt, 0)
     .option('--dump-config', 'Write the active configuration to the console')
     .option('--save-config [path]', 'Write the active configuration to the specified file and exit. Defaults to ./default.yml')
     .option('--NODE_CONFIG_DIR=<path>', 'Specify the directory to search for config files. This is equivalent to setting the NODE_CONFIG_DIR environment variable. Without this option, the built-in configuration is used.');
@@ -72,27 +71,6 @@ if(program.saveConfig || program.dumpConfig) {
 
 helpers.setLogLevel(program.logLevel);
 helpers.setLogger(program.workers > 0 ? helpers.defaultClusterLogger : helpers.defaultLogger);
-
-if (program.monitorParentProcess > 0) {
-    function monitor() {
-        function is_running(pid) {
-            try {
-                return process.kill(pid, 0)
-            }
-            catch (e) {
-                return e.code === 'EPERM'
-            }
-        }
-
-        if (!is_running(program.monitorParentProcess)) {
-            helpers.log(consts.LOG_INFO, "monitored parent process has died");
-            process.exit(1);
-        }
-        setTimeout(monitor, 1000);
-    }
-
-    monitor();
-}
 
 const errHandler = function () {
     helpers.log(consts.LOG_ERR, "Unable to start Cache Server");
