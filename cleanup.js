@@ -67,28 +67,12 @@ if(program.hasOwnProperty('maxCacheSize')) {
 }
 
 const dryRun = !program.delete;
+const logLevel = helpers.getLogLevel();
+
 cache._options = cacheOpts;
 helpers.log(consts.LOG_INFO, `Cache path is ${cache._cachePath}`);
 
-const msg = `Gathering cache files for expiration`;
-let spinner = null;
-
-if(helpers.getLogLevel() < consts.LOG_DBG && helpers.getLogLevel() > consts.LOG_NONE) {
-    spinner = ora({color: 'white'});
-}
-
-cache.on('cleanup_search_progress', data => {
-    let txt = `${msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
-    spinner ? spinner.text = txt : helpers.log(consts.LOG_DBG, txt);
-});
-
-cache.on('cleanup_search_finish', () => {
-    if(spinner) spinner.stop();
-});
-
-cache.on('cleanup_delete_item', item => {
-    helpers.log(consts.LOG_INFO, `Deleted ${item}`);
-});
+cache.on('cleanup_delete_item', item => helpers.log(consts.LOG_DBG, item));
 
 cache.on('cleanup_delete_finish', data => {
     let pct = data.cacheSize > 0 ? (data.deleteSize/data.cacheSize).toPrecision(2) * 100 : 0;
@@ -97,6 +81,27 @@ cache.on('cleanup_delete_finish', data => {
         helpers.log(consts.LOG_INFO, "Nothing deleted; run with --delete to remove expired files from the cache.");
     }
 });
+
+const msg = `Gathering cache files for expiration`;
+let spinner = null;
+
+if(logLevel < consts.LOG_DBG && logLevel >= consts.LOG_INFO) {
+    spinner = ora({color: 'white'});
+
+    cache.on('cleanup_search_progress', data => {
+        spinner.text = `${msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
+    });
+
+    cache.on('cleanup_search_finish', () => {
+        spinner.stop();
+    });
+
+} else if(logLevel === consts.LOG_DBG) {
+    cache.on('cleanup_search_progress', data => {
+        let txt = `${msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
+        helpers.log(consts.LOG_DBG, txt);
+    });
+}
 
 function doCleanup() {
     if (spinner) spinner.start(msg);
