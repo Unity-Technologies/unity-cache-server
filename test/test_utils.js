@@ -72,11 +72,8 @@ exports.sleep = function(ms) {
 exports.clientWrite = function(client, data, minPacketSize, maxPacketSize) {
     return new Promise((resolve, reject) => {
         let sentBytes = 0;
-
-        client.once('close', () => {
-            if(sentBytes < data.length)
-                reject(new Error("Client closed before write finished"));
-        });
+        let closed = false;
+        client.once('close', () => closed = true);
 
         if(typeof(minPacketSize) !== 'number') {
             minPacketSize = MIN_PACKET_SIZE;
@@ -91,6 +88,10 @@ exports.clientWrite = function(client, data, minPacketSize, maxPacketSize) {
         }
 
         function write() {
+            if(closed && sentBytes < data.length) {
+                return reject(new Error("Client closed before write finished"));
+            }
+
             let len = Math.min(data.length - sentBytes, packetSize());
             client.write(data.slice(sentBytes, sentBytes + len), () => {
                 sentBytes += len;
