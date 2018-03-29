@@ -39,10 +39,6 @@ program.description("Unity Cache Server - Cache Cleanup\n\n  Removes old files f
     .option('-D, --daemon <interval>', 'Daemon mode: execute the cleanup script at the given interval in seconds as a foreground process.', myParseInt)
     .option('--NODE_CONFIG_DIR=<path>', 'Specify the directory to search for config files. This is equivalent to setting the NODE_CONFIG_DIR environment variable. Without this option, the built-in configuration is used.');
 
-if (!process.argv.slice(2).length) {
-    return program.outputHelp();
-}
-
 program.parse(process.argv);
 
 helpers.setLogLevel(program.logLevel);
