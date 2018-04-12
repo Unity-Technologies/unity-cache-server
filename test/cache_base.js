@@ -93,6 +93,12 @@ describe("Cache: Base Class", () => {
             return cache.init(opts)
                 .then(() => fs.access(opts.cachePath));
         });
+
+        it("should initialize the _db object", async () => {
+            await cache.init(opts);
+            assert.notEqual(cache._db, null);
+        });
+
     });
 
     describe("shutdown", () => {
@@ -130,24 +136,9 @@ describe("Cache: Base Class", () => {
         });
     });
 
-    describe("registerClusterWorker", () => {
-        it("should require override implementation in subclasses by returning an error", () => {
-            let error;
-            try {
-                cache.registerClusterWorker();
-            }
-            catch(err) {
-                error = err;
-            }
-            finally {
-                assert(error);
-            }
-        });
-    });
-
     describe("cleanup", () => {
         it("should require override implementation in subclasses by returning an error", () => {
-            return cache.endPutTransaction()
+            return cache.cleanup()
                 .then(() => { throw new Error("Expected error!"); }, () => {});
         });
     });
@@ -193,6 +184,13 @@ describe("PutTransaction: Base Class", () => {
     describe("getWriteStream", () => {
         it("should require override implementation in subclasses by returning an error", () => {
             return trx.getWriteStream('i', 0)
+                .then(() => { throw new Error("Expected error!"); }, () => {});
+        });
+    });
+
+    describe("writeFilesToPath", () => {
+        it("should require override implementation in subclasses by returning an error", () => {
+            return trx.writeFilesToPath()
                 .then(() => { throw new Error("Expected error!"); }, () => {});
         });
     });

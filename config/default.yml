@@ -11,11 +11,24 @@ Cache:
         autosave: true
         autosaveInterval: 10000
         throttledSaves: false
+      highReliability: true
+      highReliabilityOptions:
+        reliabilityThreshold: 0
+        saveUnreliableVersionArtifacts: true
     cache_fs:
       cachePath: ".cache_fs"
       cleanupOptions:
         expireTimeSpan: "P30D"
         maxCacheSize: 0
+      persistence: true
+      persistenceOptions:
+        autosave: true
+        autosaveInterval: 10000
+        throttledSaves: false
+      highReliability: true
+      highReliabilityOptions:
+        reliabilityThreshold: 0
+        saveUnreliableVersionArtifacts: true
 Mirror:
   options:
     queueProcessDelay: 2000

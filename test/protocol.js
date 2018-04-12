@@ -143,16 +143,12 @@ describe("Protocol", () => {
                 });
 
                 const tests = [
-                    {ext: 'bin', data: self.smallData, cmd: cmd.putAsset, packetSize: 1},
-                    {ext: 'info', data: self.smallData, cmd: cmd.putInfo, packetSize: 1},
-                    {ext: 'resource', data: self.smallData, cmd: cmd.putResource, packetSize: 1},
-                    {ext: 'bin', data: self.data, cmd: cmd.putAsset, packetSize: SMALL_PACKET_SIZE},
-                    {ext: 'info', data: self.data, cmd: cmd.putInfo, packetSize: MED_PACKET_SIZE},
-                    {ext: 'resource', data: self.data, cmd: cmd.putResource, packetSize: LARGE_PACKET_SIZE}
+                    {packetSize: 1, data: self.smallData},
+                    {packetSize: LARGE_PACKET_SIZE, data: self.data}
                 ];
 
                 tests.forEach(function (test) {
-                    it(`should store ${test.ext} data with a (${test.cmd}) command (client write packet size = ${test.packetSize})`, () => {
+                    it(`should store all files for a transaction (client write packet size = ${test.packetSize})`, async () => {
                         // Insert 'q' character ('Quit' command) into the GUID, to catch subtle protocol errors when packet size is 1
                         if(test.packetSize === 1) {
                             test.data.guid[0] = test.data.guid[test.data.guid.length - 1] = 'q'.charCodeAt(0);
@@ -160,28 +156,38 @@ describe("Protocol", () => {
 
                         const buf = Buffer.from(
                             encodeCommand(cmd.transactionStart, test.data.guid, test.data.hash) +
-                            encodeCommand(test.cmd, null, null, test.data[test.ext]) +
+                            encodeCommand(cmd.putAsset, null, null, test.data.bin) +
+                            encodeCommand(cmd.putInfo, null, null, test.data.info) +
+                            encodeCommand(cmd.putResource, null, null, test.data.resource) +
                             encodeCommand(cmd.transactionEnd), 'ascii');
 
-                        return clientWrite(client, buf, test.packetSize)
-                            .then(() => cache.getFileStream(test.cmd[1], test.data.guid, test.data.hash))
-                            .then(stream => readStream(stream, test.data[test.ext].length))
-                            .then(data => assert.strictEqual(test.data[test.ext].compare(data), 0));
+                        await clientWrite(client, buf, test.packetSize);
+                        let stream = await cache.getFileStream('a', test.data.guid, test.data.hash);
+                        let data = await readStream(stream, test.data.bin.length);
+                        assert.strictEqual(test.data.bin.compare(data), 0);
+
+                        stream = await cache.getFileStream('i', test.data.guid, test.data.hash);
+                        data = await readStream(stream, test.data.info.length);
+                        assert.strictEqual(test.data.info.compare(data), 0);
+
+                        stream = await cache.getFileStream('r', test.data.guid, test.data.hash);
+                        data = await readStream(stream, test.data.resource.length);
+                        assert.strictEqual(test.data.resource.compare(data), 0);
                     });
                 });
 
-                it("should replace an existing file with the same guid and hash", () => {
-                    const asset = Buffer.from(crypto.randomBytes(self.data.bin.length).toString('ascii'), 'ascii');
+                it("should not allow replacing files for a version that already exists", () => {
+                    const newData = Buffer.from(crypto.randomBytes(self.data.bin.length).toString('ascii'), 'ascii');
 
                     const buf = Buffer.from(
                         encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
-                        encodeCommand(cmd.putAsset, null, null, asset) +
+                        encodeCommand(cmd.putAsset, null, null, newData) +
                         encodeCommand(cmd.transactionEnd), 'ascii');
 
                     return clientWrite(client, buf)
                         .then(() => cache.getFileStream('a', self.data.guid, self.data.hash))
-                        .then(stream => readStream(stream, asset.length))
-                        .then(buffer => assert.strictEqual(asset.compare(buffer), 0));
+                        .then(stream => readStream(stream, self.data.bin.length))
+                        .then(buffer => assert.strictEqual(buffer.compare(self.data.bin), 0));
                 });
             });
 

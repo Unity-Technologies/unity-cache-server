@@ -23,7 +23,8 @@ describe("Cache: RAM", () => {
         minFreeBlockSize: 1024,
         persistenceOptions: {
             autosave: false
-        }
+        },
+        highReliability: false
     };
 
     let cache;
@@ -43,11 +44,6 @@ describe("Cache: RAM", () => {
         afterEach(() => fs.remove(opts.cachePath));
 
         describe("init", () => {
-            it("should initialize the _db object", async () => {
-                await cache.init(opts);
-                assert.notEqual(cache._db, null);
-            });
-
             it("should initialize an empty cache if no database was loaded from disk", async () => {
                 await cache.init(opts);
                 assert.equal(cache._pageMeta.count(), 1);
