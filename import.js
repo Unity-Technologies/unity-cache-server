@@ -36,13 +36,13 @@ program.parse(process.argv);
 
 async function importTransactionFile(filePath, addressString, defaultPort) {
 
-    let address = await helpers.parseAndValidateAddressString(addressString, defaultPort);
+    const address = await helpers.parseAndValidateAddressString(addressString, defaultPort);
 
     if(!await fs.pathExists(filePath)) throw new Error(`Cannot find ${filePath}`);
-    let data = await fs.readJson(filePath);
+    const data = await fs.readJson(filePath);
     if(!data.hasOwnProperty('transactions')) throw new Error(`Invalid transaction data!`);
 
-    let client = new Client(address.host, address.port, {});
+    const client = new Client(address.host, address.port, {});
     await client.connect();
 
     const trxCount = data.transactions.length;
@@ -84,7 +84,7 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
 
         let stats;
 
-        for (let file of trx.files) {
+        for (const file of trx.files) {
 
             try {
                 stats = await fs.stat(file.path);
@@ -129,8 +129,8 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
         helpers.log(consts.LOG_WARN, warns.join('\n'));
     }
 
-    let totalTime = (Date.now() - startTime) / 1000;
-    let throughput = (sentBytes / totalTime).toFixed(2);
+    const totalTime = (Date.now() - startTime) / 1000;
+    const throughput = (sentBytes / totalTime).toFixed(2);
     helpers.log(consts.LOG_INFO, `Sent ${sentFileCount} files for ${sentAssetCount} assets (${filesize(sentBytes)}) in ${totalTime} seconds (${filesize(throughput)}/sec)`);
 
     return client.quit();

@@ -72,11 +72,8 @@ exports.sleep = function(ms) {
 exports.clientWrite = function(client, data, minPacketSize, maxPacketSize) {
     return new Promise((resolve, reject) => {
         let sentBytes = 0;
-
-        client.once('close', () => {
-            if(sentBytes < data.length)
-                reject(new Error("Client closed before write finished"));
-        });
+        let closed = false;
+        client.once('close', () => closed = true);
 
         if(typeof(minPacketSize) !== 'number') {
             minPacketSize = MIN_PACKET_SIZE;
@@ -91,7 +88,11 @@ exports.clientWrite = function(client, data, minPacketSize, maxPacketSize) {
         }
 
         function write() {
-            let len = Math.min(data.length - sentBytes, packetSize());
+            if(closed && sentBytes < data.length) {
+                return reject(new Error("Client closed before write finished"));
+            }
+
+            const len = Math.min(data.length - sentBytes, packetSize());
             client.write(data.slice(sentBytes, sentBytes + len), () => {
                 sentBytes += len;
 
@@ -117,7 +118,7 @@ exports.clientWrite = function(client, data, minPacketSize, maxPacketSize) {
 exports.readStream = function(stream, size) {
     return new Promise((resolve, reject) => {
         let pos = 0;
-        let buffer = Buffer.alloc(size, 0, 'ascii');
+        const buffer = Buffer.alloc(size, 0, 'ascii');
         stream.on('data', data => {
             if(pos + data.length <= size) {
                 data.copy(buffer, pos);
@@ -136,7 +137,7 @@ exports.readStream = function(stream, size) {
 
 exports.getClientPromise = function(port) {
     return new Promise((resolve, reject) => {
-        let client = net.createConnection(port);
+        const client = net.createConnection(port);
         client.once('connect', () => {
             resolve(client);
         });

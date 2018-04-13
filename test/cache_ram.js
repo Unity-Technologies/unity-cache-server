@@ -12,11 +12,11 @@ const MAX_FILE_SIZE = MIN_FILE_SIZE;
 
 describe("Cache: RAM", () => {
 
-    let dirtyPages = () => cache._pageMeta.chain()
+    const dirtyPages = () => cache._pageMeta.chain()
         .find({'dirty' : true}).data()
         .map(page => page.index);
 
-    let opts = {
+    const opts = {
         cachePath: tmp.tmpNameSync({}).toString(),
         pageSize: MIN_FILE_SIZE * 2,
         maxPageCount: 2,
@@ -27,9 +27,9 @@ describe("Cache: RAM", () => {
     };
 
     let cache;
-    let fileData = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
+    const fileData = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
 
-    let writeFileDataToCache = async (fileData) => {
+    const writeFileDataToCache = async (fileData) => {
         await cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
         await cache._addFileToCache('a', fileData.guid, fileData.hash, fileData.bin);
         await cache._addFileToCache('r', fileData.guid, fileData.hash, fileData.resource);
@@ -51,7 +51,7 @@ describe("Cache: RAM", () => {
             it("should initialize an empty cache if no database was loaded from disk", async () => {
                 await cache.init(opts);
                 assert.equal(cache._pageMeta.count(), 1);
-                let index = cache._index.findOne({});
+                const index = cache._index.findOne({});
 
                 assert.notStrictEqual(index, null);
                 assert.equal(index.size, opts.pageSize);
@@ -69,7 +69,7 @@ describe("Cache: RAM", () => {
             });
 
             it("should not save or load any database when opts.persistence is false", async () => {
-                let myOpts = Object.assign({}, opts);
+                const myOpts = Object.assign({}, opts);
                 myOpts.persistence = false;
 
                 await cache.init(myOpts);
@@ -84,11 +84,10 @@ describe("Cache: RAM", () => {
 
         describe("getFileStream", () => {
             it("should update the lastAccessTime of the requested file entry", async () => {
-                let prevTime;
                 await cache.init(opts);
                 await cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
                 let info = await cache.getFileInfo('i', fileData.guid, fileData.hash);
-                prevTime = info.lastAccessTime;
+                const prevTime = info.lastAccessTime;
                 await sleep(100);
                 await cache.getFileStream('i', fileData.guid, fileData.hash);
                 info = await cache.getFileInfo('i', fileData.guid, fileData.hash);
@@ -106,8 +105,8 @@ describe("Cache: RAM", () => {
 
                 cache._serializeInProgress = true;
                 await cache.init(opts);
-                let trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                let stream = await trx.getWriteStream('i', fileData.info.length);
+                const trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
+                const stream = await trx.getWriteStream('i', fileData.info.length);
                 stream.end(fileData.info);
                 await cache.endPutTransaction(trx);
                 assert(ok);
@@ -116,16 +115,15 @@ describe("Cache: RAM", () => {
 
         describe("shutdown", () => {
             it("should serialize the database and page files to disk before returning", async () => {
-                let pages;
                 await cache.init(opts);
                 await cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
 
-                pages = dirtyPages();
+                const pages = dirtyPages();
                 assert.equal(pages.length, 1);
 
                 await cache.shutdown();
                 await fs.access(cache._dbPath);
-                let dir = await fs.readdir(opts.cachePath);
+                const dir = await fs.readdir(opts.cachePath);
                 assert(dir.includes(pages[0]));
             });
         });
@@ -155,7 +153,7 @@ describe("Cache: RAM", () => {
             beforeEach(() => writeFileDataToCache(fileData));
 
             it("should write only dirty page files to disk", async () => {
-                let testDir = (dir, dirty) => {
+                const testDir = (dir, dirty) => {
                     assert(dirty.every(entry => dir.includes(entry)));
                     assert(dir.every(entry => dirty.includes(entry)));
                 };
@@ -189,8 +187,8 @@ describe("Cache: RAM", () => {
             });
 
             it("should load all page files from the cachePath", async () => {
-                let pageMeta = cache._pageMeta.chain().find({}).data();
-                let pageData = cache._pages;
+                const pageMeta = cache._pageMeta.chain().find({}).data();
+                const pageData = cache._pages;
 
                 // artificially clear out the page array before de-serializing
                 cache._pages = [];
@@ -201,7 +199,7 @@ describe("Cache: RAM", () => {
             });
 
             it("should throw an error if the page file size doesn't match the expected size", async () => {
-                let dir = await fs.readdir(opts.cachePath);
+                const dir = await fs.readdir(opts.cachePath);
 
                 assert(dir.length > 0);
                 await fs.truncate(path.join(opts.cachePath, dir[0]));
@@ -262,21 +260,21 @@ describe("Cache: RAM", () => {
             it("should re-allocate a LRU block when no free blocks are available and maxPageCount has been reached", async () => {
                 let firstBlock;
                 for(let x = 0; x < opts.maxPageCount; x++) {
-                    let key = Cache._calcIndexKey('a', randomBuffer(16), randomBuffer(16));
-                    let block = cache._reserveBlock(key, opts.pageSize);
+                    const key = Cache._calcIndexKey('a', randomBuffer(16), randomBuffer(16));
+                    const block = cache._reserveBlock(key, opts.pageSize);
                     if(!firstBlock)
                         firstBlock = block;
                     await sleep(50);
                 }
 
-                let key = Cache._calcIndexKey('a', randomBuffer(16), randomBuffer(16));
-                let block = cache._reserveBlock(key, MIN_FILE_SIZE);
+                const key = Cache._calcIndexKey('a', randomBuffer(16), randomBuffer(16));
+                const block = cache._reserveBlock(key, MIN_FILE_SIZE);
                 assert.equal(firstBlock.pageIndex, block.pageIndex);
             });
 
             it("should throw an exception if no free block or no LRU block of a suitable size can be found when maxPageCount has been reached", () => {
                 for(let x = 0; x < opts.maxPageCount; x++) {
-                    let key = Cache._calcIndexKey('a', randomBuffer(16), randomBuffer(16));
+                    const key = Cache._calcIndexKey('a', randomBuffer(16), randomBuffer(16));
                     cache._reserveBlock(key, opts.pageSize);
                 }
 

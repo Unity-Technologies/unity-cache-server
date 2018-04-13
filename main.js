@@ -87,17 +87,17 @@ if(program.workers > 0 && !CacheModule.properties.clustering) {
 
 let server = null;
 
-let cacheOpts = {};
+const cacheOpts = {};
 if(program.cachePath !== null) {
     cacheOpts.cachePath = program.cachePath;
 }
 
-let getMirrors = () => new Promise((resolve, reject) => {
+const getMirrors = () => new Promise((resolve, reject) => {
     const defaultPort = consts.DEFAULT_PORT;
     const myIp = ip.address();
 
-    let mirrors = program.mirror.map(async m => {
-        let result = await helpers.parseAndValidateAddressString(m, defaultPort);
+    const mirrors = program.mirror.map(async m => {
+        const result = await helpers.parseAndValidateAddressString(m, defaultPort);
         if((ip.isEqual(myIp, result.host) || ip.isEqual("127.0.0.1", result.host)) && program.port === port) {
             throw new Error(`Cannot mirror to self!`);
         }
@@ -113,7 +113,7 @@ let getMirrors = () => new Promise((resolve, reject) => {
 Cache.init(cacheOpts)
     .then(() => getMirrors())
     .then(mirrors => {
-        let opts = {
+        const opts = {
             port: program.port,
             mirror: mirrors
         };

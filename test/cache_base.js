@@ -9,7 +9,7 @@ const consts = require('../lib/constants');
 describe("Cache: Base Class", () => {
     let cache;
 
-    let opts = {
+    const opts = {
         cachePath: tmp.tmpNameSync({}),
     };
 
@@ -33,7 +33,7 @@ describe("Cache: Base Class", () => {
 
     describe("get _options", () => {
         it("should return an object with options for all built-in cache modules", () => {
-            let cacheOptions = cache._options;
+            const cacheOptions = cache._options;
             assert.strictEqual(typeof(cacheOptions), 'object');
             assert(cacheOptions.hasOwnProperty('cache_fs'));
             assert(cacheOptions.hasOwnProperty('cache_ram'));
@@ -44,7 +44,7 @@ describe("Cache: Base Class", () => {
                 $testVal: { nested: { option: true } }
             };
 
-            let cacheOptions = cache._options;
+            const cacheOptions = cache._options;
             assert(cacheOptions.hasOwnProperty('$testVal'));
             assert.strictEqual(cacheOptions.$testVal.nested.option, true);
         });
@@ -69,8 +69,8 @@ describe("Cache: Base Class", () => {
         });
 
         it("should handle a trailing slash in the cache path", () => {
-            let noTrailingSlash = "/dir/without/trailing/slash";
-            let withTrailingSlash = "/dir/without/trailing/slash/";
+            const noTrailingSlash = "/dir/without/trailing/slash";
+            const withTrailingSlash = "/dir/without/trailing/slash/";
 
             cache._optionOverrides = {
                 cachePath: noTrailingSlash
@@ -154,9 +154,9 @@ describe("Cache: Base Class", () => {
 });
 
 describe("PutTransaction: Base Class", () => {
-    let guid = randomBuffer(consts.GUID_SIZE);
-    let hash = randomBuffer(consts.HASH_SIZE);
-    let trx = new PutTransaction(guid, hash);
+    const guid = randomBuffer(consts.GUID_SIZE);
+    const hash = randomBuffer(consts.HASH_SIZE);
+    const trx = new PutTransaction(guid, hash);
 
     describe("get guid", () => {
         it("should return the guid passed to the constructor", () => {
@@ -185,7 +185,7 @@ describe("PutTransaction: Base Class", () => {
     describe("finalize", () => {
         it("should return a promise and emit a 'finalize' event", (done) => {
             trx.once('finalize', () => done());
-            let p = trx.finalize();
+            const p = trx.finalize();
             assert.equal(typeof(p.then), 'function');
         });
     });
