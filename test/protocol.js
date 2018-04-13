@@ -153,6 +153,11 @@ describe("Protocol", () => {
 
                 tests.forEach(function (test) {
                     it(`should store ${test.ext} data with a (${test.cmd}) command (client write packet size = ${test.packetSize})`, () => {
+                        // Insert 'q' character ('Quit' command) into the GUID, to catch subtle protocol errors when packet size is 1
+                        if(test.packetSize === 1) {
+                            test.data.guid[0] = test.data.guid[test.data.guid.length - 1] = 'q'.charCodeAt(0);
+                        }
+
                         const buf = Buffer.from(
                             encodeCommand(cmd.transactionStart, test.data.guid, test.data.hash) +
                             encodeCommand(test.cmd, null, null, test.data[test.ext]) +
