@@ -2,6 +2,9 @@ const assert = require('assert');
 const helpers = require('../lib/helpers');
 const consts = require('../lib/constants');
 const sinon = require('sinon');
+const tmp = require('tmp-promise');
+const fs = require('fs-extra');
+const path = require('path');
 
 describe("Helper functions", () => {
     const guid = Buffer.from([80,127,95,145,103,153,135,123,185,19,13,54,122,207,246,26]);
@@ -56,6 +59,40 @@ describe("Helper functions", () => {
         it("should throw an error if the address can't be resolved", () => {
             return helpers.parseAndValidateAddressString("blah", 0)
                 .then(() => { throw new Error("Expected error"); }, err => {});
+        });
+    });
+
+    describe("readDir", () => {
+        it("should walk a directory recursively and call the provided callback with file information", async () => {
+            const rootDir = await tmp.dir({unsafeCleanup: true});
+            await tmp.file({dir: rootDir.path});
+            const subDir = await tmp.dir({dir: rootDir.path});
+            await tmp.file({dir: subDir.path});
+            const expectation = sinon.mock();
+            expectation.twice();
+            await helpers.readDir(rootDir.path, expectation);
+            expectation.verify();
+            rootDir.cleanup();
+
+        });
+
+        it("should do nothing and return if no callback is provided", async () => {
+            const rootDir = await tmp.dir({unsafeCleanup: true});
+            await helpers.readDir(rootDir.path);
+            rootDir.cleanup();
+        });
+
+        it("should not walk into symlink folders", async () => {
+            const rootDir = await tmp.dir({unsafeCleanup: true});
+            await tmp.file({dir: rootDir.path});
+            const subDir = await tmp.dir({dir: rootDir.path});
+            await tmp.file({dir: subDir.path});
+            await fs.symlink(subDir.path, path.join(rootDir.path, 'foo'), 'dir');
+            const expectation = sinon.mock();
+            expectation.twice();
+            await helpers.readDir(rootDir.path, expectation);
+            expectation.verify();
+            rootDir.cleanup();
         });
     });
 
