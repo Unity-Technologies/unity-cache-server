@@ -52,7 +52,7 @@ if(!CacheModule.properties.cleanup) {
 
 const cache = new CacheModule();
 
-let cacheOpts = { cleanupOptions: {} };
+const cacheOpts = { cleanupOptions: {} };
 
 if(program.cachePath !== null) {
     cacheOpts.cachePath = program.cachePath;
@@ -75,14 +75,14 @@ helpers.log(consts.LOG_INFO, `Cache path is ${cache._cachePath}`);
 cache.on('cleanup_delete_item', item => helpers.log(consts.LOG_DBG, item));
 
 cache.on('cleanup_delete_finish', data => {
-    let pct = data.cacheSize > 0 ? (data.deleteSize/data.cacheSize).toPrecision(2) * 100 : 0;
+    const pct = data.cacheSize > 0 ? (data.deleteSize/data.cacheSize).toPrecision(2) * 100 : 0;
     helpers.log(consts.LOG_INFO, `Found ${data.deleteCount} expired files of ${data.cacheCount}. ${filesize(data.deleteSize)} of ${filesize(data.cacheSize)} (${pct}%).`);
     if(dryRun) {
         helpers.log(consts.LOG_INFO, "Nothing deleted; run with --delete to remove expired files from the cache.");
     }
 });
 
-const msg = `Gathering cache files for expiration`;
+const msg = 'Gathering cache files for expiration';
 let spinner = null;
 
 if(logLevel < consts.LOG_DBG && logLevel >= consts.LOG_INFO) {
@@ -98,7 +98,7 @@ if(logLevel < consts.LOG_DBG && logLevel >= consts.LOG_INFO) {
 
 } else if(logLevel === consts.LOG_DBG) {
     cache.on('cleanup_search_progress', data => {
-        let txt = `${msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
+        const txt = `${msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
         helpers.log(consts.LOG_DBG, txt);
     });
 }

@@ -53,5 +53,16 @@
     "progress": "^2.0.0",
     "prompt": "^1.0.0",
     "uuid": "^3.1.0"
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true
+    },
+    "parserOptions": {
+      "ecmaVersion": 8
+    },
+    "rules": {
+      "prefer-const": "error"
+    }
   }
 }

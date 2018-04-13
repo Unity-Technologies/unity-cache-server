@@ -92,7 +92,7 @@ exports.clientWrite = function(client, data, minPacketSize, maxPacketSize) {
                 return reject(new Error("Client closed before write finished"));
             }
 
-            let len = Math.min(data.length - sentBytes, packetSize());
+            const len = Math.min(data.length - sentBytes, packetSize());
             client.write(data.slice(sentBytes, sentBytes + len), () => {
                 sentBytes += len;
 
@@ -118,7 +118,7 @@ exports.clientWrite = function(client, data, minPacketSize, maxPacketSize) {
 exports.readStream = function(stream, size) {
     return new Promise((resolve, reject) => {
         let pos = 0;
-        let buffer = Buffer.alloc(size, 0, 'ascii');
+        const buffer = Buffer.alloc(size, 0, 'ascii');
         stream.on('data', data => {
             if(pos + data.length <= size) {
                 data.copy(buffer, pos);
@@ -137,7 +137,7 @@ exports.readStream = function(stream, size) {
 
 exports.getClientPromise = function(port) {
     return new Promise((resolve, reject) => {
-        let client = net.createConnection(port);
+        const client = net.createConnection(port);
         client.once('connect', () => {
             resolve(client);
         });

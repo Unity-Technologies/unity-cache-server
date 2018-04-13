@@ -111,13 +111,13 @@ describe("Helper functions", () => {
 
         describe("setLogger", () => {
             it("should do nothing if the passeed in logger is null", () => {
-                let prev = helpers.log;
+                const prev = helpers.log;
                 helpers.setLogger(null);
                 assert.strictEqual(prev, helpers.log);
             });
 
             it("should change the logging function to the passed in function", () => {
-                let myLogger = (lvl, msg) => {};
+                const myLogger = (lvl, msg) => {};
                 helpers.setLogger(myLogger);
                 assert.strictEqual(myLogger, helpers.log);
             });

@@ -4,7 +4,7 @@ const tmp = require('tmp');
 const { generateCommandData, sleep } = require('./test_utils');
 const assert = require('assert');
 
-let cacheOpts = {
+const cacheOpts = {
     cachePath: tmp.tmpNameSync({}).toString(),
     pageSize: 10 * 1024,
     minFreeBlockSize: 1024,
@@ -13,7 +13,7 @@ let cacheOpts = {
     }
 };
 
-let writeFileDataToCache = async (cache, fileData) => {
+const writeFileDataToCache = async (cache, fileData) => {
     await cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
     await cache._addFileToCache('a', fileData.guid, fileData.hash, fileData.bin);
     await cache._addFileToCache('r', fileData.guid, fileData.hash, fileData.resource);
@@ -29,18 +29,18 @@ describe("TransactionMirror", () => {
 
         this.targetServer = new Server(this.targetCache, {port: 0});
         await this.targetServer.start(err => assert(!err, `Server reported error! ${err}`));
-        let opts = { host: 'localhost', port: this.targetServer.port };
+        const opts = { host: 'localhost', port: this.targetServer.port };
         this.mirror = new TransactionMirror(opts, this.sourceCache);
         this.mirror._queueProcessDelay = 1;
     });
 
     it("should mirror all queued transactions to the target Cache Server", async () => {
-        let fileData = [
+        const fileData = [
                 generateCommandData(1024, 1024),
                 generateCommandData(1024, 1024)
             ];
 
-        for(let d of fileData) {
+        for(const d of fileData) {
             await writeFileDataToCache(this.sourceCache, d);
             const trxMock = { guid: d.guid, hash: d.hash, manifest: ['i', 'a', 'r'] };
             this.mirror.queueTransaction(trxMock);
