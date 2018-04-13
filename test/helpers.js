@@ -2,6 +2,9 @@ const assert = require('assert');
 const helpers = require('../lib/helpers');
 const consts = require('../lib/constants');
 const sinon = require('sinon');
+const tmp = require('tmp-promise');
+const fs = require('fs-extra');
+const path = require('path');
 
 describe("Helper functions", () => {
     const guid = Buffer.from([80,127,95,145,103,153,135,123,185,19,13,54,122,207,246,26]);
@@ -59,6 +62,40 @@ describe("Helper functions", () => {
         });
     });
 
+    describe("readDir", () => {
+        it("should walk a directory recursively and call the provided callback with file information", async () => {
+            const rootDir = await tmp.dir({unsafeCleanup: true});
+            await tmp.file({dir: rootDir.path});
+            const subDir = await tmp.dir({dir: rootDir.path});
+            await tmp.file({dir: subDir.path});
+            const expectation = sinon.mock();
+            expectation.twice();
+            await helpers.readDir(rootDir.path, expectation);
+            expectation.verify();
+            rootDir.cleanup();
+
+        });
+
+        it("should do nothing and return if no callback is provided", async () => {
+            const rootDir = await tmp.dir({unsafeCleanup: true});
+            await helpers.readDir(rootDir.path);
+            rootDir.cleanup();
+        });
+
+        it("should not walk into symlink folders", async () => {
+            const rootDir = await tmp.dir({unsafeCleanup: true});
+            await tmp.file({dir: rootDir.path});
+            const subDir = await tmp.dir({dir: rootDir.path});
+            await tmp.file({dir: subDir.path});
+            await fs.symlink(subDir.path, path.join(rootDir.path, 'foo'), 'dir');
+            const expectation = sinon.mock();
+            expectation.twice();
+            await helpers.readDir(rootDir.path, expectation);
+            expectation.verify();
+            rootDir.cleanup();
+        });
+    });
+
     describe("Logging functions", () => {
         before(() => {
             this.oldLevel = helpers.getLogLevel();
@@ -111,13 +148,13 @@ describe("Helper functions", () => {
 
         describe("setLogger", () => {
             it("should do nothing if the passeed in logger is null", () => {
-                let prev = helpers.log;
+                const prev = helpers.log;
                 helpers.setLogger(null);
                 assert.strictEqual(prev, helpers.log);
             });
 
             it("should change the logging function to the passed in function", () => {
-                let myLogger = (lvl, msg) => {};
+                const myLogger = (lvl, msg) => {};
                 helpers.setLogger(myLogger);
                 assert.strictEqual(myLogger, helpers.log);
             });

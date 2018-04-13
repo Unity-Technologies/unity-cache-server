@@ -61,7 +61,7 @@ describe("Server common", function() {
                 done();
             });
 
-            let ver = "fe";
+            const ver = "fe";
             client.write(ver[0]);
             sleep(50).then(() => { client.write(ver[1]); });
         });

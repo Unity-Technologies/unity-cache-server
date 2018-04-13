@@ -39,10 +39,6 @@ program.description("Unity Cache Server - Cache Cleanup\n\n  Removes old files f
     .option('-D, --daemon <interval>', 'Daemon mode: execute the cleanup script at the given interval in seconds as a foreground process.', myParseInt)
     .option('--NODE_CONFIG_DIR=<path>', 'Specify the directory to search for config files. This is equivalent to setting the NODE_CONFIG_DIR environment variable. Without this option, the built-in configuration is used.');
 
-if (!process.argv.slice(2).length) {
-    return program.outputHelp();
-}
-
 program.parse(process.argv);
 
 helpers.setLogLevel(program.logLevel);
@@ -56,7 +52,7 @@ if(!CacheModule.properties.cleanup) {
 
 const cache = new CacheModule();
 
-let cacheOpts = { cleanupOptions: {} };
+const cacheOpts = { cleanupOptions: {} };
 
 if(program.cachePath !== null) {
     cacheOpts.cachePath = program.cachePath;
@@ -71,36 +67,41 @@ if(program.hasOwnProperty('maxCacheSize')) {
 }
 
 const dryRun = !program.delete;
+const logLevel = helpers.getLogLevel();
+
 cache._options = cacheOpts;
 helpers.log(consts.LOG_INFO, `Cache path is ${cache._cachePath}`);
 
-const msg = `Gathering cache files for expiration`;
-let spinner = null;
-
-if(helpers.getLogLevel() < consts.LOG_DBG && helpers.getLogLevel() > consts.LOG_NONE) {
-    spinner = ora({color: 'white'});
-}
-
-cache.on('cleanup_search_progress', data => {
-    let txt = `${msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
-    spinner ? spinner.text = txt : helpers.log(consts.LOG_DBG, txt);
-});
-
-cache.on('cleanup_search_finish', () => {
-    if(spinner) spinner.stop();
-});
-
-cache.on('cleanup_delete_item', item => {
-    helpers.log(consts.LOG_INFO, `Deleted ${item}`);
-});
+cache.on('cleanup_delete_item', item => helpers.log(consts.LOG_DBG, item));
 
 cache.on('cleanup_delete_finish', data => {
-    let pct = data.cacheSize > 0 ? (data.deleteSize/data.cacheSize).toPrecision(2) * 100 : 0;
+    const pct = data.cacheSize > 0 ? (data.deleteSize/data.cacheSize).toPrecision(2) * 100 : 0;
     helpers.log(consts.LOG_INFO, `Found ${data.deleteCount} expired files of ${data.cacheCount}. ${filesize(data.deleteSize)} of ${filesize(data.cacheSize)} (${pct}%).`);
     if(dryRun) {
         helpers.log(consts.LOG_INFO, "Nothing deleted; run with --delete to remove expired files from the cache.");
     }
 });
+
+const msg = 'Gathering cache files for expiration';
+let spinner = null;
+
+if(logLevel < consts.LOG_DBG && logLevel >= consts.LOG_INFO) {
+    spinner = ora({color: 'white'});
+
+    cache.on('cleanup_search_progress', data => {
+        spinner.text = `${msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
+    });
+
+    cache.on('cleanup_search_finish', () => {
+        spinner.stop();
+    });
+
+} else if(logLevel === consts.LOG_DBG) {
+    cache.on('cleanup_search_progress', data => {
+        const txt = `${msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
+        helpers.log(consts.LOG_DBG, txt);
+    });
+}
 
 function doCleanup() {
     if (spinner) spinner.start(msg);

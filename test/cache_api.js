@@ -7,7 +7,7 @@ const generateCommandData = require('./test_utils').generateCommandData;
 const readStream = require('./test_utils').readStream;
 const EventEmitter = require('events');
 
-let test_modules = [
+const test_modules = [
     {
         name: "cache_ram",
         path: "../lib/cache/cache_ram",
@@ -46,7 +46,7 @@ describe("Cache API", () => {
 
             describe("static get properties", () => {
                 it("should return an object with common property values", () => {
-                    let props = CacheModule.properties;
+                    const props = CacheModule.properties;
                     assert(props.hasOwnProperty('clustering') && typeof(props['clustering']) === 'boolean');
                 });
             });
@@ -162,7 +162,7 @@ describe("Cache API", () => {
                     const TEST_FILE_SIZE = 1024 * 64 * 2;
                     const FILE_TYPE = 'i';
 
-                    let fData = generateCommandData(TEST_FILE_SIZE, TEST_FILE_SIZE);
+                    const fData = generateCommandData(TEST_FILE_SIZE, TEST_FILE_SIZE);
 
                     // Add a file to the cache (use the info data)
                     let trx = await cache.createPutTransaction(fData.guid, fData.hash);
@@ -210,7 +210,7 @@ describe("PutTransaction API", function() {
 
             before(() => {
                 /** @type {CacheBase} **/
-                let CacheModule = require(module.path);
+                const CacheModule = require(module.path);
                 cache = new CacheModule();
                 fileData = generateCommandData(1024, 1024);
             });
@@ -246,7 +246,7 @@ describe("PutTransaction API", function() {
                         .then(stream => stream.end(fileData.bin))
                         .then(() => trx.finalize())
                         .then(() => {
-                            let m = trx.manifest;
+                            const m = trx.manifest;
                             ['i', 'a', 'r'].forEach((t) => assert(m.indexOf(t) >= 0));
                         });
                 });

@@ -8,20 +8,20 @@ const moment = require('moment');
 const MIN_FILE_SIZE = 1024 * 5;
 const MAX_FILE_SIZE = MIN_FILE_SIZE;
 
-let cacheOpts = {
+const cacheOpts = {
     cachePath: tmp.tmpNameSync({}).toString()
 };
 
 let cache;
 
-let addFileToCache = async (atime) => {
+const addFileToCache = async (atime) => {
     const data = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
-    let tmpPath = tmp.tmpNameSync({dir: cacheOpts.cachePath});
+    const tmpPath = tmp.tmpNameSync({dir: cacheOpts.cachePath});
     await fs.writeFile(tmpPath, data.bin);
-    let cacheFile = await cache._addFileToCache('a', data.guid, data.hash, tmpPath);
+    const cacheFile = await cache._addFileToCache('a', data.guid, data.hash, tmpPath);
     await fs.utimes(cacheFile, atime, atime);
 
-    let stats = await fs.stat(cacheFile);
+    const stats = await fs.stat(cacheFile);
     assert(moment(stats.atime).isSame(atime, 'second'), `${stats.atime} != ${atime}`);
     return cacheFile;
 };
@@ -36,16 +36,16 @@ describe("Cache: FS", () => {
 
         describe("cleanup", () => {
             it("should remove files that have not been accessed within a given timespan (ASP.NET style)", async () => {
-                let opts = Object.assign({}, cacheOpts);
+                const opts = Object.assign({}, cacheOpts);
                 opts.cleanupOptions = {
                     expireTimeSpan: "P1D",
                     maxCacheSize: 0
                 };
 
                 await cache.init(opts);
-                let file1 = await addFileToCache(moment().subtract(2, 'days').toDate());
-                let file2 = await addFileToCache(moment().subtract(2, 'days').toDate());
-                let file3 = await addFileToCache(moment().toDate());
+                const file1 = await addFileToCache(moment().subtract(2, 'days').toDate());
+                const file2 = await addFileToCache(moment().subtract(2, 'days').toDate());
+                const file3 = await addFileToCache(moment().toDate());
 
                 await cache.cleanup(false);
 
@@ -55,16 +55,16 @@ describe("Cache: FS", () => {
             });
 
             it("should remove files that have not been accessed within a given timespan (ISO 8601 style)", async () => {
-                let opts = Object.assign({}, cacheOpts);
+                const opts = Object.assign({}, cacheOpts);
                 opts.cleanupOptions = {
                     expireTimeSpan: "1.00:00:00",
                     maxCacheSize: 0
                 };
 
                 await cache.init(opts);
-                let file1 = await addFileToCache(moment().subtract(2, 'days').toDate());
-                let file2 = await addFileToCache(moment().subtract(2, 'days').toDate());
-                let file3 = await addFileToCache(moment().toDate());
+                const file1 = await addFileToCache(moment().subtract(2, 'days').toDate());
+                const file2 = await addFileToCache(moment().subtract(2, 'days').toDate());
+                const file3 = await addFileToCache(moment().toDate());
 
                 assert(await fs.pathExists(file1));
                 assert(await fs.pathExists(file2));
@@ -78,7 +78,7 @@ describe("Cache: FS", () => {
             });
 
             it("should reject a promise with an invalid timespan", () => {
-                let opts = Object.assign({}, cacheOpts);
+                const opts = Object.assign({}, cacheOpts);
                 opts.cleanupOptions = {
                     expireTimeSpan: "ABCDEF",
                     maxCacheSize: 0
@@ -90,16 +90,16 @@ describe("Cache: FS", () => {
             });
 
             it("should remove files in least-recently-used order until the overall cache size is lower than a given threshold", async () => {
-                let opts = Object.assign({}, cacheOpts);
+                const opts = Object.assign({}, cacheOpts);
                 opts.cleanupOptions = {
                     expireTimeSpan: "P30D",
                     maxCacheSize: MIN_FILE_SIZE * 2 + 1
                 };
 
                 await cache.init(opts);
-                let file1 = await addFileToCache(moment().toDate());
-                let file2 = await addFileToCache(moment().subtract(1, 'days').toDate());
-                let file3 = await addFileToCache(moment().subtract(5, 'days').toDate());
+                const file1 = await addFileToCache(moment().toDate());
+                const file2 = await addFileToCache(moment().subtract(1, 'days').toDate());
+                const file3 = await addFileToCache(moment().subtract(5, 'days').toDate());
 
                 assert(await fs.pathExists(file1));
                 assert(await fs.pathExists(file2));
@@ -120,7 +120,7 @@ describe("Cache: FS", () => {
             });
 
             it("should emit events while processing files", async () => {
-                let opts = Object.assign({}, cacheOpts);
+                const opts = Object.assign({}, cacheOpts);
                 opts.cleanupOptions = {
                     expireTimeSpan: "P30D",
                     maxCacheSize: 1
@@ -148,14 +148,14 @@ describe("Cache: FS", () => {
             });
 
             it("should not delete any files if the dryRun option is true", async () => {
-                let opts = Object.assign({}, cacheOpts);
+                const opts = Object.assign({}, cacheOpts);
                 opts.cleanupOptions = {
                     expireTimeSpan: "P30D",
                     maxCacheSize: 1
                 };
 
                 await cache.init(opts);
-                let file = await addFileToCache(moment().toDate());
+                const file = await addFileToCache(moment().toDate());
                 cache.cleanup(true);
                 assert(await fs.pathExists(file));
             });

@@ -24,7 +24,7 @@ const LARGE_PACKET_SIZE = 1024 * 16;
 
 let cache, server, client;
 
-let test_modules = [
+const test_modules = [
     {
         tmpDir: tmp.dirSync({unsafeCleanup: true}),
         name: "cache_ram",
@@ -55,7 +55,7 @@ describe("Protocol", () => {
 
             before(async () => {
                 /** @type {CacheBase} **/
-                let CacheModule = require(module.path);
+                const CacheModule = require(module.path);
                 cache = new CacheModule();
 
                 module.options.cachePath = module.tmpDir.name;
@@ -135,7 +135,7 @@ describe("Protocol", () => {
 
                 it("should close the socket on an invalid PUT type", (done) => {
                     expectLog(client, /Unrecognized command/i, done);
-                    let buf = Buffer.from(
+                    const buf = Buffer.from(
                         encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
                         encodeCommand("px", null, null, 'abc'), 'ascii');
 
@@ -239,7 +239,7 @@ describe("Protocol", () => {
                         let dataBuf;
                         let pos = 0;
 
-                        let resp = new CacheServerResponseTransform();
+                        const resp = new CacheServerResponseTransform();
 
                         resp.on('header', function (header) {
                                 assert.strictEqual(header.cmd, '+' + test.cmd[1]);
@@ -249,7 +249,7 @@ describe("Protocol", () => {
                                 dataBuf = Buffer.allocUnsafe(header.size);
                             })
                             .on('data', function (data) {
-                                let prev = pos;
+                                const prev = pos;
                                 pos += data.copy(dataBuf, pos);
                                 assert.strictEqual(data.compare(test.blob.slice(prev, pos)), 0, `Blobs don't match at pos ${pos}`);
                             })
