@@ -156,6 +156,7 @@ describe("Protocol", () => {
                         // Insert 'q' character ('Quit' command) into the GUID, to catch subtle protocol errors when packet size is 1
                         if(test.packetSize === 1) {
                             test.data.guid[test.data.guid.length - 1] = 'q'.charCodeAt(0);
+                            test.data.guid[0] = 'q'.charCodeAt(0);
                         }
 
                         const buf = Buffer.from(
