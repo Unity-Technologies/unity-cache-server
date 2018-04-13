@@ -13,7 +13,7 @@ This open-source repository is maintained separately from the Cache Server avail
     * [Install from GitHub source](#install-from-github-source)
 * [Usage](#usage)
 * [Options](#options)
-* [Configuration file](#configuration-file)
+* [Configuration files](#configuration-files)
 * [Client Configuration](#client-configuration)
 * [Cache Modules](#cache-modules)
   * [cache\_fs (default)](#cache_fs-default)
