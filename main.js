@@ -7,7 +7,6 @@ const { Server } = require('./lib');
 const cluster = require('cluster');
 const consts = require('./lib/constants');
 const program = require('commander');
-const prompt = require('prompt');
 const ip = require('ip');
 const VERSION = require('./package.json').version;
 const fs = require('fs-extra');
@@ -126,7 +125,6 @@ Cache.init(cacheOpts)
             if(program.workers === 0) {
                 server.start(errHandler).then(() => {
                     helpers.log(consts.LOG_INFO, `Cache Server ready on port ${server.port}`);
-                    startPrompt();
                 });
             }
 
@@ -146,38 +144,9 @@ Cache.init(cacheOpts)
         process.exit(1);
     });
 
-function startPrompt() {
-    prompt.message = "";
-    prompt.delimiter = "> ";
-    prompt.start();
-
-    prompt.get(['command'], function(err, result) {
-        if(err) {
-            if(err.message === 'canceled') {
-                result = { command: 'q' };
-            }
-            else {
-                helpers.log(consts.LOG_ERR, err);
-                server.stop();
-                process.exit(1);
-            }
-        }
-
-        if(result) {
-            switch(result.command) {
-                case 'q':
-                    helpers.log(consts.LOG_INFO, "Shutting down ...");
-                    Cache.shutdown().then(() => {
-                        server.stop();
-                        process.exit(0);
-                    });
-                    break;
-            }
-        }
-
-        process.nextTick(startPrompt);
-    });
-}
-
-
-
+process.on('SIGINT', async () => {
+    helpers.log(consts.LOG_INFO, "Shutting down...");
+    await Cache.shutdown();
+    await server.stop();
+    process.exit(0);
+});
