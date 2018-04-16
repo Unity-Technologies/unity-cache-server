@@ -52,7 +52,6 @@
     "moment": "^2.20.1",
     "ora": "^1.4.0",
     "progress": "^2.0.0",
-    "prompt": "^1.0.0",
     "uuid": "^3.1.0"
   },
   "eslintConfig": {
