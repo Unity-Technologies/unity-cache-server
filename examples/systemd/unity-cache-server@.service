@@ -1,0 +1,17 @@
+[Unit]
+    Description=Unity Cache Server listening on '%i'
+    Requires=unity-cache-server.service
+    Before=unity-cache-server.service
+    BindsTo=unity-cache-server.service
+
+[Service]
+    Type=simple
+    SyslogIdentifier=unity-cache-server-%i
+    TimeoutStartSec=300
+    ExecStart=/home/unitycacheserver/unity-cache-server/main.js --path /home/unitycacheserver/cache-%i $OPTIONS
+    EnvironmentFile=/home/unitycacheserver/%i.sh
+    Restart=on-failure
+    User=unitycacheserver
+
+[Install]
+     WantedBy=unity-cache-server.service
