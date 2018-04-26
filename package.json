@@ -1,6 +1,6 @@
 {
   "name": "unity-cache-server",
-  "version": "6.0.1",
+  "version": "6.0.2",
   "description": "Unity Cache Server",
   "main": "lib/index.js",
   "engines": {
