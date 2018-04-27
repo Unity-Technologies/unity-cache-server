@@ -1,0 +1,9 @@
+[Unit]
+    Description=Start all unity-cache-server instances
+[Service]
+    Type=oneshot
+    ExecStart=/bin/true
+    RemainAfterExit=yes
+
+[Install]
+    WantedBy=multi-user.target
