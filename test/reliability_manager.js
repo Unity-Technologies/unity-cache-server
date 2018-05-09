@@ -148,9 +148,9 @@ describe("ReliabilityManager", () => {
             });
         });
 
-        describe("requireUniqueClients", () => {
+        describe("multiClient", () => {
             it("should not increment the reliability factor twice in a row for the same client", async () => {
-                const myRm = new ReliabilityManager(db, tmp.tmpNameSync(), { reliabilityThreshold: 2, requireUniqueClients: true });
+                const myRm = new ReliabilityManager(db, tmp.tmpNameSync(), { reliabilityThreshold: 2, multiClient: true });
                 const guid = randomBuffer(consts.GUID_SIZE);
                 const hash = randomBuffer(consts.HASH_SIZE);
                 await myRm.processTransaction(new StablePutTransaction(guid, hash));

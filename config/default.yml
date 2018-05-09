@@ -15,7 +15,7 @@ Cache:
       highReliabilityOptions:
         reliabilityThreshold: 2
         saveUnreliableVersionArtifacts: true
-        requireUniqueClients: false
+        multiClient: false
     cache_fs:
       cachePath: ".cache_fs"
       cleanupOptions:
@@ -30,7 +30,7 @@ Cache:
       highReliabilityOptions:
         reliabilityThreshold: 2
         saveUnreliableVersionArtifacts: true
-        requireUniqueClients: false
+        multiClient: false
 Mirror:
   options:
     queueProcessDelay: 2000
