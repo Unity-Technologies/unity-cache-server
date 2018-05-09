@@ -32,6 +32,10 @@ const test_modules = [
         options: {
             pageSize: MAX_FILE_SIZE,
             minFreeBlockSize: 1024,
+            highReliability: true,
+            highReliabilityOptions: {
+                reliabilityThreshold: 0
+            },
             persistenceOptions: {
                 adapter: new loki.LokiMemoryAdapter()
             }
@@ -41,7 +45,12 @@ const test_modules = [
         tmpDir: tmp.dirSync({unsafeCleanup: true}),
         name: "cache_fs",
         path: "../lib/cache/cache_fs",
-        options: {}
+        options: {
+            highReliability: true,
+            highReliabilityOptions: {
+                reliabilityThreshold: 0
+            }
+        }
     }
     ];
 

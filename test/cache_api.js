@@ -187,7 +187,7 @@ describe("Cache API", () => {
                         const opts = cache._options;
                         opts.highReliability = true;
                         opts.highReliabilityOptions = {
-                            reliabilityThreshold: 1
+                            reliabilityThreshold: 2
                         };
 
                         await cache.init(opts);

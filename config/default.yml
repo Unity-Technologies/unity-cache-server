@@ -11,10 +11,11 @@ Cache:
         autosave: true
         autosaveInterval: 10000
         throttledSaves: false
-      highReliability: true
+      highReliability: false
       highReliabilityOptions:
-        reliabilityThreshold: 0
+        reliabilityThreshold: 2
         saveUnreliableVersionArtifacts: true
+        requireUniqueClients: false
     cache_fs:
       cachePath: ".cache_fs"
       cleanupOptions:
@@ -25,10 +26,11 @@ Cache:
         autosave: true
         autosaveInterval: 10000
         throttledSaves: false
-      highReliability: true
+      highReliability: false
       highReliabilityOptions:
-        reliabilityThreshold: 0
+        reliabilityThreshold: 2
         saveUnreliableVersionArtifacts: true
+        requireUniqueClients: false
 Mirror:
   options:
     queueProcessDelay: 2000
