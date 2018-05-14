@@ -5,6 +5,7 @@ const assert = require('assert');
 const path = require('path');
 const randomBuffer = require('./test_utils').randomBuffer;
 const consts = require('../lib/constants');
+const sinon = require('sinon');
 
 describe("Cache: Base Class", () => {
     let cache;
@@ -130,9 +131,48 @@ describe("Cache: Base Class", () => {
     });
 
     describe("endPutTransaction", () => {
-        it("should require override implementation in subclasses by returning an error", () => {
-            return cache.endPutTransaction()
-                .then(() => { throw new Error("Expected error!"); }, () => {});
+        let stub;
+
+        after(() => {
+            stub.resetBehavior();
+        });
+
+        it("should call finalize on the transaction", async () => {
+            const trx = { finalize: () => {} };
+            const mock = sinon.mock(trx);
+            mock.expects("finalize").once();
+            await cache.endPutTransaction(trx);
+            mock.verify();
+        });
+
+        it("should process valid transactions with the reliability manager if high reliability mode is on", async () => {
+            const trx = {
+                finalize: () => {},
+                isValid: false
+            };
+
+            const myOpts = Object.assign({}, opts);
+            myOpts.highReliability = true;
+            myOpts.highReliabilityOptions = { reliabilityThreshold: 2 };
+
+            await cache.init(myOpts);
+            stub = sinon.stub(cache._rm, "processTransaction");
+
+            // invalid transaction, high reliability enabled: should not process
+            await cache.endPutTransaction(trx);
+            assert(stub.notCalled);
+            stub.resetHistory();
+
+            // valid transaction, high reliability enabled: should process
+            trx.isValid = true;
+            await cache.endPutTransaction(trx);
+            assert(stub.calledOnce);
+            stub.resetHistory();
+
+            // valid transaction, high reliability disabled: should not process
+            myOpts.highReliability = false;
+            await cache.endPutTransaction(trx);
+            assert(stub.notCalled);
         });
     });
 
@@ -145,9 +185,13 @@ describe("Cache: Base Class", () => {
 });
 
 describe("PutTransaction: Base Class", () => {
+    let trx;
     const guid = randomBuffer(consts.GUID_SIZE);
     const hash = randomBuffer(consts.HASH_SIZE);
-    const trx = new PutTransaction(guid, hash);
+
+    beforeEach(() => {
+        trx = new PutTransaction(guid, hash);
+    });
 
     describe("get guid", () => {
         it("should return the guid passed to the constructor", () => {
@@ -170,6 +214,44 @@ describe("PutTransaction: Base Class", () => {
     describe("get files", () => {
         it("should return an empty array", () => {
             assert.equal(trx.files.length, 0);
+        });
+    });
+
+    describe("get filesHashStr", () => {
+        it("should return a non-zero length string even if there are no files in the transaction", () => {
+            assert(trx.filesHashStr.length > 0);
+        });
+
+        it("should return a hash string that uniquely identifies the transaction file contents", () => {
+            Object.defineProperty(trx, "files", {
+                get: () => { return [
+                    { type: consts.FILE_TYPE.BIN, byteHash: randomBuffer(consts.HASH_SIZE) },
+                    { type: consts.FILE_TYPE.RESOURCE, byteHash: randomBuffer(consts.HASH_SIZE) },
+                    { type: consts.FILE_TYPE.INFO, byteHash: randomBuffer(consts.HASH_SIZE) }
+                ]}
+            });
+
+            const str1 = trx.filesHashStr;
+            const str2 = trx.filesHashStr;
+
+            assert(str1 !== str2);
+        });
+
+        it("should not include the info (i) file contents in the hash", () => {
+            const a = randomBuffer(consts.HASH_SIZE);
+            const r = randomBuffer(consts.HASH_SIZE);
+            Object.defineProperty(trx, "files", {
+                get: () => { return [
+                    { type: consts.FILE_TYPE.BIN, byteHash: a },
+                    { type: consts.FILE_TYPE.RESOURCE, byteHash: r },
+                    { type: consts.FILE_TYPE.INFO, byteHash: randomBuffer(consts.HASH_SIZE) }
+                ]}
+            });
+
+            const str1 = trx.filesHashStr;
+            const str2 = trx.filesHashStr;
+
+            assert(str1 === str2);
         });
     });
 
