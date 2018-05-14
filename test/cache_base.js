@@ -183,7 +183,7 @@ describe("PutTransaction: Base Class", () => {
 
     describe("getWriteStream", () => {
         it("should require override implementation in subclasses by returning an error", () => {
-            return trx.getWriteStream('i', 0)
+            return trx.getWriteStream(consts.FILE_TYPE.INFO, 0)
                 .then(() => { throw new Error("Expected error!"); }, () => {});
         });
     });

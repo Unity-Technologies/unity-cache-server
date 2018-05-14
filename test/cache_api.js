@@ -103,19 +103,19 @@ describe("Cache API", () => {
                 it("should add info, asset, and resource files to the cache that were written to the transaction", async () => {
                     const fileData = generateCommandData(1024, 1024);
                     const trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                    await trx.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
-                    await trx.getWriteStream('a', fileData.info.length).then(s => s.end(fileData.bin));
-                    await trx.getWriteStream('r', fileData.info.length).then(s => s.end(fileData.resource));
+                    await trx.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
+                    await trx.getWriteStream(consts.FILE_TYPE.BIN, fileData.info.length).then(s => s.end(fileData.bin));
+                    await trx.getWriteStream(consts.FILE_TYPE.RESOURCE, fileData.info.length).then(s => s.end(fileData.resource));
                     await cache.endPutTransaction(trx);
                     await sleep(50);
 
-                    await cache.getFileInfo('i', fileData.guid, fileData.hash)
+                    await cache.getFileInfo(consts.FILE_TYPE.INFO, fileData.guid, fileData.hash)
                         .then(info => assert.equal(info.size, fileData.info.length));
 
-                    await cache.getFileInfo('a', fileData.guid, fileData.hash)
+                    await cache.getFileInfo(consts.FILE_TYPE.BIN, fileData.guid, fileData.hash)
                         .then(info => assert.equal(info.size, fileData.bin.length));
 
-                    await cache.getFileInfo('r', fileData.guid, fileData.hash)
+                    await cache.getFileInfo(consts.FILE_TYPE.RESOURCE, fileData.guid, fileData.hash)
                         .then(info => assert.equal(info.size, fileData.resource.length));
 
                 });
@@ -123,7 +123,7 @@ describe("Cache API", () => {
                 it("should return an error if any files were partially written to the transaction", async () => {
                     const fileData = generateCommandData(1024, 1024);
                     const trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                    const stream = await trx.getWriteStream('i', fileData.info.length);
+                    const stream = await trx.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length);
                     await stream.end(fileData.info.slice(0, 1));
                     return cache.endPutTransaction(trx)
                         .then(() => { throw new Error("Expected error!"); }, err =>  assert(err));
@@ -132,30 +132,29 @@ describe("Cache API", () => {
                 it("should not add files to the cache that were partially written to the transaction", async () => {
                     const fileData = generateCommandData(1024, 1024);
                     const trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                    const stream = await trx.getWriteStream('i', fileData.info.length);
+                    const stream = await trx.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length);
                     await stream.end(fileData.info.slice(0, 1));
                     await cache.endPutTransaction(trx)
                         .then(() => {}, err => assert(err));
 
-                    return cache.getFileInfo('i', fileData.guid, fileData.hash)
+                    return cache.getFileInfo(consts.FILE_TYPE.INFO, fileData.guid, fileData.hash)
                         .then(() => { throw new Error("Expected error!"); }, err =>  assert(err));
                 });
 
                 it("should handle files being replaced while read streams to the same file are already open", async () => {
                     const TEST_FILE_SIZE = 1024 * 64 * 2;
-                    const FILE_TYPE = 'i';
 
                     const fData = generateCommandData(TEST_FILE_SIZE, TEST_FILE_SIZE);
 
                     // Add a file to the cache (use the info data)
                     let trx = await cache.createPutTransaction(fData.guid, fData.hash);
-                    let wStream = await trx.getWriteStream('i', fData.info.length);
+                    let wStream = await trx.getWriteStream(consts.FILE_TYPE.INFO, fData.info.length);
                     await new Promise(resolve => wStream.end(fData.info, resolve));
                     await cache.endPutTransaction(trx);
                     await sleep(50);
 
                     // Get a read stream
-                    let rStream = await cache.getFileStream(FILE_TYPE, fData.guid, fData.hash);
+                    let rStream = await cache.getFileStream(consts.FILE_TYPE.INFO, fData.guid, fData.hash);
 
                     // Read a block
                     let buf = Buffer.allocUnsafe(fData.info.length);
@@ -164,7 +163,7 @@ describe("Cache API", () => {
 
                     // Replace the file (use the resource data)
                     trx = await cache.createPutTransaction(fData.guid, fData.hash);
-                    wStream = await trx.getWriteStream(FILE_TYPE, fData.resource.length);
+                    wStream = await trx.getWriteStream(consts.FILE_TYPE.INFO, fData.resource.length);
                     await new Promise(resolve => wStream.end(fData.resource, resolve));
                     await cache.endPutTransaction(trx);
                     await sleep(50);
@@ -175,7 +174,7 @@ describe("Cache API", () => {
                     assert.equal(buf.compare(fData.info), 0);
 
                     // Get another new read stream to the same guid
-                    rStream = await cache.getFileStream(FILE_TYPE, fData.guid, fData.hash);
+                    rStream = await cache.getFileStream(consts.FILE_TYPE.INFO, fData.guid, fData.hash);
 
                     // Read the file and compare it to the resource data
                     buf = await readStream(rStream, fData.resource.length);
@@ -202,48 +201,48 @@ describe("Cache API", () => {
                     it("should not add a version to the cache until the reliabilityFactor meets the reliabilityThreshold", async () => {
                         const fileData = generateCommandData(1024, 1024);
                         let t = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                        await t.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
-                        await t.getWriteStream('a', fileData.bin.length).then(s => s.end(fileData.bin));
+                        await t.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
+                        await t.getWriteStream(consts.FILE_TYPE.BIN, fileData.bin.length).then(s => s.end(fileData.bin));
                         await cache.endPutTransaction(t);
                         await sleep(50);
-                        await cache.getFileInfo('i', fileData.guid, fileData.hash)
+                        await cache.getFileInfo(consts.FILE_TYPE.INFO, fileData.guid, fileData.hash)
                             .then(() => { throw new Error("Expected error!"); }, err => assert(err));
-                        await cache.getFileInfo('a', fileData.guid, fileData.hash)
+                        await cache.getFileInfo(consts.FILE_TYPE.BIN, fileData.guid, fileData.hash)
                             .then(() => { throw new Error("Expected error!"); }, err => assert(err));
 
                         t = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                        await t.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
-                        await t.getWriteStream('a', fileData.bin.length).then(s => s.end(fileData.bin));
+                        await t.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
+                        await t.getWriteStream(consts.FILE_TYPE.BIN, fileData.bin.length).then(s => s.end(fileData.bin));
                         await cache.endPutTransaction(t);
                         await sleep(50);
-                        await cache.getFileInfo('i', fileData.guid, fileData.hash)
+                        await cache.getFileInfo(consts.FILE_TYPE.INFO, fileData.guid, fileData.hash)
                             .then(i => assert.equal(i.size, fileData.info.length));
-                        await cache.getFileInfo('a', fileData.guid, fileData.hash)
+                        await cache.getFileInfo(consts.FILE_TYPE.BIN, fileData.guid, fileData.hash)
                             .then(i => assert.equal(i.size, fileData.bin.length));
                     });
 
                     it("should not add a version to the cache if all transactions for a version do not contain the same number of files", async () => {
                         const fileData = generateCommandData(1024, 1024);
                         let t = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                        await t.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
-                        await t.getWriteStream('a', fileData.bin.length).then(s => s.end(fileData.bin));
+                        await t.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
+                        await t.getWriteStream(consts.FILE_TYPE.BIN, fileData.bin.length).then(s => s.end(fileData.bin));
                         await cache.endPutTransaction(t);
                         await sleep(50);
-                        await cache.getFileInfo('i', fileData.guid, fileData.hash)
+                        await cache.getFileInfo(consts.FILE_TYPE.INFO, fileData.guid, fileData.hash)
                             .then(() => { throw new Error("Expected error!"); }, err => assert(err));
 
-                        await cache.getFileInfo('a', fileData.guid, fileData.hash)
+                        await cache.getFileInfo(consts.FILE_TYPE.BIN, fileData.guid, fileData.hash)
                             .then(() => { throw new Error("Expected error!"); }, err => assert(err));
 
                         // This time we just add the info file, so the version should be deemed unreliable
                         t = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                        await t.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
+                        await t.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
                         await cache.endPutTransaction(t);
                         await sleep(50);
 
-                        await cache.getFileInfo('i', fileData.guid, fileData.hash)
+                        await cache.getFileInfo(consts.FILE_TYPE.INFO, fileData.guid, fileData.hash)
                             .then(() => { throw new Error("Expected error!"); }, err => assert(err));
-                        await cache.getFileInfo('a', fileData.guid, fileData.hash)
+                        await cache.getFileInfo(consts.FILE_TYPE.BIN, fileData.guid, fileData.hash)
                             .then(() => { throw new Error("Expected error!"); }, err => assert(err));
                     });
 
@@ -253,9 +252,9 @@ describe("Cache API", () => {
                         const fileData = generateCommandData(1024, 1024);
                         for(let i = 0; i < cache._options.highReliabilityOptions.reliabilityThreshold + 1; i++) {
                             const trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                            await trx.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
-                            await trx.getWriteStream('a', fileData.info.length).then(s => s.end(fileData.bin));
-                            await trx.getWriteStream('r', fileData.info.length).then(s => s.end(fileData.resource));
+                            await trx.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
+                            await trx.getWriteStream(consts.FILE_TYPE.BIN, fileData.info.length).then(s => s.end(fileData.bin));
+                            await trx.getWriteStream(consts.FILE_TYPE.RESOURCE, fileData.info.length).then(s => s.end(fileData.resource));
                             await cache.endPutTransaction(trx);
                             await sleep(50);
                         }
@@ -264,39 +263,39 @@ describe("Cache API", () => {
                         const newData = Buffer.from(crypto.randomBytes(fileData.info.length * 2).toString('ascii'), 'ascii');
 
                         const trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                        const stream = await trx.getWriteStream('i', newData.length);
+                        const stream = await trx.getWriteStream(consts.FILE_TYPE.INFO, newData.length);
                         await stream.end(newData);
                         await cache.endPutTransaction(trx);
                         await sleep(50);
-                        const info = await cache.getFileInfo('i', fileData.guid, fileData.hash);
+                        const info = await cache.getFileInfo(consts.FILE_TYPE.INFO, fileData.guid, fileData.hash);
                         assert.equal(info.size, fileData.info.length);
                     });
 
                     it("should not allow a previously unstable version to become stable", async () => {
                         const fileData = generateCommandData(1024, 1024);
                         let trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                        await trx.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
+                        await trx.getWriteStream(consts.FILE_TYPE.BIN, fileData.info.length).then(s => s.end(fileData.info));
                         await cache.endPutTransaction(trx);
                         await sleep(50);
 
                         // Next version will use the wrong data, making it unreliable
                         trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                        await trx.getWriteStream('i', fileData.resource.length).then(s => s.end(fileData.resource));
+                        await trx.getWriteStream(consts.FILE_TYPE.BIN, fileData.resource.length).then(s => s.end(fileData.resource));
                         await cache.endPutTransaction(trx);
                         await sleep(50);
 
                         // Verify it doesn't exist
-                        await cache.getFileInfo('i', fileData.guid, fileData.hash)
+                        await cache.getFileInfo(consts.FILE_TYPE.BIN, fileData.guid, fileData.hash)
                             .then(() => { throw new Error("Expected error!"); }, err => assert(err));
 
                         // Try to add the correct data more than the reliability threshold .. should still not be found
                         for(let i = 0; i < cache._options.highReliabilityOptions.reliabilityThreshold + 1; i++) {
                             trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                            await trx.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
+                            await trx.getWriteStream(consts.FILE_TYPE.BIN, fileData.info.length).then(s => s.end(fileData.info));
                             await cache.endPutTransaction(trx);
                             await sleep(50);
 
-                            await cache.getFileInfo('i', fileData.guid, fileData.hash)
+                            await cache.getFileInfo(consts.FILE_TYPE.BIN, fileData.guid, fileData.hash)
                                 .then(() => { throw new Error("Expected error!"); }, err => assert(err));
                         }
                     });
@@ -310,18 +309,18 @@ describe("Cache API", () => {
                 beforeEach(async () => {
                     fileData = generateCommandData(1024, 1024);
                     const trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                    await trx.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
+                    await trx.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
                     await cache.endPutTransaction(trx);
                     await sleep(50);
                 });
 
                 it("should return a readable stream for a file that exists in the cache", () => {
-                    return cache.getFileStream('i', fileData.guid, fileData.hash)
+                    return cache.getFileStream(consts.FILE_TYPE.INFO, fileData.guid, fileData.hash)
                         .then(stream => assert(stream instanceof require('stream').Readable));
                 });
 
                 it("should return an error for a file that does not exist in the cache", () => {
-                    return cache.getFileStream('a', fileData.guid, fileData.hash)
+                    return cache.getFileStream(consts.FILE_TYPE.BIN, fileData.guid, fileData.hash)
                         .then(() => { throw new Error("Expected error!"); }, err =>  assert(err));
                 });
             });
@@ -363,12 +362,12 @@ describe("PutTransaction API", () => {
 
             describe("get manifest", () => {
                 it("should return an array of file types that were successfully written to the transaction", async () => {
-                    await trx.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
-                    await trx.getWriteStream('r', fileData.resource.length).then(s => s.end(fileData.resource));
-                    await trx.getWriteStream('a', fileData.bin.length).then(s => s.end(fileData.bin));
+                    await trx.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
+                    await trx.getWriteStream(consts.FILE_TYPE.RESOURCE, fileData.resource.length).then(s => s.end(fileData.resource));
+                    await trx.getWriteStream(consts.FILE_TYPE.BIN, fileData.bin.length).then(s => s.end(fileData.bin));
                     await trx.finalize();
                     const m = trx.manifest;
-                    ['i', 'a', 'r'].forEach((t) => assert(m.indexOf(t) >= 0));
+                    [consts.FILE_TYPE.INFO, consts.FILE_TYPE.BIN, consts.FILE_TYPE.RESOURCE].forEach((t) => assert(m.indexOf(t) >= 0));
                 });
             });
 
@@ -378,7 +377,7 @@ describe("PutTransaction API", () => {
                 });
 
                 it("should return a list of objects that represent completed files for the transaction", async () => {
-                    await trx.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
+                    await trx.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
                     await trx.finalize();
                     assert.equal(trx.files.length, 1);
                 });
@@ -386,12 +385,12 @@ describe("PutTransaction API", () => {
 
             describe("finalize", function() {
                 it("should return an error if any file was not fully written", async () => {
-                    await trx.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info.slice(0, 1)));
+                    await trx.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info.slice(0, 1)));
                     await trx.finalize().then(() => { throw new Error("Expected error!"); }, err => assert(err));
                 });
 
                 it("should return with no error and no value if the transaction was successfully finalized", async () => {
-                    await trx.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
+                    await trx.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
                     await trx.finalize();
                 });
 
@@ -417,25 +416,25 @@ describe("PutTransaction API", () => {
 
             describe("getWriteStream", function() {
                 it("should return a WritableStream for the given file type", () => {
-                    return trx.getWriteStream('i', 1)
+                    return trx.getWriteStream(consts.FILE_TYPE.INFO, 1)
                         .then(stream => assert(stream instanceof require('stream').Writable));
                 });
 
-                it("should only accept types of 'i', 'a', or 'r", async () => {
-                    await trx.getWriteStream('i', 1);
-                    await trx.getWriteStream('a', 1);
-                    await trx.getWriteStream('r', 1);
+                it("should only accept types of consts.FILE_TYPE.INFO, consts.FILE_TYPE.BIN, or 'r", async () => {
+                    await trx.getWriteStream(consts.FILE_TYPE.INFO, 1);
+                    await trx.getWriteStream(consts.FILE_TYPE.BIN, 1);
+                    await trx.getWriteStream(consts.FILE_TYPE.RESOURCE, 1);
                     await trx.getWriteStream('x', 1)
                         .then(() => { throw new Error("Expected error!"); }, err => assert(err));
                 });
 
                 it("should return an error for size equal to 0", () => {
-                    return trx.getWriteStream('i', 0)
+                    return trx.getWriteStream(consts.FILE_TYPE.INFO, 0)
                         .then(() => { throw new Error("Expected error!"); }, err => assert(err))
                 });
 
                 it("should return an error for size less than 0", () => {
-                    return trx.getWriteStream('i', -1)
+                    return trx.getWriteStream(consts.FILE_TYPE.INFO, -1)
                         .then(() => { throw new Error("Expected error!"); }, err => assert(err))
                 });
             });
@@ -448,7 +447,7 @@ describe("PutTransaction API", () => {
                 });
 
                 it("should cause files to return an empty array", async () => {
-                    await trx.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
+                    await trx.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
                     await trx.finalize();
                     assert.equal(trx.files.length, 1);
                     await trx.invalidate();
@@ -458,7 +457,7 @@ describe("PutTransaction API", () => {
 
             describe("writeFilesToPath", () => {
                 it("should copy or write file data to the specified path", async () => {
-                    await trx.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
+                    await trx.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
                     await trx.finalize();
                     const o = await tmp.dir({ unsafeCleanup: true });
                     const files = await trx.writeFilesToPath(o.path);

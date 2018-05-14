@@ -171,15 +171,15 @@ describe("Protocol", () => {
                             encodeCommand(cmd.transactionEnd), 'ascii');
 
                         await clientWrite(client, buf, test.packetSize);
-                        let stream = await cache.getFileStream('a', test.data.guid, test.data.hash);
+                        let stream = await cache.getFileStream(consts.FILE_TYPE.BIN, test.data.guid, test.data.hash);
                         let data = await readStream(stream, test.data.bin.length);
                         assert.strictEqual(test.data.bin.compare(data), 0);
 
-                        stream = await cache.getFileStream('i', test.data.guid, test.data.hash);
+                        stream = await cache.getFileStream(consts.FILE_TYPE.INFO, test.data.guid, test.data.hash);
                         data = await readStream(stream, test.data.info.length);
                         assert.strictEqual(test.data.info.compare(data), 0);
 
-                        stream = await cache.getFileStream('r', test.data.guid, test.data.hash);
+                        stream = await cache.getFileStream(consts.FILE_TYPE.RESOURCE, test.data.guid, test.data.hash);
                         data = await readStream(stream, test.data.resource.length);
                         assert.strictEqual(test.data.resource.compare(data), 0);
                     });
@@ -194,7 +194,7 @@ describe("Protocol", () => {
                         encodeCommand(cmd.transactionEnd), 'ascii');
 
                     return clientWrite(client, buf)
-                        .then(() => cache.getFileStream('a', self.data.guid, self.data.hash))
+                        .then(() => cache.getFileStream(consts.FILE_TYPE.BIN, self.data.guid, self.data.hash))
                         .then(stream => readStream(stream, self.data.bin.length))
                         .then(buffer => assert.strictEqual(buffer.compare(self.data.bin), 0));
                 });

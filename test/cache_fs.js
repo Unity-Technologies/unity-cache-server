@@ -6,6 +6,7 @@ const sleep = require('./test_utils').sleep;
 const assert = require('assert');
 const moment = require('moment');
 const helpers = require('../lib/helpers');
+const consts = require('../lib/constants');
 
 const MIN_FILE_SIZE = 1024 * 5;
 const MAX_FILE_SIZE = MIN_FILE_SIZE;
@@ -28,11 +29,11 @@ const addFileToCache = async (atime) => {
     const tmpPath = tmp.tmpNameSync();
     await fs.writeFile(tmpPath, data.bin);
     const trx = await cache.createPutTransaction(data.guid, data.hash);
-    await trx.getWriteStream('a', data.bin.length).then(s => s.end(data.bin));
+    await trx.getWriteStream(consts.FILE_TYPE.BIN, data.bin.length).then(s => s.end(data.bin));
     await cache.endPutTransaction(trx);
     await sleep(50);
     await fs.unlink(tmpPath);
-    const info = await cache.getFileInfo('a', data.guid, data.hash);
+    const info = await cache.getFileInfo(consts.FILE_TYPE.BIN, data.guid, data.hash);
     await fs.utimes(info.filePath, atime, atime);
 
     const stats = await fs.stat(info.filePath);
@@ -209,7 +210,7 @@ describe("Cache: FS", () => {
             it("should cleanup temporary files", async () => {
                 const fileData = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
                 const trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
-                await trx.getWriteStream('i', fileData.info.length).then(s => s.end(fileData.info));
+                await trx.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
                 await trx.finalize();
                 assert.equal(trx.files.length, 1);
                 const filePath = trx.files[0].file;

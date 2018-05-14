@@ -3,6 +3,7 @@ const TransactionMirror = require('../lib/server/transaction_mirror');
 const tmp = require('tmp');
 const { generateCommandData, sleep } = require('./test_utils');
 const assert = require('assert');
+const consts = require('../lib/constants');
 
 const cacheOpts = {
     cachePath: tmp.tmpNameSync({}).toString(),
@@ -14,9 +15,9 @@ const cacheOpts = {
 };
 
 const writeFileDataToCache = async (cache, fileData) => {
-    await cache._addFileToCache('i', fileData.guid, fileData.hash, fileData.info);
-    await cache._addFileToCache('a', fileData.guid, fileData.hash, fileData.bin);
-    await cache._addFileToCache('r', fileData.guid, fileData.hash, fileData.resource);
+    await cache._addFileToCache(consts.FILE_TYPE.INFO, fileData.guid, fileData.hash, fileData.info);
+    await cache._addFileToCache(consts.FILE_TYPE.BIN, fileData.guid, fileData.hash, fileData.bin);
+    await cache._addFileToCache(consts.FILE_TYPE.RESOURCE, fileData.guid, fileData.hash, fileData.resource);
 };
 
 describe("TransactionMirror", () => {
@@ -42,20 +43,20 @@ describe("TransactionMirror", () => {
 
         for(const d of fileData) {
             await writeFileDataToCache(this.sourceCache, d);
-            const trxMock = { guid: d.guid, hash: d.hash, manifest: ['i', 'a', 'r'] };
+            const trxMock = { guid: d.guid, hash: d.hash, manifest: [consts.FILE_TYPE.INFO, consts.FILE_TYPE.BIN, consts.FILE_TYPE.RESOURCE] };
             this.mirror.queueTransaction(trxMock);
         }
 
         await sleep(50);
 
         fileData.forEach(async d => {
-            let info = await this.targetCache.getFileInfo('i', d.guid, d.hash);
+            let info = await this.targetCache.getFileInfo(consts.FILE_TYPE.INFO, d.guid, d.hash);
             assert.strictEqual(info.size, d.info.length);
 
-            info = await this.targetCache.getFileInfo('r', d.guid, d.hash);
+            info = await this.targetCache.getFileInfo(consts.FILE_TYPE.RESOURCE, d.guid, d.hash);
             assert.strictEqual(info.size, d.resource.length);
 
-            info = await this.targetCache.getFileInfo('a', d.guid, d.hash);
+            info = await this.targetCache.getFileInfo(consts.FILE_TYPE.BIN, d.guid, d.hash);
             assert.strictEqual(info.size, d.bin.length);
         });
     });
