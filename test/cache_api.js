@@ -399,6 +399,20 @@ describe("PutTransaction API", () => {
                     trx.once('finalize', () => done());
                     trx.finalize();
                 });
+
+                it("should call validateHash", async () => {
+                    const spy = sinon.spy(trx, "validateHash");
+                    await trx.finalize();
+                    assert(spy.called);
+                });
+            });
+
+            describe("validateHash", function () {
+                it("should invalidate the transaction if the hash is empty (0 values)", async () => {
+                    const myTrx = await cache.createPutTransaction(fileData.guid, Buffer.alloc(consts.HASH_SIZE, 0));
+                    await myTrx.validateHash();
+                    assert(!myTrx.isValid);
+                });
             });
 
             describe("getWriteStream", function() {
