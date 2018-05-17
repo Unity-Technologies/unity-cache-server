@@ -153,13 +153,16 @@ describe("ReliabilityManager", () => {
                 const myRm = new ReliabilityManager(db, tmp.tmpNameSync(), { reliabilityThreshold: 2, multiClient: true });
                 const guid = randomBuffer(consts.GUID_SIZE);
                 const hash = randomBuffer(consts.HASH_SIZE);
-                await myRm.processTransaction(new StablePutTransaction(guid, hash));
 
                 const trx = new StablePutTransaction(guid, hash);
                 trx.clientAddress = "A";
                 await myRm.processTransaction(trx);
 
                 const entry = rm.getEntry(helpers.GUIDBufferToString(trx.guid), trx.hash.toString('hex'));
+                assert.equal(entry.state, ReliabilityManager.reliabilityStates.Pending);
+
+                trx.clientAddress = "A";
+                await myRm.processTransaction(trx);
                 assert.equal(entry.state, ReliabilityManager.reliabilityStates.Pending);
 
                 trx.clientAddress = "B";
