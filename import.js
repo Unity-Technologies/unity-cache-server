@@ -94,7 +94,7 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
                 continue;
             }
 
-            if (program.timestampCheck && stats.mtimeMs !== file.ts * 1000) {
+            if (program.timestampCheck && Math.trunc(stats.mtimeMs / 1000) !== file.ts) {
                 warns.push(`${file.path} has been modified, skipping`);
                 continue;
             }
