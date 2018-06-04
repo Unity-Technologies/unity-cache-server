@@ -27,15 +27,18 @@ function collect(val, memo) {
 }
 
 const defaultCacheModule = config.get("Cache.defaultModule");
+const defaultCachePort = config.has('Cache.port') ? config.get('Cache.port') : consts.DEFAULT_PORT;
+const defaultLogLevel = config.has('Cache.log-level') ? config.get('Cache.log-level') : consts.DEFAULT_LOG_LEVEL;
+const defaultWorkers = config.has('Cache.workers') ? config.get('Cache.workers') : consts.DEFAULT_WORKERS
 
 program.description("Unity Cache Server")
     .version(VERSION)
     .allowUnknownOption(true)
-    .option('-p, --port <n>', 'Specify the server port, only apply to new cache server', myParseInt, consts.DEFAULT_PORT)
+    .option('-p, --port <n>', 'Specify the server port, only apply to new cache server', myParseInt, defaultCachePort)
     .option('-c --cache-module [path]', 'Use cache module at specified path', defaultCacheModule)
     .option('-P, --cache-path [path]', 'Specify the path of the cache directory')
-    .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug)', myParseInt, consts.DEFAULT_LOG_LEVEL)
-    .option('-w, --workers <n>', 'Number of worker threads to spawn', zeroOrMore, consts.DEFAULT_WORKERS)
+    .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug)', myParseInt, defaultLogLevel)
+    .option('-w, --workers <n>', 'Number of worker threads to spawn', zeroOrMore, defaultWorkers)
     .option('-m --mirror [host:port]', 'Mirror transactions to another cache server. Can be repeated for multiple mirrors', collect, [])
     .option('--dump-config', 'Write the active configuration to the console')
     .option('--save-config [path]', 'Write the active configuration to the specified file and exit. Defaults to ./default.yml')

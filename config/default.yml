@@ -1,5 +1,8 @@
 Cache:
   defaultModule: "cache_fs"
+  #port: 8126
+  #workers: 2
+  #log-level: 3
   options:
     cache_ram:
       cachePath: ".cache_ram"
