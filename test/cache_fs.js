@@ -2,28 +2,47 @@ const tmp = require('tmp');
 const fs = require('fs-extra');
 const Cache = require('../lib/cache/cache_fs');
 const generateCommandData = require('./test_utils').generateCommandData;
+const sleep = require('./test_utils').sleep;
 const assert = require('assert');
 const moment = require('moment');
+const helpers = require('../lib/helpers');
+const consts = require('../lib/constants');
 
 const MIN_FILE_SIZE = 1024 * 5;
 const MAX_FILE_SIZE = MIN_FILE_SIZE;
 
 const cacheOpts = {
-    cachePath: tmp.tmpNameSync({}).toString()
+    cachePath: tmp.tmpNameSync({}).toString(),
+    persistenceOptions: {
+        autosave: false
+    },
+    highReliability: true,
+    highReliabilityOptions: {
+        reliabilityThreshold: 0
+    }
 };
 
 let cache;
 
 const addFileToCache = async (atime) => {
     const data = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
-    const tmpPath = tmp.tmpNameSync({dir: cacheOpts.cachePath});
+    const tmpPath = tmp.tmpNameSync();
     await fs.writeFile(tmpPath, data.bin);
-    const cacheFile = await cache._addFileToCache('a', data.guid, data.hash, tmpPath);
-    await fs.utimes(cacheFile, atime, atime);
+    const trx = await cache.createPutTransaction(data.guid, data.hash);
+    await trx.getWriteStream(consts.FILE_TYPE.BIN, data.bin.length).then(s => s.end(data.bin));
+    await cache.endPutTransaction(trx);
+    await sleep(50);
+    await fs.unlink(tmpPath);
+    const info = await cache.getFileInfo(consts.FILE_TYPE.BIN, data.guid, data.hash);
+    await fs.utimes(info.filePath, atime, atime);
 
-    const stats = await fs.stat(cacheFile);
+    const stats = await fs.stat(info.filePath);
     assert(moment(stats.atime).isSame(atime, 'second'), `${stats.atime} != ${atime}`);
-    return cacheFile;
+    return {
+        path: info.filePath,
+        guidStr: helpers.GUIDBufferToString(data.guid),
+        hashStr: data.hash.toString('hex')
+    };
 };
 
 describe("Cache: FS", () => {
@@ -49,9 +68,9 @@ describe("Cache: FS", () => {
 
                 await cache.cleanup(false);
 
-                assert(!await fs.pathExists(file1));
-                assert(!await fs.pathExists(file2));
-                assert(await fs.pathExists(file3));
+                assert(!await fs.pathExists(file1.path));
+                assert(!await fs.pathExists(file2.path));
+                assert(await fs.pathExists(file3.path));
             });
 
             it("should remove files that have not been accessed within a given timespan (ISO 8601 style)", async () => {
@@ -66,15 +85,15 @@ describe("Cache: FS", () => {
                 const file2 = await addFileToCache(moment().subtract(2, 'days').toDate());
                 const file3 = await addFileToCache(moment().toDate());
 
-                assert(await fs.pathExists(file1));
-                assert(await fs.pathExists(file2));
-                assert(await fs.pathExists(file3));
+                assert(await fs.pathExists(file1.path));
+                assert(await fs.pathExists(file2.path));
+                assert(await fs.pathExists(file3.path));
 
                 await cache.cleanup(false);
 
-                assert(!await fs.pathExists(file1));
-                assert(!await fs.pathExists(file2));
-                assert(await fs.pathExists(file3));
+                assert(!await fs.pathExists(file1.path));
+                assert(!await fs.pathExists(file2.path));
+                assert(await fs.pathExists(file3.path));
             });
 
             it("should reject a promise with an invalid timespan", () => {
@@ -101,22 +120,22 @@ describe("Cache: FS", () => {
                 const file2 = await addFileToCache(moment().subtract(1, 'days').toDate());
                 const file3 = await addFileToCache(moment().subtract(5, 'days').toDate());
 
-                assert(await fs.pathExists(file1));
-                assert(await fs.pathExists(file2));
-                assert(await fs.pathExists(file3));
+                assert(await fs.pathExists(file1.path));
+                assert(await fs.pathExists(file2.path));
+                assert(await fs.pathExists(file3.path));
 
                 await cache.cleanup(false);
 
-                assert(await fs.pathExists(file1));
-                assert(await fs.pathExists(file2));
-                assert(!await fs.pathExists(file3));
+                assert(await fs.pathExists(file1.path));
+                assert(await fs.pathExists(file2.path));
+                assert(!await fs.pathExists(file3.path));
 
                 opts.cleanupOptions.maxCacheSize = MIN_FILE_SIZE + 1;
                 cache._options = opts;
 
                 await cache.cleanup(false);
-                assert(await fs.pathExists(file1));
-                assert(!await fs.pathExists(file2));
+                assert(await fs.pathExists(file1.path));
+                assert(!await fs.pathExists(file2.path));
             });
 
             it("should emit events while processing files", async () => {
@@ -157,7 +176,47 @@ describe("Cache: FS", () => {
                 await cache.init(opts);
                 const file = await addFileToCache(moment().toDate());
                 cache.cleanup(true);
-                assert(await fs.pathExists(file));
+                assert(await fs.pathExists(file.path));
+            });
+
+            it("should remove versions from the reliability manager, when in high reliability mode", async () => {
+                const opts = Object.assign({}, cacheOpts);
+                opts.cleanupOptions = {
+                    expireTimeSpan: "P30D",
+                    maxCacheSize: 1
+                };
+
+                await cache.init(opts);
+                const file = await addFileToCache(moment().toDate());
+                let rmEntry = cache.reliabilityManager.getEntry(file.guidStr, file.hashStr);
+                assert(rmEntry);
+
+                await cache.cleanup(false);
+                rmEntry = cache.reliabilityManager.getEntry(file.guidStr, file.hashStr);
+                assert(!rmEntry);
+            });
+        });
+    });
+
+    describe("PutTransaction API", () => {
+
+        beforeEach(() => {
+            cache = new Cache();
+        });
+
+        afterEach(() => fs.remove(cacheOpts.cachePath));
+
+        describe("invalidate", () => {
+            it("should cleanup temporary files", async () => {
+                const fileData = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
+                const trx = await cache.createPutTransaction(fileData.guid, fileData.hash);
+                await trx.getWriteStream(consts.FILE_TYPE.INFO, fileData.info.length).then(s => s.end(fileData.info));
+                await trx.finalize();
+                assert.equal(trx.files.length, 1);
+                const filePath = trx.files[0].file;
+                assert(fs.pathExistsSync(filePath));
+                await trx.invalidate();
+                assert(!fs.pathExistsSync(filePath));
             });
         });
     });

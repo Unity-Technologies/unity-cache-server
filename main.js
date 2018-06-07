@@ -129,8 +129,7 @@ Cache.init(cacheOpts)
             }
 
             for(let i = 0; i < program.workers; i++) {
-                const worker = cluster.fork();
-                Cache.registerClusterWorker(worker);
+                cluster.fork();
             }
         }
         else {

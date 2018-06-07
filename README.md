@@ -20,6 +20,10 @@ This open-source repository is maintained separately from the Cache Server avail
   * [cache\_ram](#cache_ram)
 * [Cache Cleanup](#cache-cleanup)
 * [Mirroring](#mirroring)
+* [High Reliability Mode](#high-reliability-mode)
+  * [Background](#background)
+  * [Function](#function)
+  * [Configuration](#configuration)
 * [Unity project Library Importer](#unity-project-library-importer)
 * [Contributors](#contributors)
 * [License](#license)
@@ -185,6 +189,34 @@ Option                | Default     | Description
 --------------------- | ----------- | -----------
 queueProcessDelay     | 2000        | The period, in milliseconds, to delay the start of processing the queue, from when the first transaction is added to an empty queue. Each transaction from a client is queued after completion. It's a good idea to keep this value at or above the default value to avoid possible I/O race conditions with recently completed transactions.
 connectionIdleTimeout | 10000       | The period, in milliseconds, to keep connections to remote mirror hosts alive, after processing a queue of transactions. Queue processing is bursty. To minimize the overhead of connection setup and teardown, calibrate this value for your environment.
+
+## High Reliability Mode
+
+High Reliability Mode imposes stricter requirements on upload transactions to increase the integrity of cached data.
+
+### Background
+
+Asset versions are cached based on the Asset GUID and Asset hash reported by the client (Unity Editor). The Asset hash is calculated from the inputs to the Asset import process. The import process should produce the same binary result for a given set of inputs, but there is no guarantee that it will. Instability in the import process is typically an indication of a bug or design problem in the Asset importer.These errors can be propagated to other clients because Unity is not able to detect these instabilities before committing them to the Cache Server.
+
+### Function
+
+In the default operating mode (`highReliability` is __false__), the Cache Server accepts all transactions for all versions of an Asset from any Unity client. In this scenario, the version of an Asset can change after it is already committed and the commit can cause an incorrect or unstable import.
+
+High Reliability Mode allows the Cache Server to compare multiple transactions for the same version for binary stability before committing a version to the cache, and disallows further modifications to already committed versions. When an instability is detected, warning messages are logged and caching of the Asset is suspended until a team member uploads a new version of the Asset.
+
+Requiring multiple imports of the same Asset to ensure the stability of each Asset version is resource intensive. High Reliability Mode is primarily beneficial to developers in networked team environments, where the increased overhead of importing Assets multiple times is distributed across the entire team. The larger the team, the smaller the impact on any individual.
+
+
+### Configuration
+
+When _highReliability_ is __true__, a counter for an Asset version is incremented with each transaction that is binary identical to the previous. When the counter reaches the configured `reliabilityThreshold`, the version is committed to the cache and served. For networked team environments, setting `multiClient` to __true__ forces more than one client to commit the same transaction to increment the counter. Setting `reliabilityThreshold` to  a value of 0 or 1 disables the reliability checks, but still prevents versions from changing. For debugging purposes, setting `saveUnreliableVersionArtifacts` to __true__ isolates and saves all uploads of unstable Asset versions for later inspection and diffing.
+
+Option                                               | Default      | Description
+------------------------------------------           | ------------ | -----------
+highReliability                                      | false        | Enable high reliability mode.
+highReliabilityOptions.reliabilityThreshold          | 2            | Number of binary-stable imports of the same version required before a version is cached and served.
+highReliabilityOptions.saveUnreliableVersionArtifacts| true         | After a version is declared unreliable, save all subsequent transactions for the version for later inspection and debugging.
+highReliabilityOptions.multiClient                   | false        | Require multiple clients to upload the same binary-stable version to increment the stability factor. For example, if the same client uploads the same version twice in a row, it does not increase stability of the version.
 
 ## Unity project Library Importer
 

@@ -58,7 +58,7 @@ describe("Helper functions", () => {
 
         it("should throw an error if the address can't be resolved", () => {
             return helpers.parseAndValidateAddressString("blah", 0)
-                .then(() => { throw new Error("Expected error"); }, err => {});
+                .then(() => { throw new Error("Expected error"); }, err => assert(err));
         });
     });
 
