@@ -3,9 +3,6 @@
 Version and size numbers are sent back end forth in hex-encoding. Eg. the
 version is sent as `000000fe` over the wire (and *not* the binary `000\u00fe`).
 
-The commentary below is from reading package dumps and some poking at the
-unit-tests on the canonical server implementation.
-
 ## Version check
 
 ```
@@ -24,7 +21,7 @@ and closes the connection.
 
 ## Request cached item
 ```
-# Binary stuff
+# Asset binaries
 client --- 'ga' (id <128bit GUID><128bit HASH>) --> server
 client <-- '+a' (size <uint64>) (id <128bit GUID><128bit HASH>) + size bytes --- server (found in cache)
 client <-- '-a' (id <128bit GUID><128bit HASH>) --- server (not found in cache)
