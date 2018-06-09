@@ -35,3 +35,6 @@ Mirror:
   options:
     queueProcessDelay: 2000
     connectionIdleTimeout: 10000
+Processor:
+  options:
+    putWhitelist: []
