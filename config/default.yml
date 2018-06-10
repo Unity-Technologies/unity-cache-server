@@ -1,6 +1,8 @@
 Cache:
   defaultModule: "cache_fs"
   options:
+    processor:
+      putWhitelist: []
     cache_ram:
       cachePath: ".cache_ram"
       pageSize: 100000000
@@ -35,6 +37,3 @@ Mirror:
   options:
     queueProcessDelay: 2000
     connectionIdleTimeout: 10000
-Processor:
-  options:
-    putWhitelist: []
