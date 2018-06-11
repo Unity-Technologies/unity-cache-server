@@ -169,6 +169,7 @@ Command                          | Description
 -s, --max-cache-size <bytes>     | Override the configured maximum cache size. Files will be removed from the cache until the max cache size is satisfied, using a Least Recently Used search. A value of 0 disables this check.
 -d, --delete                     | Delete cached files that match the configured criteria. Without this, the default behavior is to dry-run which will print diagnostic information only.
 -D, --daemon <interval>          | Daemon mode. Execute the cleanup script at the given interval in seconds as a foreground process.
+-m, --low-memory                 | Run the cleanup algorithm optimized for low memory usage.
 -h, --help                       | Show usage information.
 
 ### Notes

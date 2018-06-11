@@ -37,7 +37,8 @@ program.description("Unity Cache Server - Cache Cleanup\n\n  Removes old files f
     .option('-s, --max-cache-size <bytes>', 'Override the configured maximum cache size. Files will be removed from the cache until the max cache size is satisfied, using a Least Recently Used search. A value of 0 disables this check.', myParseInt)
     .option('-d, --delete', 'Delete cached files that match the configured criteria. Without this, the default behavior is to dry-run which will print diagnostic information only.')
     .option('-D, --daemon <interval>', 'Daemon mode: execute the cleanup script at the given interval in seconds as a foreground process.', myParseInt)
-    .option('--NODE_CONFIG_DIR=<path>', 'Specify the directory to search for config files. This is equivalent to setting the NODE_CONFIG_DIR environment variable. Without this option, the built-in configuration is used.');
+    .option('--NODE_CONFIG_DIR=<path>', 'Specify the directory to search for config files. This is equivalent to setting the NODE_CONFIG_DIR environment variable. Without this option, the built-in configuration is used.')
+    .option('-m, --low-memory', 'Run the cleanup algorithm optimized for low memory usage.');
 
 program.parse(process.argv);
 
@@ -66,6 +67,10 @@ if(program.hasOwnProperty('maxCacheSize')) {
     cacheOpts.cleanupOptions.maxCacheSize = program.maxCacheSize;
 }
 
+if(program.hasOwnProperty('lowMemory')) {
+    cacheOpts.cleanupOptions.lowMemory = program.lowMemory;
+}
+
 const dryRun = !program.delete;
 const logLevel = helpers.getLogLevel();
 
@@ -82,14 +87,13 @@ cache.on('cleanup_delete_finish', data => {
     }
 });
 
-const msg = 'Gathering cache files for expiration';
 let spinner = null;
 
 if(logLevel < consts.LOG_DBG && logLevel >= consts.LOG_INFO) {
     spinner = ora({color: 'white'});
 
     cache.on('cleanup_search_progress', data => {
-        spinner.text = `${msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
+        spinner.text = `${data.msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
     });
 
     cache.on('cleanup_search_finish', () => {
@@ -98,11 +102,12 @@ if(logLevel < consts.LOG_DBG && logLevel >= consts.LOG_INFO) {
 
 } else if(logLevel === consts.LOG_DBG) {
     cache.on('cleanup_search_progress', data => {
-        const txt = `${msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
+        const txt = `${data.msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
         helpers.log(consts.LOG_DBG, txt);
     });
 }
 
+const msg = 'Gathering cache files for expiration';
 function doCleanup() {
     if (spinner) spinner.start(msg);
     cache.cleanup(dryRun)
