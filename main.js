@@ -36,12 +36,13 @@ if(Array.isArray(processorOptions.putWhitelist) && processorOptions.putWhitelist
 program.description("Unity Cache Server")
     .version(VERSION)
     .allowUnknownOption(true)
-    .option('-p, --port <n>', 'Specify the server port, only apply to new cache server', myParseInt, consts.DEFAULT_PORT)
+	.option('-p, --port <n>', 'Specify the server port, only apply to new cache server', myParseInt, consts.DEFAULT_PORT)
     .option('-c --cache-module [path]', 'Use cache module at specified path', defaultCacheModule)
     .option('-P, --cache-path [path]', 'Specify the path of the cache directory')
     .option('-l, --log-level <n>', 'Specify the level of log verbosity. Valid values are 0 (silent) through 5 (debug)', myParseInt, consts.DEFAULT_LOG_LEVEL)
     .option('-w, --workers <n>', 'Number of worker threads to spawn', zeroOrMore, consts.DEFAULT_WORKERS)
-    .option('-m --mirror [host:port]', 'Mirror transactions to another cache server. Can be repeated for multiple mirrors', collect, [])
+	.option('-m --mirror [host:port]', 'Mirror transactions to another cache server. Can be repeated for multiple mirrors', collect, [])
+	.option('--allow-ipv6', 'Allow IPv6 connections if available')
     .option('--dump-config', 'Write the active configuration to the console')
     .option('--save-config [path]', 'Write the active configuration to the specified file and exit. Defaults to ./default.yml')
     .option('--NODE_CONFIG_DIR=<path>', 'Specify the directory to search for config files. This is equivalent to setting the NODE_CONFIG_DIR environment variable. Without this option, the built-in configuration is used.');
@@ -119,7 +120,8 @@ Cache.init(cacheOpts)
     .then(mirrors => {
         const opts = {
             port: program.port,
-            mirror: mirrors
+			mirror: mirrors,
+			allowIpv6: program.allowIpv6
         };
 
         server = new Server(Cache, opts);

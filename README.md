@@ -62,6 +62,7 @@ Command                          | Description
 `-w`, `--workers <n>`            | The number of worker threads to spawn. The default is 0.
 `-m`, `--mirror [host:port]`     | Mirror transactions to another cache server. Repeat this option ofr multiple mirrors.
 `-m`, `--monitor-parent-process <n>` | Monitor a parent process and exit if it dies.
+`--allow-ipv6`                  | Allow IPv6 connections if available.
 `--dump-config`                  | Write the active configuration to the console.
 `--save-config [path]`           | Write the active configuration to the specified file and exit. Defaults to `./default.yml`.
 `--NODE_CONFIG_DIR=<path>`       | The directory to search for config files. This is equivalent to setting the `NODE_CONFIG_DIR` environment variable. If not specified, the built-in configuration is used.
