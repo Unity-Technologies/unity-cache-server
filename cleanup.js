@@ -82,14 +82,13 @@ cache.on('cleanup_delete_finish', data => {
     }
 });
 
-const msg = 'Gathering cache files for expiration';
 let spinner = null;
 
 if(logLevel < consts.LOG_DBG && logLevel >= consts.LOG_INFO) {
     spinner = ora({color: 'white'});
 
     cache.on('cleanup_search_progress', data => {
-        spinner.text = `${msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
+        spinner.text = `${data.msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
     });
 
     cache.on('cleanup_search_finish', () => {
@@ -98,11 +97,12 @@ if(logLevel < consts.LOG_DBG && logLevel >= consts.LOG_INFO) {
 
 } else if(logLevel === consts.LOG_DBG) {
     cache.on('cleanup_search_progress', data => {
-        const txt = `${msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
+        const txt = `${data.msg} (${data.deleteCount} of ${data.cacheCount} files, ${filesize(data.deleteSize)})`;
         helpers.log(consts.LOG_DBG, txt);
     });
 }
 
+const msg = 'Gathering cache files for expiration';
 function doCleanup() {
     if (spinner) spinner.start(msg);
     cache.cleanup(dryRun)
