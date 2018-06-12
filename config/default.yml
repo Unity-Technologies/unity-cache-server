@@ -21,7 +21,6 @@ Cache:
       cleanupOptions:
         expireTimeSpan: "P30D"
         maxCacheSize: 0
-        lowMemory: false
       persistence: true
       persistenceOptions:
         autosave: true
