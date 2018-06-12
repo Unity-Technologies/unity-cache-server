@@ -196,6 +196,145 @@ describe("Cache: FS", () => {
                 assert(!rmEntry);
             });
         });
+
+        describe("cleanup_low_memory", () => {
+            it("should remove files that have not been accessed within a given timespan (ASP.NET style)", async () => {
+                const opts = Object.assign({}, cacheOpts);
+                opts.cleanupOptions = {
+                    expireTimeSpan: "P1D",
+                    maxCacheSize: 0,
+                    lowMemory: true,
+                };
+
+                await cache.init(opts);
+                const file1 = await addFileToCache(moment().subtract(2, 'days').toDate());
+                const file2 = await addFileToCache(moment().subtract(2, 'days').toDate());
+                const file3 = await addFileToCache(moment().toDate());
+
+                await cache.cleanup(false);
+
+                assert(!await fs.pathExists(file1.path));
+                assert(!await fs.pathExists(file2.path));
+                assert(await fs.pathExists(file3.path));
+            });
+
+            it("should remove files that have not been accessed within a given timespan (ISO 8601 style)", async () => {
+                const opts = Object.assign({}, cacheOpts);
+                opts.cleanupOptions = {
+                    expireTimeSpan: "1.00:00:00",
+                    maxCacheSize: 0,
+                    lowMemory: true,
+                };
+
+                await cache.init(opts);
+                const file1 = await addFileToCache(moment().subtract(2, 'days').toDate());
+                const file2 = await addFileToCache(moment().subtract(2, 'days').toDate());
+                const file3 = await addFileToCache(moment().toDate());
+
+                assert(await fs.pathExists(file1.path));
+                assert(await fs.pathExists(file2.path));
+                assert(await fs.pathExists(file3.path));
+
+                await cache.cleanup(false);
+
+                assert(!await fs.pathExists(file1.path));
+                assert(!await fs.pathExists(file2.path));
+                assert(await fs.pathExists(file3.path));
+            });
+
+            it("should remove files in least-recently-used order until the overall cache size is lower than a given threshold", async () => {
+                const opts = Object.assign({}, cacheOpts);
+                opts.cleanupOptions = {
+                    expireTimeSpan: "P30D",
+                    maxCacheSize: MIN_FILE_SIZE * 2 + 1,
+                    lowMemory: true,
+                };
+
+                await cache.init(opts);
+                const file1 = await addFileToCache(moment().toDate());
+                const file2 = await addFileToCache(moment().subtract(1, 'days').toDate());
+                const file3 = await addFileToCache(moment().subtract(5, 'days').toDate());
+
+                assert(await fs.pathExists(file1.path));
+                assert(await fs.pathExists(file2.path));
+                assert(await fs.pathExists(file3.path));
+
+                await cache.cleanup(false);
+
+                assert(await fs.pathExists(file1.path));
+                assert(await fs.pathExists(file2.path));
+                assert(!await fs.pathExists(file3.path));
+
+                opts.cleanupOptions.maxCacheSize = MIN_FILE_SIZE + 1;
+                cache._options = opts;
+
+                await cache.cleanup(false);
+
+                assert(await fs.pathExists(file1.path));
+                assert(!await fs.pathExists(file2.path));
+            });
+
+            it("should emit events while processing files", async () => {
+                const opts = Object.assign({}, cacheOpts);
+                opts.cleanupOptions = {
+                    expireTimeSpan: "P30D",
+                    maxCacheSize: 1,
+                    lowMemory: true,
+                };
+
+                await cache.init(opts);
+                await addFileToCache(moment().toDate());
+
+                let cleanup_search_progress = false;
+                let cleanup_search_finish = false;
+                let cleanup_delete_item = false;
+                let cleanup_delete_finish = false;
+
+                cache.on('cleanup_search_progress', () => cleanup_search_progress = true)
+                    .on('cleanup_search_finish', () => cleanup_search_finish = true)
+                    .on('cleanup_delete_item', () => cleanup_delete_item = true)
+                    .on('cleanup_delete_finish', () => cleanup_delete_finish = true);
+
+                return cache.cleanup(false).then(() => {
+                    assert(cleanup_search_progress);
+                    assert(cleanup_search_finish);
+                    assert(cleanup_delete_item);
+                    assert(cleanup_delete_finish);
+                });
+            });
+
+            it("should not delete any files if the dryRun option is true", async () => {
+                const opts = Object.assign({}, cacheOpts);
+                opts.cleanupOptions = {
+                    expireTimeSpan: "P30D",
+                    maxCacheSize: 1,
+                    lowMemory: true,
+                };
+
+                await cache.init(opts);
+                const file = await addFileToCache(moment().toDate());
+                cache.cleanup(true);
+                assert(await fs.pathExists(file.path));
+            });
+
+            it("should remove versions from the reliability manager, when in high reliability mode", async () => {
+                const opts = Object.assign({}, cacheOpts);
+                opts.cleanupOptions = {
+                    expireTimeSpan: "P30D",
+                    maxCacheSize: 1,
+                    lowMemory: true,
+                };
+
+                await cache.init(opts);
+                const file = await addFileToCache(moment().toDate());
+                let rmEntry = cache.reliabilityManager.getEntry(file.guidStr, file.hashStr);
+                assert(rmEntry);
+
+                await cache.cleanup(false);
+                rmEntry = cache.reliabilityManager.getEntry(file.guidStr, file.hashStr);
+                assert(!rmEntry);
+            });
+        });
     });
 
     describe("PutTransaction API", () => {
