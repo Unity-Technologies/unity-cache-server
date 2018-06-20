@@ -181,4 +181,27 @@ describe("Helper functions", () => {
             });
         });
     });
+
+    describe("insertSorted", () => {
+        it("should insert an element into the correct position in an array", async () => {
+            let arr = [1, 2, 4, 5];
+            arr = helpers.insertSorted(3, arr, (a, b) => {
+                if (a === b) return 0;
+                return a < b ? -1 : 1
+            });
+
+            assert.equal(arr[2], 3);
+
+        });
+        it("should insert an element into the correct position in an empty array", async () => {
+            let arr = [];
+            arr = helpers.insertSorted(3, arr, (a, b) => {
+                if (a === b) return 0;
+                return a < b ? -1 : 1
+            });
+
+            assert.equal(arr[0], 3);
+
+        });
+    });
 });
