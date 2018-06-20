@@ -37,3 +37,6 @@ Mirror:
   options:
     queueProcessDelay: 2000
     connectionIdleTimeout: 10000
+Server:
+  options:
+    allowIpv6: false
