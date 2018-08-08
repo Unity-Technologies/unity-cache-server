@@ -28,6 +28,11 @@ function collect(val, memo) {
 
 const defaultCacheModule = config.get("Cache.defaultModule");
 
+const processorOptions = config.get("Cache.options.processor");
+if(Array.isArray(processorOptions.putWhitelist) && processorOptions.putWhitelist.length){
+    helpers.log(consts.LOG_INFO, `PUT whitelist: ${processorOptions.putWhitelist}`);
+};
+
 program.description("Unity Cache Server")
     .version(VERSION)
     .allowUnknownOption(true)
@@ -114,7 +119,8 @@ Cache.init(cacheOpts)
     .then(mirrors => {
         const opts = {
             port: program.port,
-            mirror: mirrors
+            mirror: mirrors,
+            allowIpv6: config.has("Server.options.allowIpv6") ? config.get("Server.options.allowIpv6") : false
         };
 
         server = new Server(Cache, opts);
