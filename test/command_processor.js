@@ -9,67 +9,67 @@ describe("CommandProcessor", () => {
         });
 
         it("should implement PUT when whitelisted", async () => {
-            cmdProc._whitelistEmpty = false;
-            cmdProc._putWhitelist = ["127.0.0.1"];
+            this.cmdProc._whitelistEmpty = false;
+            this.cmdProc._putWhitelist = ["127.0.0.1"];
 
-            cmdProc._trx = new PutTransaction();
-            cmdProc._trx.clientAddress = "127.0.0.1";
-            const spy = sinon.spy(cmdProc._trx, "getWriteStream");
+            this.cmdProc._trx = new PutTransaction();
+            this.cmdProc._trx.clientAddress = "127.0.0.1";
+            const spy = sinon.spy(this.cmdProc._trx, "getWriteStream");
 
-            const p = cmdProc._onPut("a", 999);
+            const p = this.cmdProc._onPut("a", 999);
             p.catch(function () {});
 
             assert(spy.called)     
         });
 
         it("should implement PUT when whitelisted (multiple)", async () => {
-            cmdProc._whitelistEmpty = false;
-            cmdProc._putWhitelist = ["127.0.0.6", "127.0.0.3", "127.0.0.1"];
+            this.cmdProc._whitelistEmpty = false;
+            this.cmdProc._putWhitelist = ["127.0.0.6", "127.0.0.3", "127.0.0.1"];
 
-            cmdProc._trx = new PutTransaction();
-            cmdProc._trx.clientAddress = "127.0.0.1";
-            const spy = sinon.spy(cmdProc._trx, "getWriteStream");
+            this.cmdProc._trx = new PutTransaction();
+            this.cmdProc._trx.clientAddress = "127.0.0.1";
+            const spy = sinon.spy(this.cmdProc._trx, "getWriteStream");
 
-            const p = cmdProc._onPut("a", 999);
+            const p = this.cmdProc._onPut("a", 999);
             p.catch(function () {});
 
             assert(spy.called)     
         });
 
         it("should implement PUT when whitelist empty", async () => {
-            cmdProc._whitelistEmpty = true;
-            cmdProc._putWhitelist = [];
+            this.cmdProc._whitelistEmpty = true;
+            this.cmdProc._putWhitelist = [];
 
-            cmdProc._trx = new PutTransaction();
-            cmdProc._trx.clientAddress = "127.0.0.1";
-            const spy = sinon.spy(cmdProc._trx, "getWriteStream");
+            this.cmdProc._trx = new PutTransaction();
+            this.cmdProc._trx.clientAddress = "127.0.0.1";
+            const spy = sinon.spy(this.cmdProc._trx, "getWriteStream");
 
-            const p = cmdProc._onPut("a", 999);
+            const p = this.cmdProc._onPut("a", 999);
             p.catch(function () {});
 
             assert(spy.called)     
         });
 
         it("should not implement PUT when not whitelisted", async () => {
-            cmdProc._whitelistEmpty = false;
-            cmdProc._putWhitelist = ["127.0.0.1"];
+            this.cmdProc._whitelistEmpty = false;
+            this.cmdProc._putWhitelist = ["127.0.0.1"];
 
-            cmdProc._trx = new PutTransaction();
-            cmdProc._trx.clientAddress = "127.0.0.2";
+            this.cmdProc._trx = new PutTransaction();
+            this.cmdProc._trx.clientAddress = "127.0.0.2";
 
-            await cmdProc._onPut("a", 999);
-            assert.strictEqual(cmdProc._writeHandler, cmdProc._writeHandlers.none);        
+            await this.cmdProc._onPut("a", 999);
+            assert.strictEqual(this.cmdProc._writeHandler, this.cmdProc._writeHandlers.none);        
         });
 
         it("should not implement PUT when not whitelisted (multiple)", async () => {
-            cmdProc._whitelistEmpty = false;
-            cmdProc._putWhitelist = ["127.0.0.6", "127.0.0.3", "127.0.0.1"];
+            this.cmdProc._whitelistEmpty = false;
+            this.cmdProc._putWhitelist = ["127.0.0.6", "127.0.0.3", "127.0.0.1"];
 
-            cmdProc._trx = new PutTransaction();
-            cmdProc._trx.clientAddress = "127.0.0.2";
+            this.cmdProc._trx = new PutTransaction();
+            this.cmdProc._trx.clientAddress = "127.0.0.2";
 
-            await cmdProc._onPut("a", 999);
-            assert.strictEqual(cmdProc._writeHandler, cmdProc._writeHandlers.none);        
+            await this.cmdProc._onPut("a", 999);
+            assert.strictEqual(this.cmdProc._writeHandler, this.cmdProc._writeHandlers.none);        
         });
     });
 });
