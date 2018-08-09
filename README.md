@@ -1,4 +1,4 @@
-#  Cache Server v6.0 [![Build Status](https://travis-ci.org/Unity-Technologies/unity-cache-server.svg?branch=master)](https://travis-ci.org/Unity-Technologies/unity-cache-server) [![Coverage Status](https://coveralls.io/repos/github/Unity-Technologies/unity-cache-server/badge.svg)](https://coveralls.io/github/Unity-Technologies/unity-cache-server)
+#  Cache Server v6.1 [![Build Status](https://travis-ci.org/Unity-Technologies/unity-cache-server.svg?branch=master)](https://travis-ci.org/Unity-Technologies/unity-cache-server) [![Coverage Status](https://coveralls.io/repos/github/Unity-Technologies/unity-cache-server/badge.svg)](https://coveralls.io/github/Unity-Technologies/unity-cache-server)
 > The Unity Cache Server, optimized for locally networked team environments.
 
 ## Overview
@@ -12,8 +12,8 @@ This open-source repository is maintained separately from the Cache Server avail
     * [Install from npm registry](#install-from-npm-registry)
     * [Install from GitHub source](#install-from-github-source)
 * [Usage](#usage)
-* [Options](#options)
 * [Configuration files](#configuration-files)
+  *[General Options](#general-options)
 * [Client Configuration](#client-configuration)
 * [Cache Modules](#cache-modules)
   * [cache\_fs (default)](#cache_fs-default)
@@ -73,6 +73,11 @@ The `config/default.yml` file contains configuration values for the cache module
 
 By default, running `unity-cache-server` uses the built-in configuration file. To start Cache Server using a custom config file, save the current config to a new file and then use the `--NODE_CONFIG_DIR` option to override the location where the cache server will look for your config file(s).
 
+### General Options
+Option                              | Default     | Description
+----------------------------------- | ----------- | -----------
+Cache.options.processor.putWhitelist|[]           | Only allow PUT transactions (uploads) from the specified array of IP addresses (string values)
+Server.options.allowIPv6            |false        | Listen for client connections on both IPv4 and IPv6
 #### Examples (Mac/Linux)
 
 1) `mkdir config`
