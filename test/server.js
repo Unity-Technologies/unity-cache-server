@@ -72,8 +72,8 @@ describe("Server common", function() {
         const ipv6Server = new CacheServer(cache, {port: 0, allowIpv6: true});
 
         before(function () {  
-            var interfaces = os.networkInterfaces();
-            var ipv6Available = false;
+            const interfaces = os.networkInterfaces();
+            let ipv6Available = false;
             Object.keys(interfaces).forEach(function (interfaceName){
                 interfaces[interfaceName].forEach(function (address){
                     if(address.family === "IPv6"){
@@ -95,7 +95,7 @@ describe("Server common", function() {
         });
     
         it("should bind to ipv6 when allowed", function(done) {
-            var serverAddress = ipv6Server._server.address();
+            const serverAddress = ipv6Server._server.address();
             assert.strictEqual(serverAddress.family, "IPv6");
             done();
         });
@@ -113,7 +113,7 @@ describe("Server common", function() {
         });
 
         it("should bind to ipv4 when ipv6 not allowed", function(done) {
-            var serverAddress = ipv4Server._server.address();
+            const serverAddress = ipv4Server._server.address();
             assert.strictEqual(serverAddress.family, "IPv4");
             done();
         });
