@@ -1,3 +1,5 @@
+require('./test_init');
+
 const loki = require('lokijs');
 const tmp = require('tmp-promise');
 const randomBuffer = require('./test_utils').randomBuffer;

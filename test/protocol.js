@@ -1,3 +1,5 @@
+require('./test_init');
+
 const assert = require('assert');
 const crypto = require('crypto');
 const helpers = require('../lib/helpers');
@@ -37,6 +39,7 @@ const test_modules = [
                 reliabilityThreshold: 0
             },
             persistenceOptions: {
+                autosave: false,
                 adapter: new loki.LokiMemoryAdapter()
             }
         }
@@ -49,6 +52,9 @@ const test_modules = [
             highReliability: true,
             highReliabilityOptions: {
                 reliabilityThreshold: 0
+            },
+            persistenceOptions: {
+                autosave: false
             }
         }
     }
@@ -57,10 +63,6 @@ const test_modules = [
 describe("Protocol", () => {
     test_modules.forEach(module => {
         describe(module.name, function() {
-
-            beforeEach(() => {
-                helpers.setLogger(() => {});
-            });
 
             before(async () => {
                 /** @type {CacheBase} **/
@@ -74,8 +76,8 @@ describe("Protocol", () => {
                 await server.start(err => assert(!err, `Cache Server reported error!  ${err}`));
             });
 
-            after(() => {
-                server.stop();
+            after(async () => {
+                await server.stop();
                 module.tmpDir.removeCallback();
             });
 
@@ -142,6 +144,8 @@ describe("Protocol", () => {
                     await clientWrite(client, helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 });
 
+                afterEach(() => client.end());
+
                 it("should close the socket on an invalid PUT type", (done) => {
                     expectLog(client, /Unrecognized command/i, done);
                     const buf = Buffer.from(
@@ -185,7 +189,7 @@ describe("Protocol", () => {
                     });
                 });
 
-                it("should not allow replacing files for a version that already exists", () => {
+                it("should not allow replacing files for a version that already exists", async () => {
                     const newData = Buffer.from(crypto.randomBytes(self.data.bin.length).toString('ascii'), 'ascii');
 
                     const buf = Buffer.from(
@@ -193,10 +197,10 @@ describe("Protocol", () => {
                         encodeCommand(cmd.putAsset, null, null, newData) +
                         encodeCommand(cmd.transactionEnd), 'ascii');
 
-                    return clientWrite(client, buf)
-                        .then(() => cache.getFileStream(consts.FILE_TYPE.BIN, self.data.guid, self.data.hash))
-                        .then(stream => readStream(stream, self.data.bin.length))
-                        .then(buffer => assert.strictEqual(buffer.compare(self.data.bin), 0));
+                    await clientWrite(client, buf);
+                    const stream = await cache.getFileStream(consts.FILE_TYPE.BIN, self.data.guid, self.data.hash);
+                    const data = await readStream(stream, self.data.bin.length);
+                    assert.strictEqual(data.compare(self.data.bin), 0);
                 });
             });
 
@@ -227,6 +231,8 @@ describe("Protocol", () => {
                     // to other request data in the tests below.
                     await clientWrite(client, helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 });
+
+                afterEach(() => client.end());
 
                 it("should close the socket on an invalid GET type", (done) => {
                     expectLog(client, /Unrecognized command/i, done);

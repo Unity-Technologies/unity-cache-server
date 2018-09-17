@@ -1,3 +1,5 @@
+require('./test_init');
+
 const assert = require('assert');
 const sinon = require('sinon');
 const { CommandProcessor, CacheBase , PutTransaction } = require('../lib');

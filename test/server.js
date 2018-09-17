@@ -1,3 +1,5 @@
+require('./test_init');
+
 const assert = require('assert');
 const net = require('net');
 const os = require('os');
@@ -15,10 +17,6 @@ let client;
 
 describe("Server common", function() {
 
-    beforeEach(function() {
-        helpers.setLogger(() => {});
-    });
-
     before(function () {
         return server.start(err => assert(!err, `Cache Server reported error! ${err}`));
     });
@@ -32,6 +30,8 @@ describe("Server common", function() {
         beforeEach(function (done) {
             client = net.connect({port: server.port}, done);
         });
+
+        afterEach(() => client.end());
 
         it("should echo the version if supported", function (done) {
             client.on('data', function (data) {
@@ -129,7 +129,7 @@ describe("Server common", function() {
                 });
 
                 client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
-                client.write(cmd.quit);
+                client.end(cmd.quit);
             });
         });
 
@@ -142,7 +142,7 @@ describe("Server common", function() {
                 });
 
                 client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
-                client.write('xx');
+                client.end('xx');
             });
         });
     })
