@@ -8,18 +8,31 @@ const consts = require('../lib/constants');
 const generateCommandData = require('./test_utils').generateCommandData;
 
 describe("Client", () => {
-    this.getClient = () => {
-        return new Client("127.0.0.1", 9999);
-    };
+    
+    beforeEach(() => {
+        this._client = null;
+        this._server = null;
+    });
 
-    this.getConnectedClient = async (onConnect) => {
+    afterEach(async () => {
+        if(this._client) { await this._client.quit(); }
+        if(this._server) { await this._server.close(); }
+    });
+
+    this.initClientServer = async (onConnect) => {
+        const self = this;
         return new Promise((resolve) => {
-            const s = net.createServer(socket => onConnect(socket));
-            s.listen(0, "0.0.0.0", () => {
-                const a = s.address();
-                resolve({server: s, client: new Client(a.address, a.port)});
+            self._server = net.createServer(socket => onConnect(socket));
+            self._server.listen(0, "0.0.0.0", () => {
+                const a = self._server.address();
+                self._client = new Client(a.address, a.port);
+                resolve();
             });
         });
+    };
+
+    this.getClient = () => {
+        return new Client("127.0.0.1", 9999);
     };
 
     describe("close", () => {
@@ -30,10 +43,9 @@ describe("Client", () => {
 
     describe("connect", () => {
         it("should return the client object if called one or more times", async () => {
-            const data = await this.getConnectedClient(() => {});
-            assert.strictEqual(await data.client.connect(), data.client);
-            assert.strictEqual(await data.client.connect(), data.client);
-            data.server.close();
+            await this.initClientServer(() => {});
+            assert.strictEqual(await this._client.connect(), this._client);
+            assert.strictEqual(await this._client.connect(), this._client);
         });
     });
 
@@ -76,9 +88,8 @@ describe("Client", () => {
 
         it("should send the given buffer to the server", (done) => {
             const data = generateCommandData(256, 256);
-            let client, server;
 
-            this.getConnectedClient(socket => {
+            this.initClientServer(socket => {
                 socket.pipe(new WritableStream({
                     write(chunk, encoding, callback) {
                         const len = consts.VERSION_SIZE + consts.CMD_SIZE + consts.SIZE_SIZE;
@@ -92,10 +103,9 @@ describe("Client", () => {
                     }
                 }));
             })
-                .then(data => { client = data.client; server = data.server; return client.connect(); })
-                .then(() => client.putFile(Client.fileTypes.BIN, data.guid, data.hash, data.bin, data.bin.length))
-                .then(() => client.quit())
-                .then(() => server.close());
+                .then(() => this._client.connect())
+                .then(() => this._client.putFile(Client.fileTypes.BIN, data.guid, data.hash, data.bin, data.bin.length))
+                .then(() => this._client.quit());
         });
     });
 });
