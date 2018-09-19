@@ -50,6 +50,20 @@ describe("Helper functions", () => {
             assert.strictEqual(result.port, 0);
         });
 
+        it("should return the same IP address passed in if already in ip v4 format", async () => {
+            const result = await helpers.parseAndValidateAddressString("1.2.3.4", 1234);
+            assert.equal(result.host, "1.2.3.4");
+            assert.strictEqual(result.port, 1234);
+        });
+
+        it("should throw an error if address in ip v6 format", async () => {
+            await helpers.parseAndValidateAddressString("2001::4860::4860::8888", 0)
+                .then(() => { throw new Error("Expected error"); }).catch(err => assert(err));
+
+            await helpers.parseAndValidateAddressString("2001:db8:0:0:0:0:2:1", 0)
+                .then(() => { throw new Error("Expected error"); }).catch(err => assert(err));
+        });
+
         it("should parse an address:port string", async () => {
             const result = await helpers.parseAndValidateAddressString("localhost:1234", 0);
             assert.equal(result.host, "127.0.0.1");

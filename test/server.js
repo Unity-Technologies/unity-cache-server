@@ -10,7 +10,6 @@ const Cache = require('../lib/cache/cache_base').CacheBase;
 const sleep = require('./test_utils').sleep;
 const cmd = require('./test_utils').cmd;
 
-helpers.setLogger(()=>{});
 const cache = new Cache();
 const server = new CacheServer(cache, {port: 0});
 let client;
