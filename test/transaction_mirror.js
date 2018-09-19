@@ -42,7 +42,6 @@ describe("TransactionMirror", () => {
         await this.sourceCache.shutdown();
         await this.targetCache.shutdown();
         await this.targetServer.stop();
-
     });
 
     it("should mirror all queued transactions to the target Cache Server", async () => {
