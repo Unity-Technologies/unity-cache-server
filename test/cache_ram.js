@@ -1,3 +1,5 @@
+require('./test_init');
+
 const tmp = require('tmp');
 const fs = require('fs-extra');
 const Cache = require('../lib/cache/cache_ram');
@@ -140,9 +142,9 @@ describe("Cache: RAM", () => {
 
         });
 
-        afterEach(async () => {
+        afterEach(() => {
             cache._clearCache();
-            await fs.remove(opts.cachePath);
+            return fs.remove(opts.cachePath);
         });
 
         describe("_serialize", () => {

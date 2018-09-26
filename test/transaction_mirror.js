@@ -1,3 +1,5 @@
+require('./test_init');
+
 const { Server, CacheRAM } = require('../lib');
 const TransactionMirror = require('../lib/server/transaction_mirror');
 const tmp = require('tmp');
@@ -25,14 +27,21 @@ describe("TransactionMirror", () => {
     before(async () => {
         this.sourceCache = new CacheRAM();
         this.targetCache = new CacheRAM();
+
         await this.sourceCache.init(cacheOpts);
         await this.targetCache.init(cacheOpts);
 
         this.targetServer = new Server(this.targetCache, {port: 0});
         await this.targetServer.start(err => assert(!err, `Server reported error! ${err}`));
-        const opts = { host: 'localhost', port: this.targetServer.port };
+        const opts = { host: 'localhost', port: this.targetServer.port, idleTimeout: 100 };
         this.mirror = new TransactionMirror(opts, this.sourceCache);
         this.mirror._queueProcessDelay = 1;
+    });
+
+    after(async () => {
+        await this.sourceCache.shutdown();
+        await this.targetCache.shutdown();
+        await this.targetServer.stop();
     });
 
     it("should mirror all queued transactions to the target Cache Server", async () => {

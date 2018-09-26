@@ -6,3 +6,5 @@ node_modules/
 coverage/
 local-production.yml
 .cache*/
+Dockerfile*
+.dockerignore

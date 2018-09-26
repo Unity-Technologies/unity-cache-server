@@ -1,3 +1,5 @@
+require('./test_init');
+
 const tmp = require('tmp');
 const fs = require('fs-extra');
 const Cache = require('../lib/cache/cache_fs');

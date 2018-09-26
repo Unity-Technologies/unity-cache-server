@@ -1,3 +1,5 @@
+require('./test_init');
+
 const assert = require('assert');
 const tmp = require('tmp-promise');
 const loki = require('lokijs');
@@ -18,6 +20,7 @@ const test_modules = [
             pageSize: 1024 * 1024,
             minFreeBlockSize: 1024,
             persistenceOptions: {
+                autosave: false,
                 adapter: new loki.LokiMemoryAdapter()
             },
             highReliability: false
@@ -28,7 +31,10 @@ const test_modules = [
         path: "../lib/cache/cache_fs",
         options: {
             cachePath: tmp.tmpNameSync({}),
-            highReliability: false
+            highReliability: false,
+            persistenceOptions: {
+                autosave: false
+            }
         }
     }
 ];
@@ -44,9 +50,7 @@ describe("Cache API", () => {
                 cache = new CacheModule();
             });
 
-            after(() => {
-                return fs.remove(module.options.cachePath);
-            });
+            after(() => fs.remove(module.options.cachePath));
 
             describe("static get properties", () => {
                 it("should return an object with common property values", () => {
@@ -340,9 +344,7 @@ describe("PutTransaction API", () => {
                 fileData = generateCommandData(1024, 1024);
             });
 
-            after(() => {
-                return fs.remove(module.options.cachePath);
-            });
+            after(() => fs.remove(module.options.cachePath));
 
             beforeEach( async () => {
                 trx = await cache.createPutTransaction(fileData.guid, fileData.hash);

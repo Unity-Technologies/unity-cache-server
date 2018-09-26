@@ -1,3 +1,5 @@
+require('./test_init');
+
 const tmp = require('tmp');
 const fs = require('fs-extra');
 const { CacheBase, PutTransaction } = require('../lib/cache/cache_base');
@@ -86,9 +88,7 @@ describe("Cache: Base Class", () => {
 
     describe("init", () => {
 
-        after(() => {
-            return fs.remove(opts.cachePath);
-        });
+        after(() => fs.remove(opts.cachePath));
 
         it("should create the cache working directory if it doesn't exist", () => {
             return cache.init(opts)

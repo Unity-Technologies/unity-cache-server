@@ -1,3 +1,5 @@
+require('./test_init');
+
 const assert = require('assert');
 const net = require('net');
 const os = require('os');
@@ -8,16 +10,11 @@ const Cache = require('../lib/cache/cache_base').CacheBase;
 const sleep = require('./test_utils').sleep;
 const cmd = require('./test_utils').cmd;
 
-helpers.setLogger(()=>{});
 const cache = new Cache();
 const server = new CacheServer(cache, {port: 0});
 let client;
 
 describe("Server common", function() {
-
-    beforeEach(function() {
-        helpers.setLogger(() => {});
-    });
 
     before(function () {
         return server.start(err => assert(!err, `Cache Server reported error! ${err}`));
@@ -32,6 +29,8 @@ describe("Server common", function() {
         beforeEach(function (done) {
             client = net.connect({port: server.port}, done);
         });
+
+        afterEach(() => client.end());
 
         it("should echo the version if supported", function (done) {
             client.on('data', function (data) {
@@ -72,8 +71,8 @@ describe("Server common", function() {
         const ipv6Server = new CacheServer(cache, {port: 0, allowIpv6: true});
 
         before(function () {  
-            var interfaces = os.networkInterfaces();
-            var ipv6Available = false;
+            const interfaces = os.networkInterfaces();
+            let ipv6Available = false;
             Object.keys(interfaces).forEach(function (interfaceName){
                 interfaces[interfaceName].forEach(function (address){
                     if(address.family === "IPv6"){
@@ -95,7 +94,7 @@ describe("Server common", function() {
         });
     
         it("should bind to ipv6 when allowed", function(done) {
-            var serverAddress = ipv6Server._server.address();
+            const serverAddress = ipv6Server._server.address();
             assert.strictEqual(serverAddress.family, "IPv6");
             done();
         });
@@ -113,7 +112,7 @@ describe("Server common", function() {
         });
 
         it("should bind to ipv4 when ipv6 not allowed", function(done) {
-            var serverAddress = ipv4Server._server.address();
+            const serverAddress = ipv4Server._server.address();
             assert.strictEqual(serverAddress.family, "IPv4");
             done();
         });
@@ -129,7 +128,7 @@ describe("Server common", function() {
                 });
 
                 client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
-                client.write(cmd.quit);
+                client.end(cmd.quit);
             });
         });
 
@@ -142,7 +141,7 @@ describe("Server common", function() {
                 });
 
                 client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
-                client.write('xx');
+                client.end('xx');
             });
         });
     })
