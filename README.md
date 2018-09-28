@@ -60,7 +60,7 @@ Command                          | Description
 `-P`, `--cache-path [path]`      | The path of the cache directory.
 `-l`, `--log-level <n>`          | The level of log verbosity. Valid values are 0 (silent) through 5 (debug). The default is 3.
 `-w`, `--workers <n>`            | The number of worker threads to spawn. The default is 0.
-`-m`, `--mirror [host:port]`     | Mirror transactions to another cache server. Repeat this option ofr multiple mirrors.
+`-m`, `--mirror [host:port]`     | Mirror transactions to another cache server. Repeat this option for multiple mirrors.
 `-m`, `--monitor-parent-process <n>` | Monitor a parent process and exit if it dies.
 `--dump-config`                  | Write the active configuration to the console.
 `--save-config [path]`           | Write the active configuration to the specified file and exit. Defaults to `./default.yml`.
