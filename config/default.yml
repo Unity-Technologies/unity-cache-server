@@ -1,4 +1,6 @@
 Cache:
+  ## the cachePath key, if set, will override 'cachePath' within the individual module options below
+  #cachePath: ".cache"
   defaultModule: "cache_fs"
   options:
     processor:
@@ -34,9 +36,13 @@ Cache:
         saveUnreliableVersionArtifacts: true
         multiClient: false
 Mirror:
+  addresses: []
   options:
     queueProcessDelay: 2000
     connectionIdleTimeout: 10000
 Server:
+  port: 8126
   options:
     allowIpv6: false
+Global:
+  logLevel: 3

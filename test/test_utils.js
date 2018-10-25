@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const consts = require('../lib/constants');
 const helpers = require('../lib/helpers');
 const net = require('net');
+const path =  require('path');
 
 const MIN_BLOB_SIZE = 64;
 const MAX_BLOB_SIZE = 2048;
@@ -146,6 +147,26 @@ exports.getClientPromise = function(port) {
             reject(err);
         });
     });
+};
+
+exports.purgeConfig = function() {
+    function directory() {
+        if (process.env.NODE_CONFIG_DIR) {
+            return process.env.NODE_CONFIG_DIR;
+        }
+
+        return path.join(process.cwd(), 'config');
+    }
+
+    for (const fileName in require.cache) {
+        if (-1 === fileName.indexOf(directory())) {
+            continue;
+        }
+
+        delete require.cache[fileName];
+    }
+
+    delete require.cache[require.resolve('config')];
 };
 
 exports.cmd = {
