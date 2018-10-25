@@ -33,7 +33,7 @@ const addFileToCache = async (atime) => {
     const trx = await cache.createPutTransaction(data.guid, data.hash);
     await trx.getWriteStream(consts.FILE_TYPE.BIN, data.bin.length).then(s => s.end(data.bin));
     await cache.endPutTransaction(trx);
-    await sleep(50);
+    await sleep(100);
     await fs.unlink(tmpPath);
     const info = await cache.getFileInfo(consts.FILE_TYPE.BIN, data.guid, data.hash);
     await fs.utimes(info.filePath, atime, atime);
