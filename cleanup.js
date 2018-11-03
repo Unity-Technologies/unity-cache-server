@@ -31,13 +31,14 @@ const optionMap = {
     },
     expireTimeSpan: {
         flags: "-e, --expire-time-span <timeSpan>",
-        description: "Override the configured maximum cache size. Files will be removed from the cache until the max cache size is satisfied, using a Least Recently Used search. A value of 0 disables this check.",
+        description: "Override the configured file expiration timespan. Both ASP.NET style time spans (days.minutes:hours:seconds, e.g. \'15.23:59:59\') and ISO 8601 time spans (e.g. \'P15DT23H59M59S\') are supported.', parseTimeSpan)",
         validator: parseTimeSpan
     },
     maxCacheSize: {
         flags: "-s, --max-cache-size <bytes>",
         description: "Override the configured maximum cache size. Files will be removed from the cache until the max cache size is satisfied, using a Least Recently Used search. A value of 0 disables this check.",
-        validator: parseInt
+        validator: parseInt,
+        default: 0
     },
     delete: {
         flags: "-d, --delete",
@@ -54,12 +55,12 @@ const optionMap = {
 cmd.description("Unity Cache Server - Cache Cleanup\n\n  Removes old files from supported cache modules.").version(version).allowUnknownOption(true);
 UnityCacheServer.handleCommandLine(cmd, optionMap);
 
-const cacheOpts = {};
-if(cmd.hasOwnProperty('expireTimeSpan')) {
+const cacheOpts = { cleanupOptions: {} };
+if(cmd.expireTimeSpan !== null) {
     cacheOpts.cleanupOptions.expireTimeSpan = cmd.expireTimeSpan;
 }
 
-if(cmd.hasOwnProperty('maxCacheSize')) {
+if(cmd.maxCacheSize > 0) {
     cacheOpts.cleanupOptions.maxCacheSize = cmd.maxCacheSize;
 }
 
@@ -67,5 +68,9 @@ const dryRun = !cmd.delete;
 const daemon = cmd.hasOwnProperty('daemon') ? cmd.daemon : 0;
 
 UnityCacheServer.initCache(cacheOpts)
-    .then(() => UnityCacheServer.cleanup(dryRun, daemon))
-    .catch(() => process.exit(1));
+    .then(() => UnityCacheServer.cleanup(dryRun, daemon * 1000))
+    .then(() => process.exit(0))
+    .catch((err) => {
+        console.log(err);
+        process.exit(1);
+    });

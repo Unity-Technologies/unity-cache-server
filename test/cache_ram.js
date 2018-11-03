@@ -13,7 +13,8 @@ const consts = require('../lib/constants');
 const MIN_FILE_SIZE = 1024 * 5;
 const MAX_FILE_SIZE = MIN_FILE_SIZE;
 
-describe("Cache: RAM", () => {
+describe("Cache: RAM", function() {
+    this.slow(250);
 
     const dirtyPages = () => cache._pageMeta.chain()
         .find({'dirty' : true}).data()
@@ -24,6 +25,7 @@ describe("Cache: RAM", () => {
         pageSize: MIN_FILE_SIZE * 2,
         maxPageCount: 2,
         minFreeBlockSize: 1024,
+        persistence: true,
         persistenceOptions: {
             autosave: false
         },
