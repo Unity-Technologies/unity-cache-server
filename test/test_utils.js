@@ -159,7 +159,7 @@ exports.purgeConfig = function() {
     }
 
     for (const fileName in require.cache) {
-        if (-1 === fileName.indexOf(directory())) {
+        if (!fileName.includes(directory())) {
             continue;
         }
 
