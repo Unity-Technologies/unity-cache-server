@@ -17,7 +17,8 @@ let client;
 describe("Server common", function() {
 
     before(function () {
-        return server.start(err => assert(!err, `Cache Server reported error! ${err}`));
+        this._defaultErrCallback = err => assert(!err, `Cache Server reported error! ${err}`);
+        return server.start(this._defaultErrCallback);
     });
 
     after(function() {
@@ -100,6 +101,7 @@ describe("Server common", function() {
         });
 
     });
+
     describe("Ipv4", function() {
         const ipv4Server = new CacheServer(cache, {port: 0, allowIpv6: false});
 
@@ -115,6 +117,38 @@ describe("Server common", function() {
             const serverAddress = ipv4Server._server.address();
             assert.strictEqual(serverAddress.family, "IPv4");
             done();
+        });
+    });
+
+    describe("Error Handling", function() {
+        after(() => {
+            server.errCallback = this._defaultErrCallback;
+            helpers.setLogger(() => {});
+        });
+
+        it("should call the configured error handler when an error event is raised", async () => {
+            return new Promise(resolve => {
+                const err = new Error();
+                server.errCallback = e => {
+                    assert.strictEqual(e, err);
+                    resolve();
+                };
+
+                server._server.emit('error', err);
+            });
+        });
+
+        it("should log an error if the error code is 'EADDRINUSE", async () => {
+            return new Promise((resolve, reject) => {
+                server.errCallback = e => {}
+                helpers.setLogger((lvl, msg) => {
+                    /already in use/.test(msg) ? resolve() : reject();
+                });
+
+                const err = new Error();
+                err.code = 'EADDRINUSE';
+                server._server.emit('error', err);
+            });
         });
     });
 
@@ -144,6 +178,6 @@ describe("Server common", function() {
                 client.end('xx');
             });
         });
-    })
+    });
 });
 

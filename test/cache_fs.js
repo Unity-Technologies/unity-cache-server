@@ -15,9 +15,6 @@ const MAX_FILE_SIZE = MIN_FILE_SIZE;
 
 const cacheOpts = {
     cachePath: tmp.tmpNameSync({}).toString(),
-    persistenceOptions: {
-        autosave: false
-    },
     highReliability: true,
     highReliabilityOptions: {
         reliabilityThreshold: 0
@@ -33,13 +30,11 @@ const addFileToCache = async (atime) => {
     const trx = await cache.createPutTransaction(data.guid, data.hash);
     await trx.getWriteStream(consts.FILE_TYPE.BIN, data.bin.length).then(s => s.end(data.bin));
     await cache.endPutTransaction(trx);
-    await sleep(50);
+    await sleep(100);
     await fs.unlink(tmpPath);
     const info = await cache.getFileInfo(consts.FILE_TYPE.BIN, data.guid, data.hash);
     await fs.utimes(info.filePath, atime, atime);
 
-    const stats = await fs.stat(info.filePath);
-    assert(moment(stats.atime).isSame(atime, 'second'), `${stats.atime} != ${atime}`);
     return {
         path: info.filePath,
         guidStr: helpers.GUIDBufferToString(data.guid),
@@ -55,7 +50,9 @@ describe("Cache: FS", () => {
 
         afterEach(() => fs.remove(cacheOpts.cachePath));
 
-        describe("cleanup", () => {
+        describe("cleanup", function() {
+            this.slow(500);
+
             it("should remove files that have not been accessed within a given timespan (ASP.NET style)", async () => {
                 const opts = Object.assign({}, cacheOpts);
                 opts.cleanupOptions = {
@@ -66,13 +63,17 @@ describe("Cache: FS", () => {
                 await cache.init(opts);
                 const file1 = await addFileToCache(moment().subtract(2, 'days').toDate());
                 const file2 = await addFileToCache(moment().subtract(2, 'days').toDate());
-                const file3 = await addFileToCache(moment().toDate());
+                const file3 = await addFileToCache(moment().add(1, 'days').toDate());
+
+                assert(fs.pathExistsSync(file1.path));
+                assert(fs.pathExistsSync(file2.path));
+                assert(fs.pathExistsSync(file3.path));
 
                 await cache.cleanup(false);
 
-                assert(!await fs.pathExists(file1.path));
-                assert(!await fs.pathExists(file2.path));
-                assert(await fs.pathExists(file3.path));
+                assert(!fs.pathExistsSync(file1.path));
+                assert(!fs.pathExistsSync(file2.path));
+                assert(fs.pathExistsSync(file3.path));
             });
 
             it("should remove files that have not been accessed within a given timespan (ISO 8601 style)", async () => {
@@ -85,17 +86,17 @@ describe("Cache: FS", () => {
                 await cache.init(opts);
                 const file1 = await addFileToCache(moment().subtract(2, 'days').toDate());
                 const file2 = await addFileToCache(moment().subtract(2, 'days').toDate());
-                const file3 = await addFileToCache(moment().toDate());
+                const file3 = await addFileToCache(moment().add(1, 'days').toDate());
 
-                assert(await fs.pathExists(file1.path));
-                assert(await fs.pathExists(file2.path));
-                assert(await fs.pathExists(file3.path));
+                assert(fs.pathExistsSync(file1.path));
+                assert(fs.pathExistsSync(file2.path));
+                assert(fs.pathExistsSync(file3.path));
 
                 await cache.cleanup(false);
 
-                assert(!await fs.pathExists(file1.path));
-                assert(!await fs.pathExists(file2.path));
-                assert(await fs.pathExists(file3.path));
+                assert(!fs.pathExistsSync(file1.path));
+                assert(!fs.pathExistsSync(file2.path));
+                assert(fs.pathExistsSync(file3.path));
             });
 
             it("should reject a promise with an invalid timespan", () => {

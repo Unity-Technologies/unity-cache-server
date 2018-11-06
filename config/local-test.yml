@@ -1,0 +1,6 @@
+Cache:
+  options:
+    cache_fs:
+      persistence: false
+    cache_ram:
+      persistence: false

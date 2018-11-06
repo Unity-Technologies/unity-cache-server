@@ -39,7 +39,9 @@ const test_modules = [
     }
 ];
 
-describe("Cache API", () => {
+describe("Cache API", function() {
+    this.slow(300);
+
     test_modules.forEach(module => {
         describe(module.name, () => {
             let CacheModule, cache;
