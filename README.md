@@ -61,7 +61,7 @@ Command                          | Description
 `-l`, `--log-level <n>`          | The level of log verbosity. Valid values are 0 (silent) through 5 (debug). The default is 3.
 `-w`, `--workers <n>`            | The number of worker threads to spawn. The default is 0.
 `-m`, `--mirror <host:port>`     | Mirror transactions to another cache server. Repeat this option for multiple mirrors.
-`-W`, `--putwhitelist <host:port>`  | Only allow PUT transactions (uploads) from the specified client address. Can be repeated for multiple clients (default: )
+`-W`, `--putwhitelist <host:port>`  | Only allow PUT transactions (uploads) from the specified client address. Can be repeated for multiple clients
 `--dump-config`                  | Write the active configuration to the console.
 `--save-config [path]`           | Write the active configuration to the specified file and exit. Defaults to `./default.yml`.
 `--NODE_CONFIG_DIR=<path>`       | The directory to search for config files. This is equivalent to setting the `NODE_CONFIG_DIR` environment variable. If not specified, the built-in configuration is used.
