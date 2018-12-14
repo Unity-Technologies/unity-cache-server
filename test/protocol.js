@@ -247,7 +247,7 @@ describe("Protocol", () => {
                     const buf = Buffer.from(encodeCommand(cmd.getAsset, self.data.guid, self.data.hash), 'ascii');
 
                     // queue up a bunch of GET requests to ensure there will be at least one open stream when we quit
-                    for(let i=0;i<10;i++) {
+                    for(let i=0;i<100;i++) {
                         await new Promise(resolve => {
                             client.write(buf, () => resolve());
                         });
