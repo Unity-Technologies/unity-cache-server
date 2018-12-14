@@ -245,6 +245,34 @@ describe("Protocol", () => {
                     {cmd: cmd.getResource, blob: self.data.resource, type: 'resource', packetSize: LARGE_PACKET_SIZE}
                 ];
 
+                it('should retrieve stored versions in the order they were are requested', function(done) {
+                    const resp = new CacheServerResponseTransform();
+                    client.pipe(resp);
+
+                    const cmds = ['+a', '+i', '+r', '+i', '+a'];
+
+                    resp.on('data', () => {});
+                    resp.on('dataEnd', () => {
+                        if(cmds.length === 0) {
+                            done();
+                        }
+                    });
+
+                    resp.on('header', header => {
+                        const nextCmd = cmds.shift();
+                        assert.strictEqual(header.cmd, nextCmd);
+                    });
+
+                    const buf = Buffer.from(
+                        encodeCommand(cmd.getAsset, self.data.guid, self.data.hash) +
+                        encodeCommand(cmd.getInfo, self.data.guid, self.data.hash) +
+                        encodeCommand(cmd.getResource, self.data.guid, self.data.hash) +
+                        encodeCommand(cmd.getInfo, self.data.guid, self.data.hash) +
+                        encodeCommand(cmd.getAsset, self.data.guid, self.data.hash), 'ascii');
+
+                    clientWrite(client, buf, LARGE_PACKET_SIZE).catch(err => done(err));
+                });
+
                 tests.forEach(function (test) {
 
                     it(`should respond with not found (-) for missing ${test.type} files (client write packet size = ${test.packetSize})`, (done) => {
