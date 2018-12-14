@@ -1,6 +1,6 @@
 {
   "name": "unity-cache-server",
-  "version": "6.1.2",
+  "version": "6.2.0",
   "description": "Unity Cache Server",
   "main": "lib/index.js",
   "engines": {
@@ -41,17 +41,17 @@
     "tmp-promise": "^1.0.5"
   },
   "dependencies": {
-    "commander": "^2.17.1",
+    "commander": "^2.19.0",
     "config": "^1.31.0",
     "filesize": "^3.5.11",
     "fs-extra": "^5.0.0",
     "ip": "^1.1.5",
     "js-yaml": "^3.12.0",
-    "lodash": "^4.17.4",
+    "lodash": "^4.17.11",
     "lokijs": "^1.5.5",
-    "moment": "^2.22.2",
+    "moment": "^2.23.0",
     "ora": "^1.4.0",
-    "progress": "^2.0.0",
+    "progress": "^2.0.3",
     "uuid": "^3.3.2"
   },
   "eslintConfig": {
