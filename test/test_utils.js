@@ -120,13 +120,14 @@ exports.readStream = function(stream, size) {
     return new Promise((resolve, reject) => {
         let pos = 0;
         const buffer = Buffer.alloc(size, 0, 'ascii');
-        stream.on('data', data => {
-            if(pos + data.length <= size) {
+        stream.on('readable', function() {
+            let data;
+            while(data = this.read()) {
+                if(pos + data.length > size)
+                    reject(new Error("Stream size exceeds buffer size allocation"));
+
                 data.copy(buffer, pos);
                 pos += data.length;
-            }
-            else {
-                reject(new Error("Stream size exceeds buffer size allocation"));
             }
         });
 
