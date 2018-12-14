@@ -123,8 +123,9 @@ exports.readStream = function(stream, size) {
         stream.on('readable', function() {
             let data;
             while(data = this.read()) {
-                if(pos + data.length > size)
+                if(pos + data.length > size) {
                     reject(new Error("Stream size exceeds buffer size allocation"));
+                }
 
                 data.copy(buffer, pos);
                 pos += data.length;
