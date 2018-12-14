@@ -261,6 +261,17 @@ describe("Protocol", () => {
                     });
                 });
 
+                it("should gracefully handle an abrupt socket close when sending a file", function(done) {
+                    const resp = new CacheServerResponseTransform();
+                    resp.on('data', () => {});
+                    client.pipe(resp);
+                    const buf = Buffer.from(encodeCommand(cmd.getAsset, self.data.guid, self.data.hash) +
+                        encodeCommand(cmd.quit), 'ascii');
+                    client.write(buf, () => done());
+                    // There's no assertion here - the failure would manifest as a stuck/hung test process as a result
+                    // of a stuck async loop
+                });
+
                 const tests = [
                     {cmd: cmd.getAsset, blob: self.data.bin, type: 'bin', packetSize: SMALL_PACKET_SIZE},
                     {cmd: cmd.getInfo, blob: self.data.info, type: 'info', packetSize: MED_PACKET_SIZE},
