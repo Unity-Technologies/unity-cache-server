@@ -244,17 +244,15 @@ describe("Protocol", () => {
                     resp.on('data', () => {});
                     client.pipe(resp);
 
-                    const buf = Buffer.from(encodeCommand(cmd.getAsset, self.data.guid, self.data.hash), 'ascii');
-
+                    let buf = Buffer.from([]);
                     // queue up a bunch of GET requests to ensure there will be at least one open stream when we quit
                     for(let i=0;i<100;i++) {
-                        await new Promise(resolve => {
-                            client.write(buf, () => resolve());
-                        });
+                        buf += encodeCommand(cmd.getAsset, self.data.guid, self.data.hash);
                     }
 
-                    // quit immediately
-                    client.write(Buffer.from(encodeCommand(cmd.quit), 'ascii'));
+                    client.write(Buffer.from(buf, 'ascii'), () => {
+                        client.write(Buffer.from(encodeCommand(cmd.quit), 'ascii'));
+                    });
 
                     return new Promise(resolve => {
                         expectLog(client, /Destroying cache file readStream/i, resolve);
