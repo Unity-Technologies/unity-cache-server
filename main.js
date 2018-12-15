@@ -2,7 +2,7 @@
 require('./lib/helpers').initConfigDir(__dirname);
 const cmd = require('commander');
 const consts = require('./lib/constants');
-const { version, description } = require('../package.json');
+const { version, description } = require('./package.json');
 const { UnityCacheServer } = require('./lib/unity_cache_server');
 
 function zeroOrMore(val) {
