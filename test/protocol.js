@@ -241,7 +241,6 @@ describe("Protocol", () => {
 
                 it("should close file streams if the client drops before finished reading", async () => {
                     const resp = new CacheServerResponseTransform();
-                    resp.on('data', () => {});
                     client.pipe(resp);
 
                     const buf = Buffer.from(encodeCommand(cmd.getAsset, self.data.guid, self.data.hash), 'ascii');
@@ -254,9 +253,12 @@ describe("Protocol", () => {
                     }
 
                     // quit immediately
-                    client.write(Buffer.from(encodeCommand(cmd.quit), 'ascii'));
+                    resp.on('header', () => {
+                        client.write(Buffer.from(encodeCommand(cmd.quit), 'ascii'));
+                    });
 
                     return new Promise(resolve => {
+                        resp.on('data', () => {});
                         expectLog(client, /Destroying cache file readStream/i, resolve);
                     });
                 });
