@@ -15,6 +15,7 @@ const cmd = require('./test_utils').cmd;
 const clientWrite = require('./test_utils').clientWrite;
 const readStream = require('./test_utils').readStream;
 const getClientPromise = require('./test_utils').getClientPromise;
+const sleep = require('./test_utils').sleep;
 
 const SMALL_MIN_FILE_SIZE = 64;
 const SMALL_MAX_FILE_SIZE = 128;
@@ -208,6 +209,7 @@ describe("Protocol", () => {
                 this.slow(1000);
 
                 const self = this;
+                let cmdProc = null;
                 self.data = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
 
                 before(async () => {
@@ -229,10 +231,17 @@ describe("Protocol", () => {
 
                     // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
                     // to other request data in the tests below.
-                    await clientWrite(client, helpers.encodeInt32(consts.PROTOCOL_VERSION));
+                    clientWrite(client, helpers.encodeInt32(consts.PROTOCOL_VERSION));
+
+                    await new Promise(resolve => {
+                        server.server.once('connection', s => {
+                            cmdProc = s.commandProcessor;
+                            resolve();
+                        });
+                    });
                 });
 
-                afterEach(() => client.end());
+                afterEach(() => client.destroy());
 
                 it("should close the socket on an invalid GET type", (done) => {
                     expectLog(client, /Unrecognized command/i, done);
@@ -243,24 +252,20 @@ describe("Protocol", () => {
                     const resp = new CacheServerResponseTransform();
                     client.pipe(resp);
 
-                    const buf = Buffer.from(encodeCommand(cmd.getAsset, self.data.guid, self.data.hash), 'ascii');
+                    cmdProc._testReadStreamDestroy = true;
 
-                    // queue up a bunch of GET requests to ensure there will be at least one open stream when we quit
-                    for(let i=0;i<100;i++) {
-                        await new Promise(resolve => {
-                            client.write(buf, () => resolve());
+                    const getCmd = Buffer.from(encodeCommand(cmd.getAsset, self.data.guid, self.data.hash), 'ascii');
+                    return clientWrite(client, getCmd)
+                        .then(() => {
+                            return new Promise(resolve => {
+                                cmdProc.on('_testReadStreamDestroy', () => {
+                                    assert.equal(cmdProc.readStream, null);
+                                    resolve();
+                                });
+
+                                client.destroy();
+                            });
                         });
-                    }
-
-                    // quit immediately
-                    resp.on('header', () => {
-                        client.write(Buffer.from(encodeCommand(cmd.quit), 'ascii'));
-                    });
-
-                    return new Promise(resolve => {
-                        resp.on('data', () => {});
-                        expectLog(client, /Destroying cache file readStream/i, resolve);
-                    });
                 });
 
                 it("should gracefully handle an abrupt socket close when sending a file", function(done) {
@@ -284,7 +289,7 @@ describe("Protocol", () => {
                     const resp = new CacheServerResponseTransform();
                     client.pipe(resp);
 
-                    const cmds = ['+a', '+i', '+r', '+i', '+a'];
+                    const cmds = ['+a', '+i', '-r', '+i', '+a'];
 
                     resp.on('data', () => {});
                     resp.on('dataEnd', () => {
@@ -301,7 +306,7 @@ describe("Protocol", () => {
                     const buf = Buffer.from(
                         encodeCommand(cmd.getAsset, self.data.guid, self.data.hash) +
                         encodeCommand(cmd.getInfo, self.data.guid, self.data.hash) +
-                        encodeCommand(cmd.getResource, self.data.guid, self.data.hash) +
+                        encodeCommand(cmd.getResource, self.data.guid, Buffer.alloc(consts.HASH_SIZE, 'ascii')) +
                         encodeCommand(cmd.getInfo, self.data.guid, self.data.hash) +
                         encodeCommand(cmd.getAsset, self.data.guid, self.data.hash), 'ascii');
 
