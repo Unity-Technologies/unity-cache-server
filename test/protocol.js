@@ -15,7 +15,7 @@ const cmd = require('./test_utils').cmd;
 const clientWrite = require('./test_utils').clientWrite;
 const readStream = require('./test_utils').readStream;
 const getClientPromise = require('./test_utils').getClientPromise;
-const sleep = require('./test_utils').sleep;
+const sinon = require('sinon');
 
 const SMALL_MIN_FILE_SIZE = 64;
 const SMALL_MAX_FILE_SIZE = 128;
@@ -227,6 +227,8 @@ describe("Protocol", () => {
                 });
 
                 beforeEach(async () => {
+                    this.stubs = [];
+
                     client = await getClientPromise(server.port);
 
                     // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
@@ -241,7 +243,10 @@ describe("Protocol", () => {
                     });
                 });
 
-                afterEach(() => client.destroy());
+                afterEach(() => {
+                    this.stubs.forEach(s => s.restore());
+                    client.destroy();
+                });
 
                 it("should close the socket on an invalid GET type", (done) => {
                     expectLog(client, /Unrecognized command/i, done);
@@ -279,12 +284,6 @@ describe("Protocol", () => {
                     // of a stuck async loop
                 });
 
-                const tests = [
-                    {cmd: cmd.getAsset, blob: self.data.bin, type: 'bin', packetSize: SMALL_PACKET_SIZE},
-                    {cmd: cmd.getInfo, blob: self.data.info, type: 'info', packetSize: MED_PACKET_SIZE},
-                    {cmd: cmd.getResource, blob: self.data.resource, type: 'resource', packetSize: LARGE_PACKET_SIZE}
-                ];
-
                 it('should retrieve stored versions in the order they were are requested', function(done) {
                     const resp = new CacheServerResponseTransform();
                     client.pipe(resp);
@@ -312,6 +311,27 @@ describe("Protocol", () => {
 
                     clientWrite(client, buf, LARGE_PACKET_SIZE).catch(err => done(err));
                 });
+
+                it('should respond with not found (-) for a file that exists but throws an error when accessed', function (done) {
+                    const resp = new CacheServerResponseTransform();
+                    client.pipe(resp);
+
+                    resp.on('header', header => {
+                        assert.strictEqual(header.cmd, '-a');
+                        done();
+                    });
+
+                    self.stubs.push(sinon.stub(cache, "getFileStream").rejects());
+
+                    const buf = Buffer.from(encodeCommand(cmd.getAsset, self.data.guid, self.data.hash), 'ascii');
+                    clientWrite(client, buf);
+                });
+
+                const tests = [
+                    {cmd: cmd.getAsset, blob: self.data.bin, type: 'bin', packetSize: SMALL_PACKET_SIZE},
+                    {cmd: cmd.getInfo, blob: self.data.info, type: 'info', packetSize: MED_PACKET_SIZE},
+                    {cmd: cmd.getResource, blob: self.data.resource, type: 'resource', packetSize: LARGE_PACKET_SIZE}
+                ];
 
                 tests.forEach(function (test) {
 
