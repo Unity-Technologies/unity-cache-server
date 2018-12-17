@@ -231,15 +231,15 @@ describe("Protocol", () => {
 
                     client = await getClientPromise(server.port);
 
-                    // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
-                    // to other request data in the tests below.
-                    clientWrite(client, helpers.encodeInt32(consts.PROTOCOL_VERSION));
-
-                    await new Promise(resolve => {
+                    return new Promise(resolve => {
                         server.server.once('connection', s => {
                             cmdProc = s.commandProcessor;
                             resolve();
                         });
+
+                        // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
+                        // to other request data in the tests below.
+                        clientWrite(client, helpers.encodeInt32(consts.PROTOCOL_VERSION));
                     });
                 });
 
