@@ -10,6 +10,7 @@ function zeroOrMore(val) {
 }
 
 function collect(val, memo) {
+    memo = memo || [];
     memo.push(val);
     return memo;
 }
@@ -27,7 +28,7 @@ const optionMap = {
     },
     port: {
         flags: "-p, --port <n>",
-        description: "Specify the server port, only apply to new cache server",
+        description: "Specify the server port",
         validator: parseInt,
         configKey: consts.CLI_CONFIG_KEYS.PORT
     },
@@ -41,14 +42,12 @@ const optionMap = {
         flags: "-m --mirror <host:port>",
         description: "Mirror transactions to another cache server. Can be repeated for multiple mirrors",
         validator: collect,
-        defaultValue: [],
         configKey: consts.CLI_CONFIG_KEYS.MIRROR
     },
     putwhitelist: {
         flags: "-W --putwhitelist <host:port>",
         description: "Only allow PUT transactions (uploads) from the specified client address. Can be repeated for multiple clients",
         validator: collect,
-        defaultValue: [],
         configKey: consts.CLI_CONFIG_KEYS.PUTWHITELIST
     }
 };

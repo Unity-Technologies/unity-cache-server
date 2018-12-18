@@ -37,8 +37,7 @@ const optionMap = {
     maxCacheSize: {
         flags: "-s, --max-cache-size <bytes>",
         description: "Override the configured maximum cache size. Files will be removed from the cache until the max cache size is satisfied, using a Least Recently Used search. A value of 0 disables this check.",
-        validator: parseInt,
-        default: 0
+        validator: parseInt
     },
     delete: {
         flags: "-d, --delete",
