@@ -25,7 +25,7 @@ const SMALL_PACKET_SIZE = 64;
 const MED_PACKET_SIZE = 1024;
 const LARGE_PACKET_SIZE = 1024 * 16;
 
-let cache, server, client;
+let cache, server, client, cmdProc;
 
 const test_modules = [
     {
@@ -75,6 +75,10 @@ describe("Protocol", () => {
                 await cache.init(module.options);
                 server = new CacheServer(cache, {port: 0});
                 await server.start(err => assert(!err, `Cache Server reported error!  ${err}`));
+
+                server.server.on('connection', socket => {
+                    cmdProc = socket.commandProcessor;
+                });
             });
 
             after(async () => {
@@ -209,7 +213,6 @@ describe("Protocol", () => {
                 this.slow(1000);
 
                 const self = this;
-                let cmdProc = null;
                 self.data = generateCommandData(MIN_FILE_SIZE, MAX_FILE_SIZE);
 
                 before(async () => {
@@ -228,19 +231,11 @@ describe("Protocol", () => {
 
                 beforeEach(async () => {
                     this.stubs = [];
-
                     client = await getClientPromise(server.port);
 
-                    return new Promise(resolve => {
-                        server.server.once('connection', s => {
-                            cmdProc = s.commandProcessor;
-                            resolve();
-                        });
-
-                        // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
-                        // to other request data in the tests below.
-                        client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
-                    });
+                    // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
+                    // to other request data in the tests below.
+                    await clientWrite(client, helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 });
 
                 afterEach(() => {
