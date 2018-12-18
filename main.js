@@ -10,6 +10,7 @@ function zeroOrMore(val) {
 }
 
 function collect(val, memo) {
+    memo = memo || [];
     memo.push(val);
     return memo;
 }
@@ -17,38 +18,36 @@ function collect(val, memo) {
 const optionMap = {
     cacheModule: {
         flags: "-c --cache-module <path>",
-        description: "Use cache module at specified path",
+        description: "The path to cache module. The Default path is 'cache_fs'.",
         configKey: consts.CLI_CONFIG_KEYS.CACHE_MODULE
     },
     cachePath: {
         flags: "-P, --cache-path <path>",
-        description: "Specify the path of the cache directory",
+        description: "The path of the cache directory.",
         configKey: consts.CLI_CONFIG_KEYS.CACHE_PATH
     },
     port: {
         flags: "-p, --port <n>",
-        description: "Specify the server port, only apply to new cache server",
+        description: "The port on which the Cache Server listens. The default value is 8126.",
         validator: parseInt,
         configKey: consts.CLI_CONFIG_KEYS.PORT
     },
     workers: {
         flags: "-w, --workers <n>",
-        description: "Number of worker threads to spawn",
+        description: "The number of worker threads to spawn. The default is 0.",
         validator: zeroOrMore,
         configKey: consts.CLI_CONFIG_KEYS.WORKERS
     },
     mirror: {
         flags: "-m --mirror <host:port>",
-        description: "Mirror transactions to another cache server. Can be repeated for multiple mirrors",
+        description: "Mirror transactions to another cache server. Repeat this option for multiple mirrors.",
         validator: collect,
-        defaultValue: [],
         configKey: consts.CLI_CONFIG_KEYS.MIRROR
     },
     putwhitelist: {
         flags: "-W --putwhitelist <host:port>",
-        description: "Only allow PUT transactions (uploads) from the specified client address. Can be repeated for multiple clients",
+        description: "Only allow PUT transactions (uploads) from the specified client address. Repeat this option for multiple addresses.",
         validator: collect,
-        defaultValue: [],
         configKey: consts.CLI_CONFIG_KEYS.PUTWHITELIST
     }
 };
