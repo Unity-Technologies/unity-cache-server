@@ -239,7 +239,7 @@ describe("Protocol", () => {
 
                         // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
                         // to other request data in the tests below.
-                        clientWrite(client, helpers.encodeInt32(consts.PROTOCOL_VERSION));
+                        client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                     });
                 });
 
