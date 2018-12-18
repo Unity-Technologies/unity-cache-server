@@ -74,7 +74,8 @@ exports.clientWrite = function(client, data, minPacketSize, maxPacketSize) {
     return new Promise((resolve, reject) => {
         let sentBytes = 0;
         let closed = false;
-        client.once('close', () => closed = true);
+        const closeListener = () => closed = true;
+        client.once('close', closeListener);
 
         if(typeof(minPacketSize) !== 'number') {
             minPacketSize = MIN_PACKET_SIZE;
@@ -98,6 +99,7 @@ exports.clientWrite = function(client, data, minPacketSize, maxPacketSize) {
                 sentBytes += len;
 
                 if (sentBytes === data.length) {
+                    client.removeListener('close', closeListener);
                     setTimeout(resolve, WRITE_RESOLVE_DELAY);
                 }
                 else {
