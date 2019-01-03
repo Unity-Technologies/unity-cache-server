@@ -200,6 +200,9 @@ describe("Unity Cache Server bootstrap", () => {
             const tmpPath = tmp.tmpNameSync();
 
             process.env.NODE_CONFIG = JSON.stringify({
+                Server: {
+                        port: 0
+                    },
                 Cache: {
                     defaultModule: "cache_fs",
                     options: {
