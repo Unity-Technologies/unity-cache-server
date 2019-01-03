@@ -3,7 +3,7 @@ const helpers = require('./lib/helpers');
 helpers.initConfigDir(__dirname);
 
 const consts = require('./lib/constants');
-const cmd = require('commander');
+const program = require('commander');
 const net = require('net');
 const fs = require('fs-extra');
 const filesize = require('filesize');
@@ -14,19 +14,22 @@ const ClientStreamDebugger = require('./lib/server/client_stream_debugger');
 
 const RECEIVE_DATA_TIMEOUT = 500;
 
-let nullServer = null;
-
-cmd.arguments('<filePath> [ServerAddress]')
+program.arguments('<filePath> [ServerAddress]')
     .option('-i --iterations <n>', 'Number of times to send the recorded session to the server', 1)
     .option('-c --max-concurrency <n>', 'Number of concurrent connections to make to the server', 1)
     .option('-d --debug-protocol', 'Print protocol stream debugging data to the console', false)
     .option('-q --no-verbose', 'Do not show progress and result statistics')
     .action((filePath, serverAddress) => {
-        serverSetup(serverAddress)
-            .then(sa => run(filePath, sa, cmd.iterations, cmd.maxConcurrency))
+        const options = {
+            numIterations: program.iterations,
+            numConcurrent: program.maxConcurrency,
+            verbose: program.verbose,
+            debugProtocol: program.debugProtocol
+        };
+
+        run(filePath, serverAddress, options)
             .then(stats => {
-                if(nullServer !== null) nullServer.close();
-                if(cmd.verbose) {
+                if(options.verbose) {
                     if(stats.bytesSent > 0) {
                         const sendTime = stats.sendTime / 1000;
                         const sendBps = stats.bytesSent / sendTime || 0;
@@ -46,40 +49,44 @@ cmd.arguments('<filePath> [ServerAddress]')
             });
     });
 
-cmd.parse(process.argv);
+program.parse(process.argv);
 
-async function serverSetup(serverAddress) {
-    if(serverAddress) return serverAddress;
+async function run(filePath, serverAddress, options) {
+    let nullServer = null;
 
-    nullServer = net.createServer({}, socket => {
-        socket.on('data', () => {});
-    });
-
-    return new Promise(resolve => {
-        nullServer.listen(0, "0.0.0.0", () => {
-            const a = nullServer.address();
-            resolve(`${a.address}:${a.port}`);
+    if(!serverAddress) {
+        nullServer = net.createServer({}, socket => {
+            socket.on('data', () => {});
         });
-    });
-}
 
-async function run(filePath, serverAddress, i, c) {
+        await new Promise(resolve => {
+            nullServer.listen(0, "0.0.0.0", () => resolve());
+        });
+    }
+
+    if(nullServer !== null) {
+        const a = nullServer.address();
+        serverAddress = `${a.address}:${a.port}`;
+    }
+
     const jobs = [];
     const results = [];
-    while(jobs.length < i) {
+    while(jobs.length < options.numIterations) {
         const jobNum = jobs.length + 1;
         jobs.push(() => {
-            if(cmd.verbose && i > 1) console.log(`Playing iteration ${jobNum}/${i}`);
-            return playStream(filePath, serverAddress)
+            if(options.verbose && options.numIterations > 1) console.log(`Playing iteration ${jobNum}/${options.numIterations}`);
+            return playStream(filePath, serverAddress, options)
                 .then(stats => results.push(stats))
                 .catch(err => { throw(err); });
         });
     }
 
     while(jobs.length > 0) {
-        const next = jobs.splice(0, c);
+        const next = jobs.splice(0, options.numConcurrent);
         await Promise.all(next.map(t => t()));
     }
+
+    if(nullServer !== null) nullServer.close();
 
     return results.reduce((prev, cur) => {
         cur.bytesSent += prev.bytesSent;
@@ -95,10 +102,9 @@ async function run(filePath, serverAddress, i, c) {
     });
 }
 
-async function playStream(filePath, serverAddress) {
+async function playStream(filePath, serverAddress, options) {
     let timer = null;
     let bytesReceived = 0, receiveStartTime, receiveEndTime, sendStartTime, sendEndTime, dataHash;
-    const debugProtocol = cmd.debugProtocol;
 
     if(!await fs.pathExists(filePath)) throw new Error(`Cannot find ${filePath}`);
     const fileStats = await fs.stat(filePath);
@@ -122,7 +128,7 @@ async function playStream(filePath, serverAddress) {
     ssp.once('header', () => {
         receiveStartTime = Date.now();
     }).on('header', header => {
-        if(debugProtocol) {
+        if(options.debugProtocol) {
             dataHash = crypto.createHash('sha256');
 
             const debugData = [header.cmd];
@@ -143,10 +149,10 @@ async function playStream(filePath, serverAddress) {
 
         clearTimeout(timer);
     }).on('data', (chunk) => {
-        if(debugProtocol) dataHash.update(chunk, 'ascii');
+        if(options.debugProtocol) dataHash.update(chunk, 'ascii');
         bytesReceived += chunk.length;
     }).on('dataEnd', () => {
-        if(debugProtocol) console.log(` <BLOB ${dataHash.digest().toString('hex')}>`);
+        if(options.debugProtocol) console.log(` <BLOB ${dataHash.digest().toString('hex')}>`);
         receiveEndTime = Date.now();
         setTimer();
     });
@@ -157,7 +163,7 @@ async function playStream(filePath, serverAddress) {
     const csd = new ClientStreamDebugger({});
 
     csd.on('debug', data => {
-        if(cmd.debugProtocol) {
+        if(options.debugProtocol) {
             console.log(`>>> ${data.join(' ')}`);
         }
     });
