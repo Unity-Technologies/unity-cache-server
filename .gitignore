@@ -8,3 +8,4 @@ local-production.yml
 .cache*/
 Dockerfile*
 .dockerignore
+diagnostics/

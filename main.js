@@ -49,6 +49,11 @@ const optionMap = {
         description: "Only allow PUT transactions (uploads) from the specified client address. Repeat this option for multiple addresses.",
         validator: collect,
         configKey: consts.CLI_CONFIG_KEYS.PUTWHITELIST
+    },
+    diagClientRecorder: {
+        flags: "--diag-client-recorder",
+        description: "Record incoming client network stream to disk.",
+        configKey: consts.CLI_CONFIG_KEYS.CLIENT_RECORDER
     }
 };
 

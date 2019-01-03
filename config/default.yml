@@ -46,3 +46,8 @@ Server:
     allowIpv6: false
 Global:
   logLevel: 3
+Diagnostics:
+  clientRecorder: false
+  clientRecorderOptions:
+    bufferSize: 10000000
+    saveDir: "diagnostics/client-recordings"
