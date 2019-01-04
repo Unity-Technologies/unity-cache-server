@@ -21,8 +21,8 @@ program.arguments('<filePath> [ServerAddress]')
     .option('-q --no-verbose', 'Do not show progress and result statistics')
     .action((filePath, serverAddress) => {
         const options = {
-            numIterations: program.iterations,
-            numConcurrent: program.maxConcurrency,
+            numIterations: parseInt(program.iterations),
+            numConcurrent: parseInt(program.maxConcurrency),
             verbose: program.verbose,
             debugProtocol: program.debugProtocol
         };
@@ -69,21 +69,54 @@ async function run(filePath, serverAddress, options) {
         serverAddress = `${a.address}:${a.port}`;
     }
 
-    const jobs = [];
-    const results = [];
-    while(jobs.length < options.numIterations) {
-        const jobNum = jobs.length + 1;
-        jobs.push(() => {
-            if(options.verbose && options.numIterations > 1) console.log(`Playing iteration ${jobNum}/${options.numIterations}`);
-            return playStream(filePath, serverAddress, options)
-                .then(stats => results.push(stats))
-                .catch(err => { throw(err); });
-        });
+    // Gather files
+    const files = [];
+    const stat = await fs.stat(filePath);
+    if(stat.isDirectory()) {
+        await helpers.readDir(filePath, f => files.push(f.path));
+    }
+    else {
+        files.push(filePath);
     }
 
+    // Validate files
+    const verBuf = Buffer.alloc(consts.VERSION_SIZE, 'ascii');
+    for(let i = 0; i < files.length; i++) {
+        const fd = await fs.open(files[i], "r");
+        await fs.read(fd, verBuf, 0, consts.VERSION_SIZE, 0);
+        if(helpers.readUInt32(verBuf) !== consts.PROTOCOL_VERSION) {
+            if(options.verbose) {
+                console.log(`Skipping unrecognized file ${files[i]}`);
+            }
+            files[i] = null;
+        }
+
+        await fs.close(fd);
+    }
+
+    const jobs = [];
+    const results = [];
+    let i = 0;
+    while(i < options.numIterations) {
+        files.forEach(f => {
+            if(f === null) return;
+            jobs.push((n, t) => {
+                if(options.verbose) console.log(`[${n}/${t}] Playing ${f}`);
+                return playStream(f, serverAddress, options)
+                    .then(stats => results.push(stats))
+                    .catch(err => { throw(err); });
+            });
+        });
+
+        i++;
+    }
+
+    const totalJobs = jobs.length;
+    let nextJobNum = 0;
     while(jobs.length > 0) {
+        nextJobNum += Math.min(jobs.length, options.numConcurrent);
         const next = jobs.splice(0, options.numConcurrent);
-        await Promise.all(next.map(t => t()));
+        await Promise.all(next.map(t => t(nextJobNum, totalJobs)));
     }
 
     if(nullServer !== null) nullServer.close();
@@ -107,6 +140,7 @@ async function playStream(filePath, serverAddress, options) {
     let bytesReceived = 0, receiveStartTime, receiveEndTime, sendStartTime, sendEndTime, dataHash;
 
     if(!await fs.pathExists(filePath)) throw new Error(`Cannot find ${filePath}`);
+
     const fileStats = await fs.stat(filePath);
     const address = await helpers.parseAndValidateAddressString(serverAddress, consts.DEFAULT_PORT);
     const client = net.createConnection(address.port, address.host, () => {});
