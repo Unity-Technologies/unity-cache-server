@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+		<key>StartCalendarInterval</key>
+		<dict>
+			<key>Hour</key>
+			<integer>22</integer>
+			<key>Minute</key>
+			<integer>45</integer>
+		</dict>
+		<key>Label</key>
+		<string>local.UnityCacheServer.PurgeStdOut</string>
+		<key>ProgramArguments</key>
+		<array>
+			<string>/usr/bin/python</string>
+			<string>-c</string>
+			<string>open("/Users/cache/UnityCacheServer.out","w0");open("/Users/cache/UnityCacheCleanup.out","w0")</string>
+		</array>
+		<key>StandardOutPath</key>
+		<string>/dev/null</string>
+		<key>StandardErrorPath</key>
+		<string>/dev/null</string>
+		<key>WorkingDirectory</key>
+		<string>/Users/cache</string>
+		<key>UserName</key>
+		<string>cache</string>
+		<key>GroupName</key>
+		<string>staff</string>
+	</dict>
+</plist>

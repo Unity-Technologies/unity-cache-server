@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+		<key>KeepAlive</key>
+		<true/>
+		<key>Label</key>
+		<string>local.UnityCacheServer.KeepAlive</string>
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>PATH</key>
+			<string>/Users/cache/node-latest-darwin-x64/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		</dict>
+		<key>ProgramArguments</key>
+		<array>
+			<string>/Users/cache/node-latest-darwin-x64/bin/unity-cache-server</string>
+			<string>--NODE_CONFIG_DIR=/Users/cache/UnityCacheServerConfig</string>
+			<string>--cache-path</string>
+			<string>/Users/cache/.cache_fs</string>
+			<string>--log-level</string>
+			<string>4</string>
+			<string>--workers</string>
+			<string>7</string>
+		</array>
+		<key>StandardOutPath</key>
+		<string>/Users/cache/UnityCacheServer.out</string>
+		<key>StandardErrorPath</key>
+		<string>/Users/cache/UnityCacheServer.err</string>
+		<key>WorkingDirectory</key>
+		<string>/Users/cache</string>
+		<key>UserName</key>
+		<string>cache</string>
+		<key>GroupName</key>
+		<string>staff</string>
+	</dict>
+</plist>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+	<dict>
+		<key>StartCalendarInterval</key>
+		<dict>
+			<key>Hour</key>
+			<integer>22</integer>
+			<key>Minute</key>
+			<integer>45</integer>
+		</dict>
+		<key>Label</key>
+		<string>local.UnityCacheServer.CacheCleanup</string>
+		<key>EnvironmentVariables</key>
+		<dict>
+			<key>PATH</key>
+			<string>/Users/cache/node-latest-darwin-x64/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		</dict>
+		<key>ProgramArguments</key>
+		<array>
+			<string>/Users/cache/node-latest-darwin-x64/bin/unity-cache-server-cleanup</string>
+			<string>--cache-path</string>
+			<string>/Users/cache/.cache_fs</string>
+			<string>--log-level</string>
+			<string>5</string>
+			<string>--expire-time-span</string>
+			<string>P30D</string>
+			<string>--max-cache-size</string>
+			<string>843738897600</string>
+			<string>--delete</string>
+		</array>
+		<key>WorkingDirectory</key>
+		<string>/Users/cache</string>
+		<key>StandardOutPath</key>
+		<string>/Users/cache/UnityCacheCleanup.out</string>
+		<key>StandardErrorPath</key>
+		<string>/Users/cache/UnityCacheCleanup.err</string>
+		<key>UserName</key>
+		<string>cache</string>
+		<key>GroupName</key>
+		<string>staff</string>
+	</dict>
+</plist>
