@@ -271,6 +271,11 @@ Option                          | Description
 
 The stream player can read a recorded client session(s) at `<filePath>`, optionally print the protocol stream to the console, and optionally send the protocol stream to a remote server at `[ServerAddress]` for e.g. performance load testing.
 
+#### Notes
+
+* If `<filePath>` is a directory, all files within the directory (recursively) will be read and played back. Some rudimentary validation is done on each file to detect whether or not it is a valid client session stream.
+* If `[ServerAddress]` is omitted, data will be sent to a temporary "no-op" TCP server. This is useful if you are only concerned with reading the debug protocol stream with the `-d` option.
+
 ## Contributors
 Contributions are welcome! Before submitting pull requests please note the Submission of Contributions section of the Apache 2.0 license.
 
