@@ -9,6 +9,9 @@ const CacheServer = require('../lib/server/server');
 const Cache = require('../lib/cache/cache_base').CacheBase;
 const sleep = require('./test_utils').sleep;
 const cmd = require('./test_utils').cmd;
+const tmp = require('tmp');
+const fs = require('fs-extra');
+const ClientStreamRecorder = require('../lib/server/client_stream_recorder');
 
 const cache = new Cache();
 const server = new CacheServer(cache, {port: 0});
@@ -148,6 +151,46 @@ describe("Server common", function() {
                 const err = new Error();
                 err.code = 'EADDRINUSE';
                 server._server.emit('error', err);
+            });
+        });
+    });
+
+    describe("Client Recorder", () => {
+        before(async () => {
+            this.tmpDir = tmp.dirSync({unsafeCleanup: true});
+
+            const csrOpts = {
+                saveDir: this.tmpDir.name,
+                bufferSize: 1024
+            };
+
+            this.csRecorder = new ClientStreamRecorder(csrOpts);
+
+            const serverOpts = {
+                port: 0,
+                clientRecorder: this.csRecorder
+            };
+
+            this.csrServer = new CacheServer(cache, serverOpts);
+            assert.ok(this.csrServer.isRecordingClient);
+            return this.csrServer.start(err => assert(!err, `Cache Server reported error! ${err}`));
+        });
+
+        after(() => {
+            this.tmpDir.removeCallback();
+            return this.csrServer.stop();
+        });
+
+        it("should use the ClientStreamRecorder if configured", (done) => {
+            client = net.connect({port: this.csrServer.port}, () => {
+
+                this.csRecorder.on('flushed', () => {
+                    assert(fs.pathExistsSync(this.csRecorder.dataPath));
+                    done();
+                });
+
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
+                client.end(cmd.quit);
             });
         });
     });

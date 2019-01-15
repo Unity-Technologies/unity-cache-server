@@ -211,6 +211,9 @@ describe("Unity Cache Server bootstrap", () => {
                             cachePath: tmpPath
                         }
                     }
+                },
+                Diagnostics: {
+                    clientRecorder: true
                 }
             });
 
@@ -254,6 +257,10 @@ describe("Unity Cache Server bootstrap", () => {
                     reject(err);
                 })
             });
+        });
+
+        it("should construct a client recorder and pass it to the server", async () => {
+            assert.ok(this._server.isRecordingClient);
         });
 
         it("should setup the server error handler", async () => {

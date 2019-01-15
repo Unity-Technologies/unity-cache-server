@@ -1,9 +1,7 @@
 require('./test_init');
 
 const assert = require('assert');
-const sinon = require('sinon');
 const uuid = require('uuid');
-const path = require('path');
 const tmp = require('tmp');
 const fs = require('fs-extra');
 const {promisify} = require('util');
@@ -70,7 +68,7 @@ describe('ClientStreamRecorder', () => {
         const guid = randomBuffer(consts.GUID_SIZE);
         const hash = randomBuffer(consts.HASH_SIZE);
 
-        const buffer = Buffer.from('fe' +
+        let buffer = Buffer.from('fe' +
             encodeCommand(cmd.getAsset, guid, hash) +
             encodeCommand(cmd.getInfo, guid, hash) +
             encodeCommand(cmd.getResource, guid, hash), 'ascii');
@@ -97,6 +95,10 @@ describe('ClientStreamRecorder', () => {
 
         assert(await fs.pathExists(csr.dataPath));
         const fileData = await fs.readFile(csr.dataPath);
-        assert.equal(Buffer.compare(buffer.slice(2), fileData.slice(consts.VERSION_SIZE)), 0);
+
+        // zero pad the input buffer to match expected file data
+        buffer = Buffer.concat([Buffer.from('000000'), buffer]);
+
+        assert.equal(Buffer.compare(fileData, buffer), 0);
     });
 });
