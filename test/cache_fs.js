@@ -122,16 +122,27 @@ describe("Cache: FS", () => {
                 const file1 = await addFileToCache(moment().toDate());
                 const file2 = await addFileToCache(moment().subtract(1, 'days').toDate());
                 const file3 = await addFileToCache(moment().subtract(5, 'days').toDate());
+                const file4 = await addFileToCache(moment().subtract(31, 'days').toDate());
 
                 assert(await fs.pathExists(file1.path));
                 assert(await fs.pathExists(file2.path));
                 assert(await fs.pathExists(file3.path));
+                assert(await fs.pathExists(file4.path));
+
+                // Execute dry-run path first for complete coverage
+                await cache.cleanup(true);
+
+                assert(await fs.pathExists(file1.path));
+                assert(await fs.pathExists(file2.path));
+                assert(await fs.pathExists(file3.path));
+                assert(await fs.pathExists(file4.path));
 
                 await cache.cleanup(false);
 
                 assert(await fs.pathExists(file1.path));
                 assert(await fs.pathExists(file2.path));
                 assert(!await fs.pathExists(file3.path));
+                assert(!await fs.pathExists(file4.path));
 
                 opts.cleanupOptions.maxCacheSize = MIN_FILE_SIZE + 1;
                 cache._options = opts;
