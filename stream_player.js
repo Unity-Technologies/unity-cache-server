@@ -193,16 +193,14 @@ async function playStream(filePath, serverAddress, options) {
 
     setTimer();
 
-    const csp = new ClientStreamProcessor({});
-    const csd = new ClientStreamDebugger({});
+    let stream = fileStream.pipe(new ClientStreamProcessor({}));
 
-    csd.on('debug', data => {
-        if(options.debugProtocol) {
-            console.log(`>>> ${data.join(' ')}`);
-        }
-    });
+    if(options.debugProtocol) {
+        stream = stream.pipe(new ClientStreamDebugger({}))
+            .on('debug', data => console.log(`>>> ${data.join(' ')}`));
+    }
 
-    fileStream.pipe(csp).pipe(csd).pipe(client, {end: false}).pipe(ssp);
+    stream.pipe(client, {end: false}).pipe(ssp);
 
     return new Promise(resolve => {
         client.on('close', () => {
