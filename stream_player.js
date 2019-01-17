@@ -12,8 +12,6 @@ const ServerStreamProcessor = require('./lib/client/server_stream_processor');
 const ClientStreamProcessor = require('./lib/server/client_stream_processor');
 const ClientStreamDebugger = require('./lib/server/client_stream_debugger');
 
-const RECEIVE_DATA_TIMEOUT = 500;
-
 program.arguments('<filePath> [ServerAddress]')
     .option('-i --iterations <n>', 'Number of times to send the recorded session to the server', 1)
     .option('-c --max-concurrency <n>', 'Number of concurrent connections to make to the server', 1)
@@ -136,18 +134,14 @@ async function run(filePath, serverAddress, options) {
 }
 
 async function playStream(filePath, serverAddress, options) {
-    let timer = null;
     let bytesReceived = 0, receiveStartTime, receiveEndTime, sendStartTime, sendEndTime, dataHash;
 
     if(!await fs.pathExists(filePath)) throw new Error(`Cannot find ${filePath}`);
 
     const fileStats = await fs.stat(filePath);
     const address = await helpers.parseAndValidateAddressString(serverAddress, consts.DEFAULT_PORT);
-    const client = net.createConnection(address.port, address.host, () => {});
-
-    const setTimer = () => {
-        timer = setTimeout(() => client.end(''), RECEIVE_DATA_TIMEOUT);
-    };
+    const client = new net.Socket();
+    await new Promise(resolve => client.connect(address.port, address.host, () => resolve()));
 
     const fileStream = fs.createReadStream(filePath);
 
@@ -157,12 +151,23 @@ async function playStream(filePath, serverAddress, options) {
         sendEndTime = Date.now();
     });
 
+    let reqCount = 0;
+
     const ssp = new ServerStreamProcessor();
 
     ssp.once('header', () => {
         receiveStartTime = Date.now();
-    }).on('header', header => {
-        if(options.debugProtocol) {
+    }).on('header', () => {
+        reqCount--;
+        if(reqCount === 0) client.end('');
+    }).on('data', (chunk) => {
+        bytesReceived += chunk.length;
+    }).on('dataEnd', () => {
+        receiveEndTime = Date.now();
+    });
+
+    if(options.debugProtocol) {
+        ssp.on('header', header => {
             dataHash = crypto.createHash('sha256');
 
             const debugData = [header.cmd];
@@ -174,26 +179,26 @@ async function playStream(filePath, serverAddress, options) {
             debugData.push(header.hash.toString('hex'));
 
             const txt = `<<< ${debugData.join(' ')}`;
+
             if(header.size) {
                 process.stdout.write(txt);
             } else {
                 console.log(txt)
             }
-        }
+        }).on('data', (chunk) => {
+            dataHash.update(chunk, 'ascii');
+        }).on('dataEnd', () => {
+            console.log(` <BLOB ${dataHash.digest().toString('hex')}>`);
+        });
+    }
 
-        clearTimeout(timer);
-    }).on('data', (chunk) => {
-        if(options.debugProtocol) dataHash.update(chunk, 'ascii');
-        bytesReceived += chunk.length;
-    }).on('dataEnd', () => {
-        if(options.debugProtocol) console.log(` <BLOB ${dataHash.digest().toString('hex')}>`);
-        receiveEndTime = Date.now();
-        setTimer();
+    const csp = new ClientStreamProcessor({});
+
+    csp.on('cmd', cmd => {
+        if(cmd[0] === 'g') reqCount++;
     });
 
-    setTimer();
-
-    let stream = fileStream.pipe(new ClientStreamProcessor({}));
+    let stream = fileStream.pipe(csp);
 
     if(options.debugProtocol) {
         stream = stream.pipe(new ClientStreamDebugger({}))
