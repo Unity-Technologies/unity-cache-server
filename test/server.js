@@ -143,7 +143,7 @@ describe("Server common", function() {
 
         it("should log an error if the error code is 'EADDRINUSE", async () => {
             return new Promise((resolve, reject) => {
-                server.errCallback = e => {}
+                server.errCallback = e => {};
                 helpers.setLogger((lvl, msg) => {
                     /already in use/.test(msg) ? resolve() : reject();
                 });
