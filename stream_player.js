@@ -63,6 +63,7 @@ async function run(filePath, serverAddress, options) {
     }
 
     if(nullServer !== null) {
+        options.nullServer = true;
         const a = nullServer.address();
         serverAddress = `${a.address}:${a.port}`;
     }
@@ -134,7 +135,7 @@ async function run(filePath, serverAddress, options) {
 }
 
 async function playStream(filePath, serverAddress, options) {
-    let bytesReceived = 0, receiveStartTime, receiveEndTime, sendStartTime, sendEndTime, dataHash;
+    let bytesReceived = 0, fileOpen = false, receiveStartTime, receiveEndTime, sendStartTime, sendEndTime, dataHash;
 
     if(!await fs.pathExists(filePath)) throw new Error(`Cannot find ${filePath}`);
 
@@ -143,12 +144,25 @@ async function playStream(filePath, serverAddress, options) {
     const client = new net.Socket();
     await new Promise(resolve => client.connect(address.port, address.host, () => resolve()));
 
+    client.on('error', (err) => {
+        console.log(err);
+    });
+
     const fileStream = fs.createReadStream(filePath);
 
+    const endClient = () => {
+        if(options.nullServer || (reqCount === 0 && !fileOpen)) {
+            process.nextTick(() => client.end(''));
+        }
+    };
+
     fileStream.on('open', () => {
+        fileOpen = true;
         sendStartTime = Date.now();
     }).on('close', () => {
+        fileOpen = false;
         sendEndTime = Date.now();
+        endClient();
     });
 
     let reqCount = 0;
@@ -159,7 +173,7 @@ async function playStream(filePath, serverAddress, options) {
         receiveStartTime = Date.now();
     }).on('header', () => {
         reqCount--;
-        if(reqCount === 0) client.end('');
+        if(reqCount === 0) endClient();
     }).on('data', (chunk) => {
         bytesReceived += chunk.length;
     }).on('dataEnd', () => {
@@ -195,7 +209,8 @@ async function playStream(filePath, serverAddress, options) {
     const csp = new ClientStreamProcessor({});
 
     csp.on('cmd', cmd => {
-        if(cmd[0] === 'g') reqCount++;
+        if(cmd[0] === 'g' || cmd === 'ts') reqCount++;
+        if(cmd === 'te') reqCount --;
     });
 
     let stream = fileStream.pipe(csp);
