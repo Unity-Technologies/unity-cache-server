@@ -169,7 +169,7 @@ describe("Cache API", function() {
                     wStream = await trx.getWriteStream(consts.FILE_TYPE.INFO, fData.resource.length);
                     await new Promise(resolve => wStream.end(fData.resource, resolve));
 
-                    cache.endPutTransaction(trx).then(() => { throw new Error("Expected error"); }, (err) => assert(err))
+                    return cache.endPutTransaction(trx).then(() => { throw new Error("Expected error"); }, (err) => assert(err))
                         .then(() => rStream.destroy());
                 });
 
