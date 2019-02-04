@@ -48,7 +48,10 @@ describe("Cache: FS", () => {
             cache = new Cache();
         });
 
-        afterEach(() => fs.remove(cacheOpts.cachePath));
+        afterEach(async () => {
+            await cache.shutdown();
+            return fs.remove(cacheOpts.cachePath)
+        });
 
         describe("cleanup", function() {
             this.slow(500);

@@ -144,7 +144,8 @@ describe("Cache: RAM", function() {
 
         });
 
-        afterEach(() => {
+        afterEach(async () => {
+            await cache.shutdown();
             cache._clearCache();
             return fs.remove(opts.cachePath);
         });
