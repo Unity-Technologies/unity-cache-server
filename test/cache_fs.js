@@ -181,7 +181,7 @@ describe("Cache: FS", () => {
 
                 await cache.init(opts);
                 const file = await addFileToCache(moment().toDate());
-                cache.cleanup(true);
+                await cache.cleanup(true);
                 assert(await fs.pathExists(file.path));
             });
 
