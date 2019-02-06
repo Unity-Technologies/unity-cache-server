@@ -15,7 +15,7 @@ describe("CommandProcessor", () => {
             this.cmdProc._putWhitelist = ["127.0.0.1"];
 
             this.cmdProc._trx = new PutTransaction();
-            this.cmdProc._trx.clientAddress = "127.0.0.1";
+            this.cmdProc._trx.clientAddress = "127.0.0.1:1234";
             const spy = sinon.spy(this.cmdProc._trx, "getWriteStream");
 
             const p = this.cmdProc._onPut("a", 999);
@@ -29,7 +29,7 @@ describe("CommandProcessor", () => {
             this.cmdProc._putWhitelist = ["127.0.0.6", "127.0.0.3", "127.0.0.1"];
 
             this.cmdProc._trx = new PutTransaction();
-            this.cmdProc._trx.clientAddress = "127.0.0.1";
+            this.cmdProc._trx.clientAddress = "127.0.0.1:1234";
             const spy = sinon.spy(this.cmdProc._trx, "getWriteStream");
 
             const p = this.cmdProc._onPut("a", 999);
@@ -43,7 +43,7 @@ describe("CommandProcessor", () => {
             this.cmdProc._putWhitelist = [];
 
             this.cmdProc._trx = new PutTransaction();
-            this.cmdProc._trx.clientAddress = "127.0.0.1";
+            this.cmdProc._trx.clientAddress = "127.0.0.1:1234";
             const spy = sinon.spy(this.cmdProc._trx, "getWriteStream");
 
             const p = this.cmdProc._onPut("a", 999);
@@ -57,7 +57,7 @@ describe("CommandProcessor", () => {
             this.cmdProc._putWhitelist = ["127.0.0.1"];
 
             this.cmdProc._trx = new PutTransaction();
-            this.cmdProc._trx.clientAddress = "127.0.0.2";
+            this.cmdProc._trx.clientAddress = "127.0.0.2:1234";
 
             await this.cmdProc._onPut("a", 6);
             assert.strictEqual(this.cmdProc._writeHandler, this.cmdProc._writeHandlers.putStream);

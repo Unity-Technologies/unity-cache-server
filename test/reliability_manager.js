@@ -157,17 +157,34 @@ describe("ReliabilityManager", () => {
                 const hash = randomBuffer(consts.HASH_SIZE);
 
                 const trx = new StablePutTransaction(guid, hash);
-                trx.clientAddress = "A";
+                trx.clientAddress = "A:1234";
                 await myRm.processTransaction(trx);
 
                 const entry = rm.getEntry(helpers.GUIDBufferToString(trx.guid), trx.hash.toString('hex'));
                 assert.equal(entry.state, ReliabilityManager.reliabilityStates.Pending);
 
-                trx.clientAddress = "A";
+                trx.clientAddress = "A:1234";
                 await myRm.processTransaction(trx);
                 assert.equal(entry.state, ReliabilityManager.reliabilityStates.Pending);
 
-                trx.clientAddress = "B";
+                trx.clientAddress = "B:1234";
+                await myRm.processTransaction(trx);
+                assert.equal(entry.state, ReliabilityManager.reliabilityStates.ReliableNew);
+            });
+
+            it("should increment the reliability factor for the same IP on different ports", async () => {
+                const myRm = new ReliabilityManager(db, tmp.tmpNameSync(), { reliabilityThreshold: 2, multiClient: true });
+                const guid = randomBuffer(consts.GUID_SIZE);
+                const hash = randomBuffer(consts.HASH_SIZE);
+
+                const trx = new StablePutTransaction(guid, hash);
+                trx.clientAddress = "A:1234";
+                await myRm.processTransaction(trx);
+
+                const entry = rm.getEntry(helpers.GUIDBufferToString(trx.guid), trx.hash.toString('hex'));
+                assert.equal(entry.state, ReliabilityManager.reliabilityStates.Pending);
+
+                trx.clientAddress = "A:4321";
                 await myRm.processTransaction(trx);
                 assert.equal(entry.state, ReliabilityManager.reliabilityStates.ReliableNew);
             });
