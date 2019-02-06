@@ -6,7 +6,6 @@ const loki = require('lokijs');
 const fs = require('fs-extra');
 const sleep = require('./test_utils').sleep;
 const generateCommandData = require('./test_utils').generateCommandData;
-const readStream = require('./test_utils').readStream;
 const sinon = require('sinon');
 const crypto = require('crypto');
 const consts = require('../lib/constants');
@@ -145,32 +144,6 @@ describe("Cache API", function() {
 
                     return cache.getFileInfo(consts.FILE_TYPE.INFO, fileData.guid, fileData.hash)
                         .then(() => { throw new Error("Expected error!"); }, err =>  assert(err));
-                });
-
-                it("should throw an error when trying to replace a file that is open for reading", async () => {
-                    const TEST_FILE_SIZE = 1024 * 64 * 2;
-
-                    const fData = generateCommandData(TEST_FILE_SIZE, TEST_FILE_SIZE);
-
-                    // Add a file to the cache (use the info data)
-                    let trx = await cache.createPutTransaction(fData.guid, fData.hash);
-                    let wStream = await trx.getWriteStream(consts.FILE_TYPE.INFO, fData.info.length);
-                    await new Promise(resolve => wStream.end(fData.info, resolve));
-                    await cache.endPutTransaction(trx);
-
-                    // Get a read stream
-                    const rStream = await cache.getFileStream(consts.FILE_TYPE.INFO, fData.guid, fData.hash);
-
-                    // Read a byte
-                    await new Promise(resolve => rStream.once('readable', () => resolve(rStream.read(1))));
-
-                    // Try to replace the file (use the resource data)
-                    trx = await cache.createPutTransaction(fData.guid, fData.hash);
-                    wStream = await trx.getWriteStream(consts.FILE_TYPE.INFO, fData.resource.length);
-                    await new Promise(resolve => wStream.end(fData.resource, resolve));
-
-                    cache.endPutTransaction(trx).then(() => { throw new Error("Expected error"); }, (err) => assert(err))
-                        .then(() => rStream.destroy());
                 });
 
                 describe("High Reliability Mode", () => {
