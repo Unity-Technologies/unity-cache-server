@@ -48,7 +48,10 @@ describe("Cache: FS", () => {
             cache = new Cache();
         });
 
-        afterEach(() => fs.remove(cacheOpts.cachePath));
+        afterEach(async () => {
+            await cache.shutdown();
+            return fs.remove(cacheOpts.cachePath)
+        });
 
         describe("cleanup", function() {
             this.slow(500);
@@ -189,7 +192,7 @@ describe("Cache: FS", () => {
 
                 await cache.init(opts);
                 const file = await addFileToCache(moment().toDate());
-                cache.cleanup(true);
+                await cache.cleanup(true);
                 assert(await fs.pathExists(file.path));
             });
 
