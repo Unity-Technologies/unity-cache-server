@@ -208,6 +208,9 @@ describe("Unity Cache Server bootstrap", () => {
                             cachePath: tmpPath
                         }
                     }
+                },
+                Server: {
+                    port: 0
                 }
             });
 
