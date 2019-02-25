@@ -323,6 +323,7 @@ describe("Protocol", () => {
                 });
 
                 const tests = [
+                    {cmd: cmd.getAsset, blob: self.data.bin, type: 'bin', packetSize: 1},
                     {cmd: cmd.getAsset, blob: self.data.bin, type: 'bin', packetSize: SMALL_PACKET_SIZE},
                     {cmd: cmd.getInfo, blob: self.data.info, type: 'info', packetSize: MED_PACKET_SIZE},
                     {cmd: cmd.getResource, blob: self.data.resource, type: 'resource', packetSize: LARGE_PACKET_SIZE}

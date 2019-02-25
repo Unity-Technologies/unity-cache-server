@@ -8,6 +8,7 @@ const path = require('path');
 const randomBuffer = require('./test_utils').randomBuffer;
 const consts = require('../lib/constants');
 const sinon = require('sinon');
+const { Writable } = require('stream');
 
 describe("Cache: Base Class", () => {
     let cache;
@@ -124,9 +125,9 @@ describe("Cache: Base Class", () => {
     });
 
     describe("createPutTransaction", () => {
-        it("should require override implementation in subclasses by returning an error", () => {
-            return cache.createPutTransaction()
-                .then(() => { throw new Error("Expected error!"); }, () => {});
+        it("should return an instance of a PutTransaction", async () => {
+            const t = await cache.createPutTransaction();
+            assert.ok(t instanceof PutTransaction);
         });
     });
 
@@ -264,16 +265,16 @@ describe("PutTransaction: Base Class", () => {
     });
 
     describe("getWriteStream", () => {
-        it("should require override implementation in subclasses by returning an error", () => {
-            return trx.getWriteStream(consts.FILE_TYPE.INFO, 0)
-                .then(() => { throw new Error("Expected error!"); }, () => {});
+        it("should return a Writable stream", async() => {
+            const s = await trx.getWriteStream(consts.FILE_TYPE.INFO, 0);
+            assert.ok(s instanceof Writable);
         });
     });
 
     describe("writeFilesToPath", () => {
-        it("should require override implementation in subclasses by returning an error", () => {
-            return trx.writeFilesToPath()
-                .then(() => { throw new Error("Expected error!"); }, () => {});
+        it("should return a promise", () => {
+            const p = trx.writeFilesToPath();
+            assert.ok(p instanceof Promise);
         });
     });
 });
