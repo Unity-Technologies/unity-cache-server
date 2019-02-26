@@ -43,7 +43,7 @@ describe("Client", () => {
 
     describe("connect", () => {
         it("should return the client object if called one or more times", async () => {
-            await this.initClientServer(() => {});
+            await this.initClientServer(s => s.on('data', () => {} ));
             assert.strictEqual(await this._client.connect(), this._client);
             assert.strictEqual(await this._client.connect(), this._client);
         });

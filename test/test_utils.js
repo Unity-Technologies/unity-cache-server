@@ -64,6 +64,8 @@ exports.expectLog = function(client, regex, condition, callback) {
         assert.strictEqual(match, condition);
         callback();
     });
+
+    client.on('data', () => {});
 };
 
 exports.sleep = function(ms) {
