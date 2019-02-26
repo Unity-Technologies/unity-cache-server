@@ -9,3 +9,4 @@ local-production.yml
 Dockerfile*
 .dockerignore
 diagnostics/
+.idea

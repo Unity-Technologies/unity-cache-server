@@ -214,7 +214,7 @@ describe("Unity Cache Server bootstrap", () => {
                 },
                 Diagnostics: {
                     clientRecorder: true
-                }
+				}
             });
 
             const opts = {
