@@ -207,6 +207,8 @@ describe("Server common", function() {
                     done();
                 });
 
+                client.on('data', () => {});
+
                 client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 client.end(cmd.quit);
             });
@@ -219,6 +221,8 @@ describe("Server common", function() {
                 client.on('close', function() {
                     done();
                 });
+
+                client.on('data', () => {});
 
                 client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 client.end('xx');
