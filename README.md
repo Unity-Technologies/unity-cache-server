@@ -30,7 +30,7 @@ This open-source repository is maintained separately from the Cache Server avail
 
 ## Server Setup
 
-Download and install LTS version 10.15.1 of Node.js from the [Node.JS website](https://nodejs.org/en/download/).
+Download and install LTS version 10.15.x of Node.js from the [Node.JS website](https://nodejs.org/en/download/).
 
 #### Install from npm registry
 
