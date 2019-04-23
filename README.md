@@ -1,4 +1,4 @@
-#  Cache Server v6.2 [![Build Status](https://travis-ci.org/Unity-Technologies/unity-cache-server.svg?branch=master)](https://travis-ci.org/Unity-Technologies/unity-cache-server) [![Coverage Status](https://coveralls.io/repos/github/Unity-Technologies/unity-cache-server/badge.svg)](https://coveralls.io/github/Unity-Technologies/unity-cache-server)
+#  Cache Server v6.3 [![Build Status](https://travis-ci.org/Unity-Technologies/unity-cache-server.svg?branch=master)](https://travis-ci.org/Unity-Technologies/unity-cache-server) [![Coverage Status](https://coveralls.io/repos/github/Unity-Technologies/unity-cache-server/badge.svg)](https://coveralls.io/github/Unity-Technologies/unity-cache-server)
 > The Unity Cache Server, optimized for locally networked team environments.
 
 ## Overview
@@ -31,7 +31,7 @@ This open-source repository is maintained separately from the Cache Server avail
 
 ## Server Setup
 
-Download and install LTS version 8.10.0 of Node.js from the [Node.JS website](https://nodejs.org/en/download/).
+Download and install LTS version 10.15.x of Node.js from the [Node.JS website](https://nodejs.org/en/download/).
 
 #### Install from npm registry
 
