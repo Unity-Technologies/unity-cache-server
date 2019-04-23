@@ -74,7 +74,7 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
         }
 
         try {
-            helpers.shouldLog(consts.LOG_DBG) && helpers.log(consts.LOG_DBG, `Begin transaction for ${helpers.GUIDBufferToString(guid)}-${hash.toString('hex')}`);
+            helpers.log(consts.LOG_DBG, `Begin transaction for ${helpers.GUIDBufferToString(guid)}-${hash.toString('hex')}`);
             await client.beginTransaction(guid, hash);
         }
         catch (err) {
