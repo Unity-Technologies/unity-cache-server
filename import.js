@@ -101,7 +101,7 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
 
             try {
                 const stream = fs.createReadStream(file.path);
-                helpers.shouldLog(consts.LOG_DBG) && helpers.log(consts.LOG_DBG, `Putting file of type: ${file.type} size: ${stats.size}`);
+                helpers.log(consts.LOG_DBG, `Putting file of type: ${file.type} size: ${stats.size}`);
                 await client.putFile(file.type, guid, hash, stream, stats.size);
             }
             catch(err) {
@@ -114,7 +114,7 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
         }
 
         try {
-            helpers.shouldLog(consts.LOG_DBG) && helpers.log(consts.LOG_DBG, `End transaction for ${helpers.GUIDBufferToString(guid)}-${hash.toString('hex')}`);
+            helpers.log(consts.LOG_DBG, `End transaction for ${helpers.GUIDBufferToString(guid)}-${hash.toString('hex')}`);
             await client.endTransaction();
             sentAssetCount++;
         }
