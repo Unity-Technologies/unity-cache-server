@@ -146,10 +146,10 @@ describe("Cache: Base Class", () => {
             mock.verify();
         });
 
-        it("should process valid transactions with the reliability manager if high reliability mode is on", async () => {
+        it("should process transactions with the reliability manager if high reliability mode is on", async () => {
             const trx = {
                 finalize: () => {},
-                isValid: false
+                isValid: true
             };
 
             const myOpts = Object.assign({}, opts);
@@ -159,18 +159,12 @@ describe("Cache: Base Class", () => {
             await cache.init(myOpts);
             stub = sinon.stub(cache._rm, "processTransaction");
 
-            // invalid transaction, high reliability enabled: should not process
-            await cache.endPutTransaction(trx);
-            assert(stub.notCalled);
-            stub.resetHistory();
-
-            // valid transaction, high reliability enabled: should process
-            trx.isValid = true;
+            // High reliability enabled: should process
             await cache.endPutTransaction(trx);
             assert(stub.calledOnce);
             stub.resetHistory();
 
-            // valid transaction, high reliability disabled: should not process
+            // High reliability disabled: should not process
             myOpts.highReliability = false;
             await cache.endPutTransaction(trx);
             assert(stub.notCalled);
