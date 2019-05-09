@@ -144,7 +144,7 @@ describe("Unity Cache Server bootstrap", () => {
                     verified = true;
             });
 
-            const argv = process.argv.concat(['--dump-config']);
+            const argv = process.argv.slice(0, 2).concat(['--dump-config']);
             UnityCacheServer.handleCommandLine(cmd, this.opts, argv);
             assert.ok(verified);
         });
