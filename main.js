@@ -26,6 +26,11 @@ const optionMap = {
         description: "The path of the cache directory.",
         configKey: consts.CLI_CONFIG_KEYS.CACHE_PATH
     },
+    host: {
+        flags: "-h, --host <address>",
+        description: "The interface on which the Cache Server listens. The default is to listen on all interfaces.",
+        configKey: consts.CLI_CONFIG_KEYS.HOST
+    },
     port: {
         flags: "-p, --port <n>",
         description: "The port on which the Cache Server listens. The default value is 8126.",
