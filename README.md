@@ -55,6 +55,7 @@ unity-cache-server [arguments]
 Command                          | Description
 -------------------------------- | -----------
 `-V`, `--version`                | Show the version number of the Cache Server.
+`-h`, `--host <address>`         | The interface on which the Cache Server listens. The default is to listen on all interfaces.
 `-p`, `--port <n>`               | The port on which the Cache Server listens. The default value is 8126.
 `-c`, `--cache-module [path]`    | The path to cache module. The Default path is 'cache_fs'.
 `-P`, `--cache-path [path]`      | The path of the cache directory.
@@ -79,6 +80,7 @@ Option                              | Default     | Description
 Global.logLevel                     |3            | Logging level; override with the --log-level CLI command
 Cache.options.processor.putWhitelist|[]           | Only allow PUT transactions (uploads) from the specified array of IP addresses (string values)
 Cache.options.workers               |1            | Number of worker threads; override with the --worker CLI command
+Server.host                         |0.0.0.0      | The interface on which the Cache Server listens. Override with the --host CLI command
 Server.port                         |8126         | The port on which the Cache Server listens. Override with the --port CLI command
 Server.options.allowIPv6            |false        | Listen for client connections on both IPv4 and IPv6
 #### Examples (Mac/Linux)
