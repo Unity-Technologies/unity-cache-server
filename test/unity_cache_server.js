@@ -95,7 +95,7 @@ describe("Unity Cache Server bootstrap", () => {
 
     describe("handleCommandLine", () => {
         before(() => {
-            this._exitStub = sinon.stub(process, "exit").callsFake(() => {});
+            sinon.stub(process, "exit").callsFake(() => {});
 
             this._log = helpers.log;
             this.opts = {
@@ -113,7 +113,7 @@ describe("Unity Cache Server bootstrap", () => {
 
         afterEach(() => helpers.setLogger(this._log));
 
-        after(() => this._exitStub.restore());
+        after(() => sinon.restore());
 
         it("should parse the given CLI option map and configure the given Commander object", () => {
             assert.equal(cmd.options.length, 5); // 4 common options plus one custom from this test suite
@@ -223,7 +223,7 @@ describe("Unity Cache Server bootstrap", () => {
 
             this._cache = await UnityCacheServer.initCache(opts);
 
-            this._propStub = sinon.stub(this._cache.constructor, "properties").get(() => {
+            sinon.stub(this._cache.constructor, "properties").get(() => {
                 return {
                     clustering: false, // test to ensure clustering is disabled automatically
                     cleanup: true
@@ -232,12 +232,8 @@ describe("Unity Cache Server bootstrap", () => {
         });
 
         afterEach(() => {
-            if(this._exitStub) {
-                this._exitStub.restore();
-            }
+            sinon.restore();
         });
-
-        after(() => this._propStub.restore());
 
         it("should start the cache server", async () => {
             this._server = await UnityCacheServer.start();
@@ -258,14 +254,14 @@ describe("Unity Cache Server bootstrap", () => {
 
         it("should setup the server error handler", async () => {
             return new Promise(resolve => {
-                this._exitStub = sinon.stub(process, "exit").callsFake(() => resolve());
+                sinon.stub(process, "exit").callsFake(() => resolve());
                 this._server._server.emit('error', new Error());
             });
         });
 
         it("should setup the CTRL-C handler", () => {
             return new Promise(resolve => {
-                this._exitStub = sinon.stub(process, "exit").callsFake(() => resolve());
+                sinon.stub(process, "exit").callsFake(() => resolve());
 
                 // Only test SIGTERM, as mocha itself listens to SIGINT
                 process.kill(process.pid, 'SIGTERM');
@@ -287,10 +283,9 @@ describe("Unity Cache Server bootstrap", () => {
             };
 
             this._cache = await UnityCacheServer.initCache(opts);
-            this._stubs = [];
         });
 
-        afterEach(() => this._stubs.forEach(s => s.restore()));
+        afterEach(() => sinon.restore());
 
         after(() => {
             UnityCacheServer._cache_instance = null;
@@ -299,8 +294,6 @@ describe("Unity Cache Server bootstrap", () => {
 
         it("should invoke the cache cleanup process without the dryrun flag", async () => {
             const cleanupSpy = sinon.spy(this._cache, "cleanup");
-            this._stubs.push(cleanupSpy);
-
             const eventSpy1 = sinon.spy();
             const eventSpy2 = sinon.spy();
             const eventSpy3 = sinon.spy();
@@ -319,17 +312,13 @@ describe("Unity Cache Server bootstrap", () => {
         });
 
         it("should error and exit if the cache module does not support caching", async () => {
-            const propStub = sinon.stub(this._cache.constructor, "properties").get(() => {
+            sinon.stub(this._cache.constructor, "properties").get(() => {
                 return { cleanup: false }
             });
-
-            this._stubs.push(propStub);
 
             const exitStub = sinon.stub(process, "exit").callsFake((code) => {
                 assert.equal(code, 1);
             });
-
-            this._stubs.push(exitStub);
 
             await UnityCacheServer.cleanup();
             assert(exitStub.calledOnce);
@@ -337,20 +326,18 @@ describe("Unity Cache Server bootstrap", () => {
 
         it("should run repeatedly when started in daemon mode", async () => {
             const cleanupSpy = sinon.spy(this._cache, "cleanup");
-            this._stubs.push(cleanupSpy);
             const p = UnityCacheServer.cleanup(true, 50);
             await sleep(150);
             assert(cleanupSpy.callCount > 1);
-            this._stubs.push(sinon.stub(process, "exit").callsFake(() => {}));
+            sinon.stub(process, "exit").callsFake(() => {});
             process.kill(process.pid, 'SIGTERM');
             return p;
         });
 
         it("should exit in a timely manner when interrupted in daemon mode", async () => {
-            const cleanupSpy = sinon.spy(this._cache, "cleanup");
-            this._stubs.push(cleanupSpy);
+            sinon.spy(this._cache, "cleanup");
             const p = UnityCacheServer.cleanup(true, 5000);
-            this._stubs.push(sinon.stub(process, "exit").callsFake(() => {}));
+            sinon.stub(process, "exit").callsFake(() => {});
             process.kill(process.pid, 'SIGTERM');
             return p;
         });

@@ -132,10 +132,8 @@ describe("Cache: Base Class", () => {
     });
 
     describe("endPutTransaction", () => {
-        let stub;
-
         after(() => {
-            stub.resetBehavior();
+            sinon.restore();
         });
 
         it("should call finalize on the transaction", async () => {
@@ -157,7 +155,7 @@ describe("Cache: Base Class", () => {
             myOpts.highReliabilityOptions = { reliabilityThreshold: 2 };
 
             await cache.init(myOpts);
-            stub = sinon.stub(cache._rm, "processTransaction");
+            const stub = sinon.stub(cache._rm, "processTransaction");
 
             // High reliability enabled: should process
             await cache.endPutTransaction(trx);

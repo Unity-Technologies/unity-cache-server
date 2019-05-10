@@ -230,7 +230,6 @@ describe("Protocol", () => {
                 });
 
                 beforeEach(async () => {
-                    this.stubs = [];
                     client = await getClientPromise(server.port);
 
                     // The Unity client always sends the version once on-connect. i.e., the version should not be pre-pended
@@ -239,7 +238,7 @@ describe("Protocol", () => {
                 });
 
                 afterEach(() => {
-                    this.stubs.forEach(s => s.restore());
+                    sinon.restore();
                     client.destroy();
                 });
 
@@ -316,7 +315,7 @@ describe("Protocol", () => {
                         done();
                     });
 
-                    self.stubs.push(sinon.stub(cache, "getFileStream").rejects());
+                    sinon.stub(cache, "getFileStream").rejects();
 
                     const buf = Buffer.from(encodeCommand(cmd.getAsset, self.data.guid, self.data.hash), 'ascii');
                     clientWrite(client, buf);
