@@ -37,6 +37,17 @@ describe("ReliabilityManager", () => {
     });
 
     describe("processTransaction", () => {
+        it("should not process invalid transactions", async () => {
+            const guid = randomBuffer(consts.GUID_SIZE);
+            const hash = randomBuffer(consts.HASH_SIZE);
+            const trx = new PutTransaction(guid, hash);
+            await trx.invalidate();
+            assert(!trx.isValid);
+            await rm.processTransaction(trx);
+            const entry = rm.getEntry(helpers.GUIDBufferToString(guid), hash.toString('hex'));
+            assert(!entry);
+        });
+
         describe("Unknown version", () => {
             let trx, trxSpy;
             before(async () => {
@@ -156,20 +167,22 @@ describe("ReliabilityManager", () => {
                 const guid = randomBuffer(consts.GUID_SIZE);
                 const hash = randomBuffer(consts.HASH_SIZE);
 
-                const trx = new StablePutTransaction(guid, hash);
+                let trx = new StablePutTransaction(guid, hash);
                 trx.clientAddress = "A:1234";
                 await myRm.processTransaction(trx);
 
                 const entry = rm.getEntry(helpers.GUIDBufferToString(trx.guid), trx.hash.toString('hex'));
-                assert.equal(entry.state, ReliabilityManager.reliabilityStates.Pending);
+                assert.strictEqual(entry.state, ReliabilityManager.reliabilityStates.Pending);
 
+                trx = new StablePutTransaction(guid, hash);
                 trx.clientAddress = "A:1234";
                 await myRm.processTransaction(trx);
-                assert.equal(entry.state, ReliabilityManager.reliabilityStates.Pending);
+                assert.strictEqual(entry.state, ReliabilityManager.reliabilityStates.Pending);
 
+                trx = new StablePutTransaction(guid, hash);
                 trx.clientAddress = "B:1234";
                 await myRm.processTransaction(trx);
-                assert.equal(entry.state, ReliabilityManager.reliabilityStates.ReliableNew);
+                assert.strictEqual(entry.state, ReliabilityManager.reliabilityStates.ReliableNew);
             });
 
             it("should increment the reliability factor for the same IP on different ports", async () => {
@@ -177,16 +190,17 @@ describe("ReliabilityManager", () => {
                 const guid = randomBuffer(consts.GUID_SIZE);
                 const hash = randomBuffer(consts.HASH_SIZE);
 
-                const trx = new StablePutTransaction(guid, hash);
+                let trx = new StablePutTransaction(guid, hash);
                 trx.clientAddress = "A:1234";
                 await myRm.processTransaction(trx);
 
                 const entry = rm.getEntry(helpers.GUIDBufferToString(trx.guid), trx.hash.toString('hex'));
-                assert.equal(entry.state, ReliabilityManager.reliabilityStates.Pending);
+                assert.strictEqual(entry.state, ReliabilityManager.reliabilityStates.Pending);
 
+                trx = new StablePutTransaction(guid, hash);
                 trx.clientAddress = "A:4321";
                 await myRm.processTransaction(trx);
-                assert.equal(entry.state, ReliabilityManager.reliabilityStates.ReliableNew);
+                assert.strictEqual(entry.state, ReliabilityManager.reliabilityStates.ReliableNew);
             });
         });
     });
