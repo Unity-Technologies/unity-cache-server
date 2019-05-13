@@ -59,7 +59,7 @@ Command                          | Description
 `-p`, `--port <n>`               | The port on which the Cache Server listens. The default value is 8126.
 `-c`, `--cache-module [path]`    | The path to cache module. The Default path is 'cache_fs'.
 `-P`, `--cache-path [path]`      | The path of the cache directory.
-`-l`, `--log-level <n>`          | The level of log verbosity. Valid values are 0 (silent) through 5 (debug). The default is 3 (info).
+`-l`, `--log-level <n>`          | The level of log verbosity. Valid values are 0 (silent) through 4 (debug). The default is 3 (info).
 `-w`, `--workers <n>`            | The number of worker threads to spawn. The default is 0.
 `-m`, `--mirror <host:port>`     | Mirror transactions to another cache server. Repeat this option for multiple mirrors.
 `-W`, `--putwhitelist <host:port>`  | Only allow PUT transactions (uploads) from the specified client address. Repeat this option for multiple addresses.
@@ -174,7 +174,7 @@ Command                          | Description
 -V, --version                    | Show the version number of cleanup script.
 -c --cache-module [path]         | The path to the cache module.
 -P, --cache-path [path]          | The path of the cache directory.
--l, --log-level <n>              | The level of log verbosity. Valid values are 0 (silent) through 5 (debug)
+-l, --log-level <n>              | The level of log verbosity. Valid values are 0 (silent) through 4 (debug)
 -e, --expire-time-span <timeSpan>| Override the configured file expiration timespan. Both ASP.NET style time spans (days.minutes:hours:seconds, for example '15.23:59:59') and ISO 8601 time spans (For example, 'P15DT23H59M59S') are supported.
 -s, --max-cache-size <bytes>     | Override the configured maximum cache size. Files will be removed from the cache until the max cache size is satisfied, using a Least Recently Used search. A value of 0 disables this check.
 -d, --delete                     | Delete cached files that match the configured criteria. Without this, the default behavior is to dry-run which will print diagnostic information only.
