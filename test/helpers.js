@@ -124,13 +124,13 @@ describe("Helper functions", () => {
             it("should log a console message if the desired log level is >= the minimum level", () => {
                 const spy = sinon.spy(console, 'log');
                 const str = "Hello World";
-                helpers.setLogLevel(consts.LOG_TEST);
+                helpers.setLogLevel(consts.LOG_INFO);
 
                 helpers.defaultLogger(consts.LOG_WARN, str);
                 assert(spy.calledOnce);
                 spy.resetHistory();
 
-                helpers.defaultLogger(consts.LOG_TEST, str);
+                helpers.defaultLogger(consts.LOG_INFO, str);
                 assert(spy.calledOnce);
                 spy.resetHistory();
 
@@ -144,13 +144,13 @@ describe("Helper functions", () => {
             it("should log a console message if the desired log level is >= the minimum level", () => {
                 const spy = sinon.spy(console, 'log');
                 const str = "Hello World";
-                helpers.setLogLevel(consts.LOG_TEST);
+                helpers.setLogLevel(consts.LOG_INFO);
 
                 helpers.defaultClusterLogger(consts.LOG_WARN, str);
                 assert(spy.calledOnce);
                 spy.resetHistory();
 
-                helpers.defaultClusterLogger(consts.LOG_TEST, str);
+                helpers.defaultClusterLogger(consts.LOG_INFO, str);
                 assert(spy.calledOnce);
                 spy.resetHistory();
 
