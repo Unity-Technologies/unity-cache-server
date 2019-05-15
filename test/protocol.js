@@ -307,7 +307,8 @@ describe("Protocol", () => {
                     // execute each command in series, asynchronously, to better simulate a real world server connection
                     let next = Promise.resolve();
                     cmdData.forEach(b => {
-                        next = next.then(() => clientWrite(client, Buffer.from(b, 'ascii'), LARGE_PACKET_SIZE));
+                        next = next.then(() => clientWrite(client, Buffer.from(b, 'ascii'), LARGE_PACKET_SIZE))
+                            .catch(err => done(err));
                     });
                 });
 
