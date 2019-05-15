@@ -286,7 +286,7 @@ describe("Protocol", () => {
 
                     resp.on('data', () => {});
                     resp.on('dataEnd', () => {
-                        if (cmds.length === 0) {
+                        if(cmds.length === 0) {
                             done();
                         }
                     });
