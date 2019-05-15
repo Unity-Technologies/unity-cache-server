@@ -286,7 +286,7 @@ describe("Protocol", () => {
 
                     resp.on('data', () => {});
                     resp.on('dataEnd', () => {
-                        if(cmds.length === 0) {
+                        if (cmds.length === 0) {
                             done();
                         }
                     });
@@ -296,14 +296,19 @@ describe("Protocol", () => {
                         assert.strictEqual(header.cmd, nextCmd);
                     });
 
-                    const buf = Buffer.from(
-                        encodeCommand(cmd.getAsset, self.data.guid, self.data.hash) +
-                        encodeCommand(cmd.getInfo, self.data.guid, self.data.hash) +
-                        encodeCommand(cmd.getResource, self.data.guid, Buffer.alloc(consts.HASH_SIZE, 'ascii')) +
-                        encodeCommand(cmd.getInfo, self.data.guid, self.data.hash) +
-                        encodeCommand(cmd.getAsset, self.data.guid, self.data.hash), 'ascii');
+                    const cmdData = [
+                        encodeCommand(cmd.getAsset, self.data.guid, self.data.hash),
+                        encodeCommand(cmd.getInfo, self.data.guid, self.data.hash),
+                        encodeCommand(cmd.getResource, self.data.guid, Buffer.alloc(consts.HASH_SIZE, 'ascii')),
+                        encodeCommand(cmd.getInfo, self.data.guid, self.data.hash),
+                        encodeCommand(cmd.getAsset, self.data.guid, self.data.hash)
+                    ];
 
-                    clientWrite(client, buf, LARGE_PACKET_SIZE).catch(err => done(err));
+                    // execute each command in series, asynchronously, to better simulate a real world server connection
+                    let next = Promise.resolve();
+                    cmdData.forEach(b => {
+                        next = next.then(() => clientWrite(client, Buffer.from(b, 'ascii'), LARGE_PACKET_SIZE));
+                    });
                 });
 
                 it('should respond with not found (-) for a file that exists but throws an error when accessed', function (done) {
