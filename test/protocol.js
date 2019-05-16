@@ -287,6 +287,7 @@ describe("Protocol", () => {
                     resp.on('data', () => {});
                     resp.on('dataEnd', () => {
                         if(cmds.length === 0) {
+                            assert.strictEqual(cmdProc.sentFileCount, 4);
                             done();
                         }
                     });
@@ -317,6 +318,7 @@ describe("Protocol", () => {
                     resp.on('data', () => {});
                     resp.on('dataEnd', () => {
                         if(cmds.length === 0) {
+                            assert.strictEqual(cmdProc.sentFileCount, 4);
                             done();
                         }
                     });
