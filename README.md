@@ -56,10 +56,11 @@ unity-cache-server [arguments]
 Option                          | Description
 -------------------------------- | -----------
 `-V`, `--version`                | Show the version number of the Cache Server.
+`-h`, `--host <address>`         | The interface on which the Cache Server listens. The default is to listen on all interfaces.
 `-p`, `--port <n>`               | The port on which the Cache Server listens. The default value is 8126.
 `-c`, `--cache-module [path]`    | The path to cache module. The Default path is 'cache_fs'.
 `-P`, `--cache-path [path]`      | The path of the cache directory.
-`-l`, `--log-level <n>`          | The level of log verbosity. Valid values are 0 (silent) through 5 (debug). The default is 3 (info).
+`-l`, `--log-level <n>`          | The level of log verbosity. Valid values are 0 (silent) through 4 (debug). The default is 3 (info).
 `-w`, `--workers <n>`            | The number of worker threads to spawn. The default is 0.
 `--diag-client-recorder`         | Record incoming client network stream to disk.
 `-m`, `--mirror <host:port>`     | Mirror transactions to another cache server. Repeat this option for multiple mirrors.
@@ -81,6 +82,7 @@ Option                              | Default     | Description
 Global.logLevel                     |3            | Logging level; override with the --log-level CLI command
 Cache.options.processor.putWhitelist|[]           | Only allow PUT transactions (uploads) from the specified array of IP addresses (string values)
 Cache.options.workers               |1            | Number of worker threads; override with the --worker CLI command
+Server.host                         |0.0.0.0      | The interface on which the Cache Server listens. Override with the --host CLI command
 Server.port                         |8126         | The port on which the Cache Server listens. Override with the --port CLI command
 Server.options.allowIPv6            |false        | Listen for client connections on both IPv4 and IPv6
 #### Examples (Mac/Linux)
@@ -174,7 +176,7 @@ Option                          | Description
 -V, --version                    | Show the version number of cleanup script.
 -c --cache-module [path]         | The path to the cache module.
 -P, --cache-path [path]          | The path of the cache directory.
--l, --log-level <n>              | The level of log verbosity. Valid values are 0 (silent) through 5 (debug)
+-l, --log-level <n>              | The level of log verbosity. Valid values are 0 (silent) through 4 (debug)
 -e, --expire-time-span <timeSpan>| Override the configured file expiration timespan. Both ASP.NET style time spans (days.minutes:hours:seconds, for example '15.23:59:59') and ISO 8601 time spans (For example, 'P15DT23H59M59S') are supported.
 -s, --max-cache-size <bytes>     | Override the configured maximum cache size. Files will be removed from the cache until the max cache size is satisfied, using a Least Recently Used search. A value of 0 disables this check.
 -d, --delete                     | Delete cached files that match the configured criteria. Without this, the default behavior is to dry-run which will print diagnostic information only.

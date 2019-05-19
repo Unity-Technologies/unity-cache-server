@@ -18,9 +18,10 @@ const cache = new CacheBase();
 let client;
 
 describe("Server constructor", function() {
-    it("should use the default port if no port is specified in options", () => {
+    it("should use the default host and port if no host or port is specified in options", () => {
         const s = new CacheServer(cache, { mirror:[] });
         assert.strictEqual(s.port, consts.DEFAULT_PORT);
+        assert.strictEqual(s.host, consts.DEFAULT_HOST);
     });
 });
 
@@ -59,6 +60,25 @@ describe("Server mirroring", function() {
         await clientWrite(client, buf);
 
         spies.forEach(s => assert(s.calledOnce));
+    });
+});
+
+describe("Server startup", function() {
+    let server;
+
+    after(() => {
+        server.stop();
+    });
+
+    it("Should try to bind to the configured host",  function(done) {
+        // Validating an exception trying to bind to a bogus adapter is much simpler and more portable than trying
+        // to find a unique, valid adapter to bind to.
+        const host = "1.2.3.4";
+        server = new CacheServer(cache, {host, port: 0});
+        server.start(err => {
+            assert.strictEqual(err.address, host);
+            done();
+        });
     });
 });
 
