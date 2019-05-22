@@ -25,7 +25,7 @@ This open-source repository is maintained separately from the Cache Server avail
   * [Function](#function)
   * [Configuration](#configuration)
 * [Unity project Library Importer](#unity-project-library-importer)
-* [Diagnostic Tools](#diagnostic-tools)
+* [Diagnostics](#diagnostics)
 * [Contributors](#contributors)
 * [License](#license)
 
@@ -247,36 +247,19 @@ Tools are provided to quickly seed a Cache Server from a fully imported Unity pr
 * The import process connects and uploads to the target host like any other Unity client, so it should be safe in a production environment.
 * Files are skipped if any changes were detected between when the JSON data was exported and when the importer tool is executed.
 
-## Diagnostic Tools
-
-Diagnostic tools are included for debugging and performance testing.
+## Diagnostics
 
 ### Client Recorder (--diag-client-recorder)
 
-Starting up the Cache Server with the `--diag-client-recorder` option will write to disk raw data from all incoming client connections (by default to the `diagnostics/client-recordings` folder). These client data sessions are consumed by the `stream_player.js` utility.
+Starting up the Cache Server with the `--diag-client-recorder` option will write to disk raw data from all incoming client connections (by default to the `diagnostics/client-recordings` folder). Example tools and libraries for analysing recorded sessions can be found in the [ucs-diag-tools](https://github.com/Unity-Technologies/ucs-diag-utils) repository.
 
-### Client Stream Player
+### Configuration
 
-#### Usage
-
-`stream_player.js [options] <filePath> [ServerAddress]`
-
-Option                          | Description
-------------------------------- | -----------
-  -i --iterations <n>           | Number of times to send the recorded session to the server (default: 1)
-  -c --max-concurrency <n>      | Number of concurrent connections to make to the server (default: 1)
-  -d --debug-protocol           | Print protocol stream debugging data to the console.
-  -q --no-verbose               | Do not show progress and result statistics.
-  -h, --help                    | Show usage information.
-  
-#### Description
-
-The stream player can read a recorded client session(s) at `<filePath>`, optionally print the protocol stream to the console, and optionally send the protocol stream to a remote server at `[ServerAddress]` for e.g. performance load testing.
-
-#### Notes
-
-* If `<filePath>` is a directory, all files within the directory (recursively) will be read and played back. Some rudimentary validation is done on each file to detect whether or not it is a valid client session stream.
-* If `[ServerAddress]` is omitted, data will be sent to a temporary "no-op" TCP server. This is useful if you are only concerned with reading the debug protocol stream with the `-d` option.
+Option                                               | Default      | Description
+------------------------------------------           | ------------ | -----------
+Diagnostics.clientRecorder                           | false        | Enable client network stream recording.
+Diagnostics.clientRecorderOptions.bufferSize         | 10000000     | Size of in-memory buffer for client network stream recording. 
+Diagnostics.clientRecorderOptions.saveDir            | "diagnostics/client-recordings" | Directory where client network stream recordings will be saved. A relative directory will be relative to the server application startup directory.
 
 ## Contributors
 Contributions are welcome! Before submitting pull requests please note the Submission of Contributions section of the Apache 2.0 license.
