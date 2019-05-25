@@ -49,6 +49,5 @@ Global:
 Diagnostics:
   clientRecorder: false
   clientRecorderOptions:
-    enabled: false
     bufferSize: 10000000
     saveDir: "diagnostics/client-recordings"
