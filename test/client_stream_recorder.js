@@ -90,7 +90,7 @@ describe('ClientStreamRecorder', () => {
         });
 
         await new Promise(resolve => {
-            csr.on('flushed', () => resolve());
+            csr.on('finished', () => resolve());
         });
 
         assert(await fs.pathExists(csr.dataPath));
@@ -98,7 +98,6 @@ describe('ClientStreamRecorder', () => {
 
         // zero pad the input buffer to match expected file data
         buffer = Buffer.concat([Buffer.from('000000'), buffer]);
-
-        assert.equal(Buffer.compare(fileData, buffer), 0);
+        assert.strictEqual(Buffer.compare(fileData, buffer), 0);
     });
 });
