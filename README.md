@@ -53,7 +53,7 @@ npm install github:Unity-Technologies/unity-cache-server -g
 unity-cache-server [arguments]
 ```
 
-Option                          | Description
+Option                           | Description
 -------------------------------- | -----------
 `-V`, `--version`                | Show the version number of the Cache Server.
 `-h`, `--host <address>`         | The interface on which the Cache Server listens. The default is to listen on all interfaces.
@@ -171,7 +171,7 @@ Due to performance considerations, the `cache_fs` module shipped with Cache Serv
 or
 `node cleanup.js [options]`
 
-Option                          | Description
+Option                           | Description
 -------------------------------- | -----------
 -V, --version                    | Show the version number of cleanup script.
 -c --cache-module [path]         | The path to the cache module.
@@ -255,10 +255,10 @@ Starting up the Cache Server with the `--diag-client-recorder` option will write
 
 ### Configuration
 
-Option                                               | Default      | Description
-------------------------------------------           | ------------ | -----------
-Diagnostics.clientRecorder                           | false        | Enable client network stream recording.
-Diagnostics.clientRecorderOptions.bufferSize         | 10000000     | Size of in-memory buffer for client network stream recording. 
+Option                                               | Default                         | Description
+------------------------------------------           | ------------------------------- | -----------
+Diagnostics.clientRecorder                           | false                           | Enable client network stream recording.
+Diagnostics.clientRecorderOptions.bufferSize         | 10000000                        | Size of in-memory buffer for client network stream recording. 
 Diagnostics.clientRecorderOptions.saveDir            | "diagnostics/client-recordings" | Directory where client network stream recordings will be saved. A relative directory will be relative to the server application startup directory.
 
 ## Contributors
