@@ -9,7 +9,7 @@ const CacheServer = require('../lib/server/server');
 const tmp = require('tmp');
 const ClientStreamRecorder = require('../lib/server/client_stream_recorder');
 const CacheBase = require('../lib/cache/cache_base').CacheBase;
-const { generateCommandData, encodeCommand, clientWrite, sleep, cmd } = require('./test_utils');
+const { generateCommandData, encodeCommand, clientWrite, sleep, cmd, purgeConfig } = require('./test_utils');
 const sinon = require('sinon');
 
 const cache = new CacheBase();
@@ -223,16 +223,17 @@ describe("Server common", function() {
         before(async () => {
             this.tmpDir = tmp.dirSync({unsafeCleanup: true});
 
-            const serverOpts = {
-                port: 0,
-                clientRecorder: {
-                    enabled: true,
-                    saveDir: this.tmpDir.name,
-                    bufferSize: 1024
+            purgeConfig();
+            process.env.NODE_CONFIG = JSON.stringify({
+                Diagnostics: {
+                    clientRecorderOptions: {
+                        saveDir: this.tmpDir.name,
+                        bufferSize: 1024
+                    }
                 }
-            };
+            });
 
-            this.csrServer = new CacheServer(cache, serverOpts);
+            this.csrServer = new CacheServer(cache, {clientRecorder: true});
             return this.csrServer.start(err => assert(!err, `Cache Server reported error! ${err}`));
         });
 
@@ -247,13 +248,12 @@ describe("Server common", function() {
             this.csrServer.server.on('connection', socket => {
                 assert.ok(Array.isArray(socket._readableState.pipes));
                 assert.ok(socket._readableState.pipes.find(x => x instanceof ClientStreamRecorder));
-                done();
             });
 
             client = net.connect({port: this.csrServer.port}, () => {
                 client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
                 client.end(cmd.quit);
-            });
+            }).on('data', () => {}).on('close', () => done());
         });
     });
 
