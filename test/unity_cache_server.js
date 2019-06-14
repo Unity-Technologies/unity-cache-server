@@ -213,7 +213,8 @@ describe("Unity Cache Server bootstrap", () => {
                     }
                 },
                 Diagnostics: {
-                    clientRecorder: true
+                    clientRecorder: true,
+                    saveDir: tmpPath
 				}
             });
 
