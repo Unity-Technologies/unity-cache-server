@@ -25,6 +25,7 @@ This open-source repository is maintained separately from the Cache Server avail
   * [Function](#function)
   * [Configuration](#configuration)
 * [Unity project Library Importer](#unity-project-library-importer)
+* [Diagnostics](#diagnostics)
 * [Contributors](#contributors)
 * [License](#license)
 
@@ -52,7 +53,7 @@ npm install github:Unity-Technologies/unity-cache-server -g
 unity-cache-server [arguments]
 ```
 
-Command                          | Description
+Option                           | Description
 -------------------------------- | -----------
 `-V`, `--version`                | Show the version number of the Cache Server.
 `-h`, `--host <address>`         | The interface on which the Cache Server listens. The default is to listen on all interfaces.
@@ -61,6 +62,7 @@ Command                          | Description
 `-P`, `--cache-path [path]`      | The path of the cache directory.
 `-l`, `--log-level <n>`          | The level of log verbosity. Valid values are 0 (silent) through 4 (debug). The default is 3 (info).
 `-w`, `--workers <n>`            | The number of worker threads to spawn. The default is 0.
+`--diag-client-recorder`         | Record incoming client network stream to disk.
 `-m`, `--mirror <host:port>`     | Mirror transactions to another cache server. Repeat this option for multiple mirrors.
 `-W`, `--putwhitelist <host:port>`  | Only allow PUT transactions (uploads) from the specified client address. Repeat this option for multiple addresses.
 `--dump-config`                  | Write the active configuration to the console.
@@ -169,7 +171,7 @@ Due to performance considerations, the `cache_fs` module shipped with Cache Serv
 or
 `node cleanup.js [options]`
 
-Command                          | Description
+Option                           | Description
 -------------------------------- | -----------
 -V, --version                    | Show the version number of cleanup script.
 -c --cache-module [path]         | The path to the cache module.
@@ -244,6 +246,20 @@ Tools are provided to quickly seed a Cache Server from a fully imported Unity pr
 * The default `server:port` is `localhost:8126`
 * The import process connects and uploads to the target host like any other Unity client, so it should be safe in a production environment.
 * Files are skipped if any changes were detected between when the JSON data was exported and when the importer tool is executed.
+
+## Diagnostics
+
+### Client Recorder (--diag-client-recorder)
+
+Starting up the Cache Server with the `--diag-client-recorder` option will write to disk raw data from all incoming client connections (by default to the `diagnostics/client-recordings` folder). Example tools and libraries for analysing recorded sessions can be found in the [ucs-diag-tools](https://github.com/Unity-Technologies/ucs-diag-utils) repository.
+
+### Configuration
+
+Option                                               | Default                         | Description
+------------------------------------------           | ------------------------------- | -----------
+Diagnostics.clientRecorder                           | false                           | Enable client network stream recording.
+Diagnostics.clientRecorderOptions.bufferSize         | 10000000                        | Size of in-memory buffer for client network stream recording. 
+Diagnostics.clientRecorderOptions.saveDir            | "diagnostics/client-recordings" | Directory where client network stream recordings will be saved. A relative directory will be relative to the server application startup directory.
 
 ## Contributors
 Contributions are welcome! Before submitting pull requests please note the Submission of Contributions section of the Apache 2.0 license.

@@ -6,8 +6,9 @@ const os = require('os');
 const helpers = require('../lib/helpers');
 const consts = require('../lib/constants');
 const CacheServer = require('../lib/server/server');
+const tmp = require('tmp');
+const ClientStreamRecorder = require('../lib/server/client_stream_recorder');
 const CacheBase = require('../lib/cache/cache_base').CacheBase;
-const TransactionMirror = require('../lib/server/transaction_mirror');
 const { generateCommandData, encodeCommand, clientWrite, sleep, cmd } = require('./test_utils');
 const sinon = require('sinon');
 
@@ -214,6 +215,44 @@ describe("Server common", function() {
                 const err = new Error();
                 err.code = 'EADDRINUSE';
                 server._server.emit('error', err);
+            });
+        });
+    });
+
+    describe("Client Recorder", () => {
+        before(async () => {
+            this.tmpDir = tmp.dirSync({unsafeCleanup: true});
+
+            const serverOpts = {
+                port: 0,
+                clientRecorder: {
+                    enabled: true,
+                    saveDir: this.tmpDir.name,
+                    bufferSize: 1024
+                }
+            };
+
+            this.csrServer = new CacheServer(cache, serverOpts);
+            return this.csrServer.start(err => assert(!err, `Cache Server reported error! ${err}`));
+        });
+
+        after(() => {
+            this.tmpDir.removeCallback();
+            return this.csrServer.stop();
+        });
+
+        it("should use the ClientStreamRecorder if configured", (done) => {
+            assert.ok(this.csrServer.isRecordingClient);
+
+            this.csrServer.server.on('connection', socket => {
+                assert.ok(Array.isArray(socket._readableState.pipes));
+                assert.ok(socket._readableState.pipes.find(x => x instanceof ClientStreamRecorder));
+                done();
+            });
+
+            client = net.connect({port: this.csrServer.port}, () => {
+                client.write(helpers.encodeInt32(consts.PROTOCOL_VERSION));
+                client.end(cmd.quit);
             });
         });
     });
