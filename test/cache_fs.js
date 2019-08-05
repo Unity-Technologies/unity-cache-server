@@ -196,6 +196,19 @@ describe("Cache: FS", () => {
                 assert(await fs.pathExists(file.path));
             });
 
+            it("should delete any files if the dryRun option is false", async () => {
+                const opts = Object.assign({}, cacheOpts);
+                opts.cleanupOptions = {
+                    expireTimeSpan: "P30D",
+                    maxCacheSize: 1
+                };
+
+                await cache.init(opts);
+                const file = await addFileToCache(moment().toDate());
+                await cache.cleanup(false);
+                assert(!await fs.pathExists(file.path));
+            });
+
             it("should remove versions from the reliability manager, when in high reliability mode", async () => {
                 const opts = Object.assign({}, cacheOpts);
                 opts.cleanupOptions = {

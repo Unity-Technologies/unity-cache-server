@@ -104,13 +104,14 @@ describe("ReliabilityManager", () => {
         });
 
         describe("Known version, reliabilityFactor exceeds reliabilityThreshold", () => {
-            let trx;
+            let trx, trxSpy;
             before(async () => {
                 const guid = randomBuffer(consts.GUID_SIZE);
                 const hash = randomBuffer(consts.HASH_SIZE);
                 await rm.processTransaction(new StablePutTransaction(guid, hash)); // once
                 await rm.processTransaction(new StablePutTransaction(guid, hash)); // twice
                 trx = new StablePutTransaction(guid, hash);
+                trxSpy = sinon.spy(trx, "writeFilesToPath");
                 assert(trx.isValid);
                 await rm.processTransaction(trx); // three times (last time)
             });
@@ -124,6 +125,10 @@ describe("ReliabilityManager", () => {
 
             it("should invalidate the transaction to prevent changes to the version", () => {
                 assert(!trx.isValid);
+            });
+
+            it("should not tell the cache to write unreliable files", () => {
+                assert(!trxSpy.called);
             });
         });
 
@@ -150,10 +155,12 @@ describe("ReliabilityManager", () => {
                 assert(!trx.isValid);
             });
 
+            // seperated this into 2 tests
             it("should tell the transaction to write unreliable files if saveUnreliableVersionArtifacts is true", async () => {
                 assert(spy.called);
+            });
 
-                // Test with saveUnreliableVersionArtifacts = false
+            it("should not tell the transaction to write unreliable files if saveUnreliableVersionArtifacts is false", async () => {
                 const myRm = new ReliabilityManager(db, tmp.tmpNameSync(), {reliabilityThreshold: 2, saveUnreliableVersionArtifacts: false});
                 spy.resetHistory();
                 await myRm.processTransaction(trx);
