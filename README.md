@@ -39,11 +39,18 @@ Download and install LTS version 10.15.x of Node.js from the [Node.JS website](h
 npm install unity-cache-server -g
 ```
 
+For the latest beta release:
+```bash
+npm install unity-cache-server@beta -g
+```
+
 #### Install from GitHub source
 
 ```bash
 npm install github:Unity-Technologies/unity-cache-server -g
 ```
+
+Note: GitHub source install from `master` branch might be ahead of latest release version.
 
 ## Usage
 
