@@ -217,6 +217,19 @@ describe("Server common", function() {
                 server._server.emit('error', err);
             });
         });
+
+        it("should log an error if the error code is 'ECONNRESET", async () => {
+            return new Promise((resolve, reject) => {
+                server.errCallback = e => {};
+                helpers.setLogger((lvl, msg) => {
+                    /unexpectedly closed the connection/.test(msg) ? resolve() : reject();
+                });
+
+                const err = new Error();
+                err.code = 'ECONNRESET';
+                server._server.emit('error', err);
+            });
+        });
     });
 
     describe("Client Recorder", () => {
