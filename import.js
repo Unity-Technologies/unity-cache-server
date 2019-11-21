@@ -43,7 +43,13 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
     if(!data.hasOwnProperty('transactions')) throw new Error(`Invalid transaction data!`);
 
     const client = new Client(address.host, address.port, {});
-    await client.connect();
+    try {
+        await client.connect();
+    }
+    catch(err) {
+        helpers.log(consts.LOG_ERR, err);
+        process.exit(1);
+    }
 
     const trxCount = data.transactions.length;
     const trxStart = Math.min(trxCount - 1, Math.max(0, program.skip - 1));
@@ -66,6 +72,11 @@ async function importTransactionFile(filePath, addressString, defaultPort) {
         const trx = data.transactions[i];
         const guid = helpers.GUIDStringToBuffer(trx.guid);
         const hash = Buffer.from(trx.hash, 'hex');
+
+        if (!hash || !guid) {
+            helpers.log(consts.LOG_DBG, `Transaction had invalid hash or guid. Skipping`);
+            continue;
+        }
 
         if(logLevel === consts.LOG_DBG) {
             helpers.log(consts.LOG_INFO, `(${i + 1}/${trxCount}) ${trx.assetPath}`);
