@@ -33,7 +33,7 @@ This version of the cache server does not support the new Asset Database Version
 
 ## Server Setup
 
-Download and install LTS version 10.15.x of Node.js from the [Node.JS website](https://nodejs.org/en/download/).
+Download and install LTS version 12.13.x of Node.js from the [Node.JS website](https://nodejs.org/en/download/).
 
 #### Install from npm registry
 
