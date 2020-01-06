@@ -7,6 +7,8 @@ This repository contains an open-source implementation of the Cache Server. This
 
 This open-source repository is maintained separately from the Cache Server available on the Unity website and the implementation of the Cache Server that is packaged with the Unity installer.
 
+This version of the cache server does not support the new Asset Database Version 2 introduced in Unity 2019.3. For projects using the new Asset import pipeline, use the[Accelerator](https://blogs.unity3d.com/2019/09/11/speed-up-your-team-with-the-unity-accelerator/)
+
 #### Table of Contents
 * [Server Setup](#server-setup)
     * [Install from npm registry](#install-from-npm-registry)
@@ -31,7 +33,7 @@ This open-source repository is maintained separately from the Cache Server avail
 
 ## Server Setup
 
-Download and install LTS version 10.15.x of Node.js from the [Node.JS website](https://nodejs.org/en/download/).
+Download and install LTS version 12.13.x of Node.js from the [Node.JS website](https://nodejs.org/en/download/).
 
 #### Install from npm registry
 
