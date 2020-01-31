@@ -49,19 +49,14 @@ exports.encodeCommand = function(command, guid, hash, blob) {
     return command;
 };
 
-exports.expectLog = function(client, regex, condition, callback) {
-    if(typeof(callback) !== 'function' && typeof(condition) === 'function') {
-        callback = condition;
-        condition = true;
-    }
-
+exports.expectLogContains = function(client, regex, callback) {
     let match;
     helpers.setLogger(function (lvl, msg) {
         match = match || regex.test(msg);
     });
 
     client.on('close', function() {
-        assert.strictEqual(match, condition);
+        assert.ok(match, `The log did not match regular expression: ${regex.toString()}`);
         callback();
     });
 
