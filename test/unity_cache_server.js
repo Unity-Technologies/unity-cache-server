@@ -116,7 +116,7 @@ describe("Unity Cache Server bootstrap", () => {
         after(() => sinon.restore());
 
         it("should parse the given CLI option map and configure the given Commander object", () => {
-            assert.equal(cmd.options.length, 5); // 4 common options plus one custom from this test suite
+            assert.equal(cmd.options.length, 4); // 3 common options plus one custom from this test suite
             const opt = cmd.options[0];
             assert.equal(opt.flags, this.opts.test.flags);
             assert.equal(opt.description, this.opts.test.description);
