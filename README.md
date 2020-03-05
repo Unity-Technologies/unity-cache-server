@@ -7,7 +7,7 @@ This repository contains an open-source implementation of the Cache Server. This
 
 This open-source repository is maintained separately from the Cache Server available on the Unity website and the implementation of the Cache Server that is packaged with the Unity installer.
 
-This version of the cache server does not support the new Asset Database Version 2 introduced in Unity 2019.3. For projects using the new Asset import pipeline, use the[Accelerator](https://blogs.unity3d.com/2019/09/11/speed-up-your-team-with-the-unity-accelerator/)
+This version of the cache server does not support the new Asset Database Version 2 introduced in Unity 2019.3. For projects using the new Asset import pipeline, use the [Accelerator](https://blogs.unity3d.com/2019/09/11/speed-up-your-team-with-the-unity-accelerator/)
 
 #### Table of Contents
 * [Server Setup](#server-setup)
@@ -76,14 +76,11 @@ Option                           | Description
 `-W`, `--putwhitelist <host:port>`  | Only allow PUT transactions (uploads) from the specified client address. Repeat this option for multiple addresses.
 `--dump-config`                  | Write the active configuration to the console.
 `--save-config [path]`           | Write the active configuration to the specified file and exit. Defaults to `./default.yml`.
-`--NODE_CONFIG_DIR=<path>`       | The directory to search for config files. This is equivalent to setting the `NODE_CONFIG_DIR` environment variable. If not specified, the built-in configuration is used.
 `-h`, `--help`                   | Show usage information.
 
 ## Configuration files
 
 The `config/default.yml` file contains configuration values for the cache modules (see below) and other features. The config system is based on the node-config module. For additional information on how to manage environment specific config files, see the [Configuration Files](https://github.com/lorenwest/node-config/wiki/Configuration-Files) documentation on the node-config GitHub repository.
-
-By default, running `unity-cache-server` uses the built-in configuration file. To start Cache Server using a custom config file, save the current config to a new file and then use the `--NODE_CONFIG_DIR` option to override the location where the cache server will look for your config file(s).
 
 ### General Options
 Option                              | Default     | Description
@@ -96,14 +93,19 @@ Server.port                         |8126         | The port on which the Cache 
 Server.options.allowIPv6            |false        | Listen for client connections on both IPv4 and IPv6
 #### Examples (Mac/Linux)
 
-1) `mkdir config`
-1) `unity-cache-server --save-config config/default.yml`
-3) `unity-cache-server --NODE_CONFIG_DIR=config`
 
 You can have multiple configuration files based on environment:
 
 1) `export NODE_ENV=development`
 2) `unity-cache-server --save-config config/local-development.yml`
+
+To use a custom configuration directory:
+
+1) `mkdir myCustomConfig`
+2) `unity-cache-server --save-config myCustomConfig/default.yml`
+3) `export NODE_CONFIG_DIR=myCustomConfig`
+3) `unity-cache-server`
+
 
 To dump the current config to the console, run the following command:
 
