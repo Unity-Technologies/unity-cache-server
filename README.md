@@ -3,11 +3,11 @@
 
 ## Overview
 
+**Note: This version of the cache server does not support the new Asset Database Version 2 introduced in Unity 2019.3. For projects using the new Asset import pipeline, use the [Accelerator](https://blogs.unity3d.com/2019/09/11/speed-up-your-team-with-the-unity-accelerator/)**
+
 This repository contains an open-source implementation of the Cache Server. This stand-alone version of Cache Server is specifically optimized for LAN connected teams. The Cache Server speeds up initial import of project data, as well as platform switching within a project.
 
 This open-source repository is maintained separately from the Cache Server available on the Unity website and the implementation of the Cache Server that is packaged with the Unity installer.
-
-This version of the cache server does not support the new Asset Database Version 2 introduced in Unity 2019.3. For projects using the new Asset import pipeline, use the [Accelerator](https://blogs.unity3d.com/2019/09/11/speed-up-your-team-with-the-unity-accelerator/)
 
 #### Table of Contents
 * [Server Setup](#server-setup)
