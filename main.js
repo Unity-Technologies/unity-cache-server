@@ -27,7 +27,7 @@ const optionMap = {
         configKey: consts.CLI_CONFIG_KEYS.CACHE_PATH
     },
     host: {
-        flags: "-h, --host <address>",
+        flags: "-H, --host <address>",
         description: "The interface on which the Cache Server listens. The default is to listen on all interfaces.",
         configKey: consts.CLI_CONFIG_KEYS.HOST
     },
