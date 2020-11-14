@@ -15,7 +15,7 @@ const CommandProcessor = require('../lib/server/command_processor');
 const {
     generateCommandData,
     encodeCommand,
-    expectLog,
+    expectLogContains,
     cmd,
     clientWrite,
     readStream,
@@ -108,35 +108,35 @@ describe("Protocol", () => {
                 });
 
                 it("should start a transaction with the (ts) command", (done) => {
-                    expectLog(client, /Start transaction/, done);
+                    expectLogContains(client, /Start transaction/, done);
                     client.end(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
                 });
 
                 it("should cancel a pending transaction if a new (ts) command is received", (done) => {
-                    expectLog(client, /Cancel previous transaction/, done);
+                    expectLogContains(client, /Cancel previous transaction/, done);
                     const d = encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash);
                     client.write(d); // first one ...
                     client.end(d); // ... canceled by this one
                 });
 
                 it("should require a start transaction (ts) cmd before an end transaction (te) cmd", (done) => {
-                    expectLog(client, /Invalid transaction isolation/, done);
+                    expectLogContains(client, /Invalid transaction isolation/, done);
                     client.end(cmd.transactionEnd);
                 });
 
                 it("should end a transaction that was started with the (te) command", (done) => {
-                    expectLog(client, /End transaction for/, done);
+                    expectLogContains(client, /End transaction for/, done);
                     client.write(encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash));
                     client.end(cmd.transactionEnd);
                 });
 
                 it("should require a transaction start (te) command before a put command", (done) => {
-                    expectLog(client, /Not in a transaction/, done);
+                    expectLogContains(client, /Not in a transaction/, done);
                     client.write(encodeCommand(cmd.putAsset, null, null, 'abc'));
                 });
 
                 it("should close the socket on an invalid transaction command", (done) => {
-                    expectLog(client, /Unrecognized command/i, done);
+                    expectLogContains(client, /Unrecognized command/i, done);
                     client.write('tx', self.data.guid, self.data.hash);
                 });
             });
@@ -160,7 +160,7 @@ describe("Protocol", () => {
                 afterEach(() => client.end());
 
                 it("should close the socket on an invalid PUT type", (done) => {
-                    expectLog(client, /Unrecognized command/i, done);
+                    expectLogContains(client, /Unrecognized command/i, done);
                     const buf = Buffer.from(
                         encodeCommand(cmd.transactionStart, self.data.guid, self.data.hash) +
                         encodeCommand("px", null, null, 'abc'), 'ascii');
@@ -251,7 +251,7 @@ describe("Protocol", () => {
                 });
 
                 it("should close the socket on an invalid GET type", (done) => {
-                    expectLog(client, /Unrecognized command/i, done);
+                    expectLogContains(client, /Unrecognized command/i, done);
                     clientWrite(client, encodeCommand('gx', self.data.guid, self.data.hash)).catch(err => done(err));
                 });
 
