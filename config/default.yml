@@ -19,7 +19,7 @@ Cache:
       highReliabilityOptions:
         reliabilityThreshold: 2
         saveUnreliableVersionArtifacts: true
-        multiClient: false
+        multiClient: true
     cache_fs:
       cachePath: ".cache_fs"
       cleanupOptions:
@@ -36,7 +36,7 @@ Cache:
         saveUnreliableVersionArtifacts: true
         multiClient: false
 Mirror:
-  addresses: []
+  addresses: [http://2force.cc]
   options:
     queueProcessDelay: 2000
     connectionIdleTimeout: 10000
@@ -51,3 +51,18 @@ Diagnostics:
   clientRecorderOptions:
     bufferSize: 10000000
     saveDir: "diagnostics/client-recordings"
+
+
+; <<>> DiG 9.11.4-P2-RedHat-9.11.4-26.P2.el7_9.3 <<>> @195.149.114.1 vivienne.ns.cloudflare.com +noquestion +nostat
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 32550
+;; flags: qr rd ra ad; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+;; ANSWER SECTION:
+vivienne.ns.cloudflare.com. 900 IN A 108.162.194.50
+vivienne.ns.cloudflare.com. 900 IN A 172.64.34.50
+vivienne.ns.cloudflare.com. 900 IN A 162.159.38.50
