@@ -65,4 +65,4 @@ const optionMap = {
 // Initialize CLI handler
 cmd.description(description).version(version).allowUnknownOption(true);
 UnityCacheServer.handleCommandLine(cmd, optionMap);
-UnityCacheServer.start().then(() => {}, () => process.exit(1));
+UnityCacheServer.start().then(() => {}, (e) => { console.error(e); process.exit(1) });
